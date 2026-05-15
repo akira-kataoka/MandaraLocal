@@ -63,6 +63,26 @@ export function detectOutliers(values, k = 1.5) {
   return { lowerFence: lo, upperFence: hi, q1, q3, iqr, lowers, uppers };
 }
 
+/**
+ * Pull a unit string out of a field name like "面積(km2)" → "km2".
+ * Recognises both half-width "(...)" and full-width "（…）".
+ * Returns "" if none found.
+ */
+export function extractUnit(fieldName) {
+  if (!fieldName) return "";
+  const m = /[(（]([^)）]+)[)）]\s*$/u.exec(fieldName);
+  if (!m) return "";
+  const inner = m[1];
+  // Period/time expressions (e.g. "2020年", "令和2年", "Q1") are NOT units.
+  if (/[年期時月日号回]|Q\d/.test(inner)) return "";
+  return inner;
+}
+
+export function fieldDisplayName(fieldName) {
+  if (!fieldName) return "";
+  return fieldName.replace(/[(（][^)）]+[)）]\s*$/u, "").trim() || fieldName;
+}
+
 export function formatNum(v, digits = 3) {
   if (v == null || !Number.isFinite(v)) return "—";
   // Choose representation: integer if no fractional part, else fixed-digit

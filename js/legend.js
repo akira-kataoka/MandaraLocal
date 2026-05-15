@@ -2,13 +2,14 @@
 // legend.js  -- Build the legend DOM from breaks + colors
 // =====================================================================
 
-import { formatNum } from "./stats.js";
+import { formatNum, extractUnit } from "./stats.js";
 
 export function renderLegend(container, breaks, colors, options = {}) {
   container.innerHTML = "";
   if (!breaks.length || !colors.length) return;
 
   const title = options.title;
+  const unit  = title ? extractUnit(title) : "";
   if (title) {
     const t = document.createElement("div");
     t.style.fontWeight = "600";
@@ -18,8 +19,6 @@ export function renderLegend(container, breaks, colors, options = {}) {
   }
 
   const k = colors.length;
-  // breaks length = k + 1
-  // Show rows from high → low (typical thematic-map convention)
   for (let i = k - 1; i >= 0; i--) {
     const lo = breaks[i];
     const hi = breaks[i + 1];
@@ -29,7 +28,8 @@ export function renderLegend(container, breaks, colors, options = {}) {
     sw.className = "legend-swatch";
     sw.style.background = colors[i];
     const label = document.createElement("span");
-    label.textContent = `${formatNum(lo)} 〜 ${formatNum(hi)}`;
+    const range = `${formatNum(lo)} 〜 ${formatNum(hi)}`;
+    label.textContent = unit ? `${range} ${unit}` : range;
     row.appendChild(sw);
     row.appendChild(label);
     container.appendChild(row);

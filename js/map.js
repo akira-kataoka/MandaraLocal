@@ -3,7 +3,7 @@
 // =====================================================================
 
 import { classifyValue } from "./classification.js";
-import { formatNum } from "./stats.js";
+import { formatNum, extractUnit } from "./stats.js";
 
 const NA_COLOR = "#e5e7eb"; // grey for missing values
 const HOVER_OUTLINE = "#111827";
@@ -133,8 +133,9 @@ export class MandaraMap {
     let valueText = "";
     if (this._lookupFn) {
       const info = this._lookupFn(code);
+      const unit = extractUnit(this._fieldName);
       if (info && info.value != null) {
-        valueText = ` <span class="val">${formatNum(info.value)}</span>`;
+        valueText = ` <span class="val">${formatNum(info.value)}${unit ? " " + escapeHtml(unit) : ""}</span>`;
       } else {
         valueText = ` <span class="val">—</span>`;
       }
