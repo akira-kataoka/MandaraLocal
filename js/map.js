@@ -105,7 +105,9 @@ export class MandaraMap {
       // Only thicken the outline. Leaflet's setStyle merges options, so the
       // existing fillColor / fillOpacity are preserved.
       lyr.setStyle({ weight: 2, color: HOVER_OUTLINE });
-      if (lyr.bringToFront) lyr.bringToFront();
+      // NOTE: do NOT bringToFront() here — it raises this polygon above the
+      // symbolLayer/circle markers, making them disappear visually.
+      // Outline weight alone is enough for hover emphasis.
       this._showTooltip(feature, e);
       if (this._hoverHandler) this._hoverHandler(feature.properties.id, true);
     });
@@ -329,6 +331,8 @@ export class MandaraMap {
       if (lyr.feature.properties.id === id) {
         lyr.setStyle({ weight: 3, color: "#dc2626", fillOpacity: 0.95 });
         if (lyr.bringToFront) lyr.bringToFront();
+        // Keep symbol circles above the elevated polygon
+        this.symbolLayer.eachLayer(s => s.bringToFront && s.bringToFront());
       } else {
         // re-apply the choropleth style for this feature
         if (this._lookupFn) {
@@ -362,6 +366,7 @@ export class MandaraMap {
       });
       if (isOutlier && lyr.bringToFront) lyr.bringToFront();
     });
+    this.symbolLayer.eachLayer(s => s.bringToFront && s.bringToFront());
   }
 
   clearOutlierMarks() {
