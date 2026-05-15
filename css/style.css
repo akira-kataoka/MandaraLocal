@@ -177,6 +177,19 @@ details.derived .form-row input[type="text"] {
 .stats-table td:first-child { color: var(--muted); }
 .stats-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 
+.outlier-list {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text);
+  max-height: 90px;
+  overflow-y: auto;
+}
+.outlier-list .ol-section { color: var(--muted); font-weight: 600; margin-top: 4px; }
+.outlier-list .ol-high { color: #b91c1c; }
+.outlier-list .ol-low { color: #1d4ed8; }
+.outlier-list .ol-item { padding: 1px 0; cursor: pointer; }
+.outlier-list .ol-item:hover { background: #fef3c7; }
+
 #legend-container {
   font-size: 12px;
 }

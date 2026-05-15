@@ -156,6 +156,10 @@
       <section class="panel" id="panel-stats" hidden>
         <h2>4. 基本統計量</h2>
         <table id="stats-table" class="stats-table"></table>
+        <div class="form-row inline" style="margin-top:6px">
+          <label><input type="checkbox" id="chk-outliers" /> 外れ値を地図で強調 (IQR×1.5)</label>
+        </div>
+        <div id="outlier-list" class="outlier-list"></div>
       </section>
 
       <section class="panel" id="panel-legend" hidden>

@@ -30,6 +30,39 @@ export function computeStats(values) {
   };
 }
 
+/**
+ * Detect outliers via Tukey's fences (IQR method).
+ * Returns { lowerFence, upperFence, q1, q3, iqr, lowers: Set<index>, uppers: Set<index> }
+ *
+ * @param values   parallel array (some entries may be null/NaN — kept as index)
+ */
+export function detectOutliers(values, k = 1.5) {
+  const idx = [];
+  const v = [];
+  for (let i = 0; i < values.length; i++) {
+    if (Number.isFinite(values[i])) { idx.push(i); v.push(values[i]); }
+  }
+  if (v.length < 4) return { lowerFence: null, upperFence: null, q1: null, q3: null, iqr: null, lowers: new Set(), uppers: new Set() };
+  v.sort((a, b) => a - b);
+  const q = (p) => {
+    const ix = (v.length - 1) * p;
+    const lo = Math.floor(ix), hi = Math.ceil(ix);
+    return lo === hi ? v[lo] : v[lo] + (v[hi] - v[lo]) * (ix - lo);
+  };
+  const q1 = q(0.25), q3 = q(0.75);
+  const iqr = q3 - q1;
+  const lo = q1 - k * iqr;
+  const hi = q3 + k * iqr;
+  const lowers = new Set(), uppers = new Set();
+  for (let i = 0; i < values.length; i++) {
+    const x = values[i];
+    if (!Number.isFinite(x)) continue;
+    if (x < lo) lowers.add(i);
+    else if (x > hi) uppers.add(i);
+  }
+  return { lowerFence: lo, upperFence: hi, q1, q3, iqr, lowers, uppers };
+}
+
 export function formatNum(v, digits = 3) {
   if (v == null || !Number.isFinite(v)) return "—";
   // Choose representation: integer if no fractional part, else fixed-digit

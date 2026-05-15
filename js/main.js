@@ -5,7 +5,7 @@
 import { parseCsvText, loadCsvFile, loadSampleCsv, buildValueLookup, buildMuniIndex } from "./data.js";
 import { computeBreaks } from "./classification.js";
 import { getPalette } from "./color.js";
-import { computeStats, formatNum } from "./stats.js";
+import { computeStats, formatNum, detectOutliers } from "./stats.js";
 import { renderLegend } from "./legend.js";
 import { MandaraMap } from "./map.js";
 import { exportPng, exportSvg } from "./export.js";
@@ -70,6 +70,8 @@ const els = {
   chkReverse:   $("chk-reverse"),
   panelStats:   $("panel-stats"),
   statsTable:   $("stats-table"),
+  chkOutliers:  $("chk-outliers"),
+  outlierList:  $("outlier-list"),
   panelLegend:  $("panel-legend"),
   legendBox:    $("legend-container"),
   panelTable:   $("panel-table"),
@@ -343,6 +345,7 @@ els.chkReverse.addEventListener("change", () => {
   state.reverse = els.chkReverse.checked;
   refresh();
 });
+els.chkOutliers.addEventListener("change", () => refresh());
 
 els.scatterX.addEventListener("change", drawScatter);
 els.scatterY.addEventListener("change", drawScatter);
@@ -493,7 +496,57 @@ function refresh() {
   // Data table
   renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover);
 
+  // Outlier highlight
+  applyOutlierHighlight(values);
+
   saveSettings(state);
+}
+
+function applyOutlierHighlight(values) {
+  const out = detectOutliers(values);
+  // Build list view first (always show — informative even when not highlighting)
+  els.outlierList.innerHTML = "";
+  const rows = state.dataset.rows;
+  const hi = [...out.uppers].map(i => ({ row: rows[i], v: values[i] })).sort((a,b)=>b.v-a.v);
+  const lo = [...out.lowers].map(i => ({ row: rows[i], v: values[i] })).sort((a,b)=>a.v-b.v);
+  if (hi.length) {
+    const s = document.createElement("div");
+    s.className = "ol-section ol-high"; s.textContent = `上方外れ値 ${hi.length}件`;
+    els.outlierList.appendChild(s);
+    for (const { row, v } of hi.slice(0, 8)) {
+      const it = document.createElement("div"); it.className = "ol-item";
+      it.textContent = `${row.name || "#"+row.key}: ${formatNum(v)}`;
+      it.addEventListener("mouseenter", () => mapper.highlightById(row.key));
+      it.addEventListener("mouseleave", () => mapper.clearHighlight());
+      els.outlierList.appendChild(it);
+    }
+  }
+  if (lo.length) {
+    const s = document.createElement("div");
+    s.className = "ol-section ol-low"; s.textContent = `下方外れ値 ${lo.length}件`;
+    els.outlierList.appendChild(s);
+    for (const { row, v } of lo.slice(0, 8)) {
+      const it = document.createElement("div"); it.className = "ol-item";
+      it.textContent = `${row.name || "#"+row.key}: ${formatNum(v)}`;
+      it.addEventListener("mouseenter", () => mapper.highlightById(row.key));
+      it.addEventListener("mouseleave", () => mapper.clearHighlight());
+      els.outlierList.appendChild(it);
+    }
+  }
+  if (!hi.length && !lo.length) {
+    const s = document.createElement("div"); s.className = "ol-section";
+    s.textContent = "外れ値なし";
+    els.outlierList.appendChild(s);
+  }
+
+  // Apply on-map marking when checkbox is on
+  if (els.chkOutliers.checked) {
+    const ids = new Set();
+    [...out.uppers, ...out.lowers].forEach(i => ids.add(rows[i].key));
+    mapper.markOutliers(ids);
+  } else {
+    mapper.clearOutlierMarks();
+  }
 }
 
 function onTableRowHover(id, isOn) {

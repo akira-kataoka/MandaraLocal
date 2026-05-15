@@ -287,6 +287,43 @@ export class MandaraMap {
     });
   }
 
+  /**
+   * Highlight a set of features as outliers with a heavy red outline.
+   * @param idSet Set<id>  -- set of feature ids to mark
+   */
+  markOutliers(idSet) {
+    if (!this.layer) return;
+    this._outlierIds = idSet || new Set();
+    this.layer.eachLayer((lyr) => {
+      const id = lyr.feature.properties.id;
+      const info = this._lookupFn ? this._lookupFn(id) : null;
+      const isOutlier = this._outlierIds.has(id);
+      const fill = info ? info.color : NA_COLOR;
+      lyr.setStyle({
+        weight: isOutlier ? 2.5 : 0.6,
+        color:  isOutlier ? "#dc2626" : "#475569",
+        fillColor: fill,
+        fillOpacity: 0.88,
+        dashArray: isOutlier ? "4 2" : null,
+      });
+      if (isOutlier && lyr.bringToFront) lyr.bringToFront();
+    });
+  }
+
+  clearOutlierMarks() {
+    this._outlierIds = new Set();
+    if (!this.layer) return;
+    this.layer.eachLayer((lyr) => {
+      const id = lyr.feature.properties.id;
+      const info = this._lookupFn ? this._lookupFn(id) : null;
+      lyr.setStyle({
+        weight: 0.6, color: "#475569",
+        fillColor: info ? info.color : NA_COLOR,
+        fillOpacity: 0.88, dashArray: null,
+      });
+    });
+  }
+
   clearHighlight() {
     if (!this.layer) return;
     this.layer.eachLayer((lyr) => {
