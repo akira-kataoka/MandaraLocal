@@ -16,7 +16,7 @@ const PAD = { top: 10, right: 12, bottom: 28, left: 38 };
  *              Each circle is tagged with data-id for cross-highlighting.
  * @param onHover (id, on) callback fired on circle mouseover/out
  */
-export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover = null) {
+export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover = null, onSelect = null) {
   // Pair up & drop missing
   const pairs = [];
   for (let i = 0; i < xs.length; i++) {
@@ -73,6 +73,9 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
         c.setAttribute("r", "3");
         onHover(fid, false);
       });
+      if (onSelect) {
+        c.addEventListener("click", () => onSelect(fid));
+      }
       c.style.cursor = "pointer";
     }
     pts.appendChild(c);

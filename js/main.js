@@ -99,6 +99,7 @@ const els = {
   overlayFooter:  $("overlay-footer"),
   btnPng:       $("btn-export-png"),
   btnSvg:       $("btn-export-svg"),
+  btnCsv:       $("btn-export-csv"),
 };
 
 // ----- Restore prior session settings -----
@@ -461,6 +462,24 @@ els.scatterX.addEventListener("change", drawScatter);
 els.scatterY.addEventListener("change", drawScatter);
 els.btnDerived.addEventListener("click", addDerivedField);
 els.btnTemplate.addEventListener("click", downloadTemplate);
+els.btnCsv.addEventListener("click", exportCurrentCsv);
+
+function exportCurrentCsv() {
+  if (!state.dataset) { setSummary("先にデータを読み込んでください", "warn"); return; }
+  const f = state.dataset.fields;
+  const header = ["地域", ...f];
+  const rows = state.dataset.rows.map(r => [r.name || ("#"+r.key), ...f.map(k => r.values[k] ?? "")]);
+  const csv = [header.map(csvEscape).join(",")]
+    .concat(rows.map(r => r.map(csvEscape).join(","))).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `mandara_data_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`データを ${a.download} としてダウンロードしました（${rows.length}行 / ${f.length}列）`, "success");
+}
 
 function downloadTemplate() {
   if (!state.geojson) {
@@ -764,7 +783,7 @@ function drawScatter() {
   const xs = state.dataset.rows.map(r => r.values[xf]);
   const ys = state.dataset.rows.map(r => r.values[yf]);
   const ids = state.dataset.rows.map(r => r.key);
-  const { r, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover);
+  const { r, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick);
   if (r == null) {
     els.scatterCorr.textContent = `n=${n} — 相関係数を計算できません`;
   } else {
@@ -777,6 +796,13 @@ function drawScatter() {
 function onScatterHover(id, isHot) {
   if (isHot) mapper.highlightById(id);
   else       mapper.clearHighlight();
+}
+function onScatterClick(id) {
+  if (state.level === "chocho") {
+    // Town points have no polygon — just highlight via tooltip
+    return;
+  }
+  mapper.zoomToFeature(id);
 }
 
 function onMapHover(id, isHot) {
