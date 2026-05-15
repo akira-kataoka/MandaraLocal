@@ -11,6 +11,7 @@ import { MandaraMap } from "./map.js";
 import { exportPng, exportSvg } from "./export.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { renderScatter } from "./scatter.js";
+import { renderTable } from "./table.js";
 
 // ----- State -----
 const state = {
@@ -71,6 +72,8 @@ const els = {
   statsTable:   $("stats-table"),
   panelLegend:  $("panel-legend"),
   legendBox:    $("legend-container"),
+  panelTable:   $("panel-table"),
+  tableWrap:    $("table-wrap"),
   panelScatter: $("panel-scatter"),
   scatterX:     $("scatter-x"),
   scatterY:     $("scatter-y"),
@@ -207,6 +210,7 @@ async function applyLevel(level) {
       els.panelStats.hidden = true;
       els.panelLegend.hidden = true;
       els.panelScatter.hidden = true;
+      els.panelTable.hidden = true;
     }
     setSummary("地図準備完了。サンプルまたはCSVを読み込んでください。", "muted");
   } catch (e) {
@@ -415,6 +419,7 @@ function onDatasetReady(ds, label) {
   els.panelClass.hidden = false;
   els.panelStats.hidden = false;
   els.panelLegend.hidden = false;
+  els.panelTable.hidden = false;
   if (ds.fields.length >= 2) {
     els.panelScatter.hidden = false;
     populateScatterSelectors(ds.fields);
@@ -485,7 +490,15 @@ function refresh() {
     els.overlayB.hidden = true;
   }
 
+  // Data table
+  renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover);
+
   saveSettings(state);
+}
+
+function onTableRowHover(id, isOn) {
+  if (isOn) mapper.highlightById(id);
+  else      mapper.clearHighlight();
 }
 
 function renderStats(values) {

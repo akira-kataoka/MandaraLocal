@@ -181,6 +181,38 @@ details.derived .form-row input[type="text"] {
   font-size: 12px;
 }
 
+.table-wrap {
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-top: 4px;
+}
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.table-wrap th, .table-wrap td {
+  padding: 3px 6px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid #f1f5f9;
+}
+.table-wrap td { font-variant-numeric: tabular-nums; }
+.table-wrap th {
+  background: #f8fafc;
+  position: sticky;
+  top: 0;
+  cursor: pointer;
+  user-select: none;
+}
+.table-wrap th:hover { background: #e0e7ff; }
+.table-wrap th.sort-asc::after { content: " ▲"; color: var(--accent); }
+.table-wrap th.sort-desc::after { content: " ▼"; color: var(--accent); }
+.table-wrap tbody tr:hover { background: #fef3c7; cursor: pointer; }
+.table-wrap td.num { text-align: right; }
+
 #scatter-svg {
   width: 100%;
   height: 220px;
