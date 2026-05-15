@@ -61,6 +61,7 @@ export class MandaraMap {
   /**
    * @param geojson  GeoJSON FeatureCollection with properties.id present
    * @param opts.nameFor (props) => string  -- override per-feature display name
+   * @param opts.canvas {boolean} -- use Canvas renderer (much faster for >500 polygons)
    */
   setBaseGeo(geojson, opts = {}) {
     if (opts.nameFor) this._nameFor = opts.nameFor;
@@ -69,10 +70,13 @@ export class MandaraMap {
       this.layer = null;
     }
     this.symbolLayer.clearLayers();
-    this.layer = L.geoJSON(geojson, {
+    const useCanvas = opts.canvas ?? (geojson.features.length > 500);
+    const layerOpts = {
       style: () => this._defaultStyle(),
       onEachFeature: (feat, lyr) => this._bindInteractions(feat, lyr),
-    }).addTo(this.map);
+    };
+    if (useCanvas) layerOpts.renderer = L.canvas({ padding: 0.5 });
+    this.layer = L.geoJSON(geojson, layerOpts).addTo(this.map);
 
     // Pre-compute approximate centroids for proportional symbols
     this._centroidCache.clear();

@@ -117,16 +117,28 @@ async function applyLevel(level) {
     const g = await getGeo(level);
     state.geojson = g;
     if (level === "municipality") {
+      // Fallback: romanize → katakana for features that lack a confirmed jp name
+      if (typeof wanakana !== "undefined") {
+        for (const f of g.features) {
+          if (!f.properties.name_jp && f.properties.name_en) {
+            const kata = wanakana.toKatakana(f.properties.name_en.toLowerCase());
+            f.properties.name_kata = kata;
+          }
+        }
+      }
       state.muniIndex = buildMuniIndex(g);
       mapper.setBaseGeo(g, {
         nameFor: (p) => {
-          const main = p.name_jp || p.name_en || `#${p.id}`;
-          return p.name_jp ? `${main}（${p.pref_name || ""}）`
-                            : `${main}（${p.pref_name || ""}/英語）`;
+          if (p.name_jp)
+            return `${p.name_jp}（${p.pref_name || ""}）`;
+          if (p.name_kata)
+            return `${p.name_kata}（${p.pref_name || ""}）`;
+          return `${p.name_en || "#"+p.id}（${p.pref_name || ""}）`;
         }
       });
       const jpCount = Object.keys(muniJpMap || {}).length;
-      els.hintLevel.innerHTML = `${g.features.length}市町村ロード済み（うち${jpCount}件は日本語名対応）。<br/>
+      const fallbackCount = g.features.length - jpCount;
+      els.hintLevel.innerHTML = `${g.features.length}市町村ロード済み（漢字 ${jpCount} / カタカナ ${fallbackCount}）。<br/>
         CSV: 1列目=日本語名 (例: <code>新宿区</code>) / 英語名 (例: <code>Chiyoda</code>) / id (例: <code>13001</code>)`;
     } else {
       state.muniIndex = null;
