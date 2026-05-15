@@ -65,6 +65,33 @@
           <label for="select-field">対象列</label>
           <select id="select-field"></select>
         </div>
+        <details class="derived">
+          <summary>派生列を作る（A÷B など）</summary>
+          <div class="form-row">
+            <label for="derived-a">A</label>
+            <select id="derived-a"></select>
+          </div>
+          <div class="form-row">
+            <label for="derived-op">演算</label>
+            <select id="derived-op">
+              <option value="div">÷</option>
+              <option value="mul">×</option>
+              <option value="add">+</option>
+              <option value="sub">−</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="derived-b">B</label>
+            <select id="derived-b"></select>
+          </div>
+          <div class="form-row">
+            <label for="derived-name">列名</label>
+            <input type="text" id="derived-name" placeholder="例: 人口密度" />
+          </div>
+          <div class="form-row">
+            <button id="btn-add-derived" class="btn btn-primary">列を追加</button>
+          </div>
+        </details>
         <div class="form-row">
           <label for="select-mode">表現方法</label>
           <select id="select-mode">

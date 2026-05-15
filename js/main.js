@@ -42,6 +42,11 @@ const els = {
   dataSummary:  $("data-summary"),
   panelField:   $("panel-field"),
   selectField:  $("select-field"),
+  derivedA:     $("derived-a"),
+  derivedOp:    $("derived-op"),
+  derivedB:     $("derived-b"),
+  derivedName:  $("derived-name"),
+  btnDerived:   $("btn-add-derived"),
   selectMode:   $("select-mode"),
   rowSymbolSize:$("row-symbol-size"),
   inputMaxR:    $("input-maxr"),
@@ -276,6 +281,7 @@ els.chkReverse.addEventListener("change", () => {
 
 els.scatterX.addEventListener("change", drawScatter);
 els.scatterY.addEventListener("change", drawScatter);
+els.btnDerived.addEventListener("click", addDerivedField);
 
 els.btnPng.addEventListener("click", () => {
   const wrap = document.querySelector(".map-wrap");
@@ -303,13 +309,8 @@ function onDatasetReady(ds, label) {
   // pick first numeric field as default
   state.field = ds.fields[0];
 
-  // Field selector
-  els.selectField.innerHTML = "";
-  for (const f of ds.fields) {
-    const o = document.createElement("option");
-    o.value = f; o.textContent = f;
-    els.selectField.appendChild(o);
-  }
+  // Field selectors (main + derived A/B)
+  populateFieldSelects();
   els.selectField.value = state.field;
 
   // Reveal panels
@@ -385,6 +386,49 @@ function renderStats(values) {
   els.statsTable.innerHTML = rows.map(([k,v]) =>
     `<tr><td>${k}</td><td>${v}</td></tr>`
   ).join("");
+}
+
+function populateFieldSelects() {
+  const fields = state.dataset?.fields || [];
+  for (const sel of [els.selectField, els.derivedA, els.derivedB]) {
+    const prev = sel.value;
+    sel.innerHTML = "";
+    for (const f of fields) {
+      const o = document.createElement("option");
+      o.value = f; o.textContent = f;
+      sel.appendChild(o);
+    }
+    if (fields.includes(prev)) sel.value = prev;
+  }
+  if (fields.length >= 1) els.derivedA.value = fields[0];
+  if (fields.length >= 2) els.derivedB.value = fields[1];
+}
+
+const OP_FN = { div: (a,b) => b===0 ? null : a/b, mul: (a,b)=>a*b, add: (a,b)=>a+b, sub: (a,b)=>a-b };
+const OP_SYM = { div: "÷", mul: "×", add: "+", sub: "−" };
+
+function addDerivedField() {
+  if (!state.dataset) return;
+  const a = els.derivedA.value, b = els.derivedB.value, op = els.derivedOp.value;
+  const explicit = els.derivedName.value.trim();
+  const name = explicit || `${a} ${OP_SYM[op]} ${b}`;
+  if (state.dataset.fields.includes(name)) {
+    setSummary(`列「${name}」はすでに存在します`, "warn"); return;
+  }
+  const fn = OP_FN[op];
+  for (const r of state.dataset.rows) {
+    const va = r.values[a], vb = r.values[b];
+    r.values[name] = (Number.isFinite(va) && Number.isFinite(vb)) ? fn(va, vb) : null;
+  }
+  state.dataset.fields.push(name);
+  populateFieldSelects();
+  els.selectField.value = name;
+  state.field = name;
+  els.derivedName.value = "";
+  refresh();
+  // scatter dropdowns refresh too
+  if (state.dataset.fields.length >= 2) populateScatterSelectors(state.dataset.fields);
+  setSummary(`派生列「${name}」を追加しました（${state.dataset.fields.length}列）`, "success");
 }
 
 function populateScatterSelectors(fields) {

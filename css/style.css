@@ -139,6 +139,24 @@ html, body {
   line-height: 1.5;
 }
 
+details.derived {
+  margin: 4px 0 8px;
+  font-size: 12px;
+}
+details.derived summary {
+  cursor: pointer;
+  color: var(--accent);
+  padding: 4px 0;
+}
+details.derived[open] summary { font-weight: 600; }
+details.derived .form-row input[type="text"] {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
 .data-summary {
   margin-top: 8px;
   font-size: 12px;
