@@ -229,6 +229,57 @@ export class MandaraMap {
   }
 
   /**
+   * Town-level (chocho) plot: each entry is { town, lat, lng, koaza, id }.
+   * Renders as CircleMarkers in the symbol layer. Tooltip on hover.
+   * Optional valueMap / classified colors will paint each town by its value.
+   *
+   * @param towns      [{ id, town, lat, lng, koaza }]
+   * @param valueMap   Map<id, number|null>  (optional)
+   * @param breaks     classification breaks   (optional)
+   * @param colors     palette colors          (optional)
+   * @param fieldName  current data field      (optional)
+   */
+  applyTownPlot(towns, valueMap, breaks, colors, fieldName) {
+    this.symbolLayer.clearLayers();
+    // Remove any base polygon layer (towns are points)
+    if (this.layer) {
+      this.map.removeLayer(this.layer);
+      this.layer = null;
+    }
+    if (!towns || !towns.length) return;
+    const lookup = (id) => {
+      if (!valueMap || !breaks || !colors) return null;
+      const v = valueMap.get(id);
+      if (!Number.isFinite(v)) return null;
+      const idx = classifyValue(v, breaks);
+      return { v, color: idx < 0 ? null : colors[idx] };
+    };
+
+    const group = L.featureGroup();
+    for (const t of towns) {
+      if (!Number.isFinite(t.lat) || !Number.isFinite(t.lng)) continue;
+      const info = lookup(t.id);
+      const color = info?.color || "#2563eb";
+      const r = info?.v != null ? 6 : 4;
+      const m = L.circleMarker([t.lat, t.lng], {
+        radius: r, color: "#1e3a8a", weight: 0.7,
+        fillColor: color, fillOpacity: 0.7,
+      });
+      const valText = info?.v != null ? ` <span class="val">${formatNum(info.v)}</span>` : "";
+      const fieldText = fieldName ? `<br/><small>${fieldName}</small>` : "";
+      m.bindTooltip(`${t.town}${t.koaza || ""}${valText}${fieldText}`, {
+        sticky: true, direction: "top", offset: [0, -6], className: "chocho-tip",
+      });
+      m.addTo(this.symbolLayer);
+      group.addLayer(m);
+    }
+    try {
+      const b = group.getBounds();
+      if (b.isValid()) this.map.fitBounds(b, { padding: [40, 40], maxZoom: 14 });
+    } catch (_) {}
+  }
+
+  /**
    * Render dot-density: for each feature, drop floor(value/unit) random dots
    * inside its polygon. Dots are 1px canvas pixels for performance.
    *

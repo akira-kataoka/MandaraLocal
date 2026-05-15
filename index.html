@@ -32,6 +32,7 @@
           <select id="select-level">
             <option value="prefecture">都道府県（47件）</option>
             <option value="municipality">市町村（1,742件）</option>
+            <option value="chocho">町丁目（市区町村を選択）</option>
           </select>
         </div>
         <div class="form-row" id="row-pref-filter" hidden>
@@ -39,6 +40,14 @@
           <select id="select-pref-filter">
             <option value="">全国</option>
           </select>
+        </div>
+        <div class="form-row" id="row-chocho" hidden>
+          <label for="select-cho-pref">都道府県</label>
+          <select id="select-cho-pref"></select>
+        </div>
+        <div class="form-row" id="row-chocho-muni" hidden>
+          <label for="select-cho-muni">市区町村</label>
+          <select id="select-cho-muni"></select>
         </div>
         <div class="form-row hint" id="hint-level"></div>
       </section>

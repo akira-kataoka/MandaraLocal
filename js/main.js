@@ -15,7 +15,10 @@ import { renderTable } from "./table.js";
 
 // ----- State -----
 const state = {
-  level: "prefecture",   // "prefecture" | "municipality"
+  level: "prefecture",   // "prefecture" | "municipality" | "chocho"
+  chochoPref: "",        // chocho mode: current prefecture name (jp)
+  chochoMuni: "",        // chocho mode: current municipality name (jp)
+  chochoTowns: [],       // [{ id, town, lat, lng, koaza }]
   dataset: null,         // { rows, fields, unmatched, level }
   field: null,
   fieldB: null,
@@ -40,6 +43,10 @@ const els = {
   hintLevel:    $("hint-level"),
   rowPrefFilter:    $("row-pref-filter"),
   selectPrefFilter: $("select-pref-filter"),
+  rowChocho:        $("row-chocho"),
+  selectChoPref:    $("select-cho-pref"),
+  rowChochoMuni:    $("row-chocho-muni"),
+  selectChoMuni:    $("select-cho-muni"),
   loadSample:   $("btn-load-sample"),
   csvFile:      $("csv-file"),
   btnTemplate:  $("btn-download-template"),
@@ -161,8 +168,87 @@ async function getGeo(level) {
   return g;
 }
 
+// ----- Chocho (町丁目) level via Geolonia japanese-addresses -----
+const GEOLONIA_PREF_INDEX = "https://geolonia.github.io/japanese-addresses/api/ja.json";
+let geoloniaIndex = null;
+
+async function getGeoloniaIndex() {
+  if (geoloniaIndex) return geoloniaIndex;
+  const res = await fetch(GEOLONIA_PREF_INDEX);
+  if (!res.ok) throw new Error(`Geolonia index load failed (${res.status})`);
+  geoloniaIndex = await res.json();
+  return geoloniaIndex;
+}
+
+async function fetchTowns(pref, muni) {
+  const enc = encodeURIComponent(pref) + "/" + encodeURIComponent(muni) + ".json";
+  const url = `https://geolonia.github.io/japanese-addresses/api/ja/${enc}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`町丁目データ取得失敗 (${res.status})`);
+  const arr = await res.json();
+  return arr.map((t, i) => ({ id: 1_000_000 + i, ...t }));
+}
+
+async function enterChochoMode() {
+  els.rowPrefFilter.hidden = true;
+  els.rowChocho.hidden = false;
+  els.rowChochoMuni.hidden = false;
+  els.mapSearch.hidden = true;
+  state.muniIndex = null;
+
+  if (!state.chochoPref) {
+    const idx = await getGeoloniaIndex();
+    const prefNames = Object.keys(idx);
+    els.selectChoPref.innerHTML = prefNames.map(n => `<option>${n}</option>`).join("");
+    state.chochoPref = prefNames[12] || prefNames[0];     // default to 東京都
+    els.selectChoPref.value = state.chochoPref;
+    populateChoMuni();
+  }
+  await loadChochoTowns();
+  els.hintLevel.innerHTML = `Geolonia japanese-addresses (CC BY 4.0) から町丁目データを動的取得。<br/>
+    CSV: 1列目=町名 (例: <code>西新宿</code>) でマッチ`;
+}
+
+function populateChoMuni() {
+  const munis = geoloniaIndex[state.chochoPref] || [];
+  els.selectChoMuni.innerHTML = munis.map(m => `<option>${m}</option>`).join("");
+  if (!state.chochoMuni || !munis.includes(state.chochoMuni)) {
+    state.chochoMuni = munis[0] || "";
+  }
+  els.selectChoMuni.value = state.chochoMuni;
+}
+
+async function loadChochoTowns() {
+  if (!state.chochoPref || !state.chochoMuni) return;
+  setSummary(`町丁目を取得中…  ${state.chochoPref} ${state.chochoMuni}`, "muted");
+  try {
+    state.chochoTowns = await fetchTowns(state.chochoPref, state.chochoMuni);
+    mapper.applyTownPlot(state.chochoTowns);
+    setSummary(`${state.chochoPref}${state.chochoMuni}: ${state.chochoTowns.length}町丁目を表示`, "success");
+    if (state.dataset && state.dataset.level === "chocho" && state.field) refresh();
+    else {
+      // hide field panel until user loads CSV that matches chocho
+      els.panelField.hidden = true;
+      els.panelClass.hidden = true;
+      els.panelStats.hidden = true;
+      els.panelLegend.hidden = true;
+      els.panelScatter.hidden = true;
+      els.panelTable.hidden = true;
+      els.overlay.hidden = true;
+    }
+  } catch (e) {
+    setSummary("町丁目データ取得失敗: " + e.message, "error");
+  }
+}
+
 async function applyLevel(level) {
   state.level = level;
+  if (level === "chocho") {
+    state.dataset = null;
+    return enterChochoMode();
+  }
+  els.rowChocho.hidden = true;
+  els.rowChochoMuni.hidden = true;
   try {
     const g = await getGeo(level);
     state.geojson = g;
@@ -232,6 +318,16 @@ els.selectPrefFilter.addEventListener("change", () => {
     applyMunicipalityRender(state.geojson);
     if (state.dataset && state.field) refresh();
   }
+});
+els.selectChoPref.addEventListener("change", () => {
+  state.chochoPref = els.selectChoPref.value;
+  state.chochoMuni = "";  // reset
+  populateChoMuni();
+  loadChochoTowns();
+});
+els.selectChoMuni.addEventListener("change", () => {
+  state.chochoMuni = els.selectChoMuni.value;
+  loadChochoTowns();
 });
 
 function populatePrefFilter(g) {
