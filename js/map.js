@@ -77,6 +77,9 @@ export class MandaraMap {
     };
     if (useCanvas) layerOpts.renderer = L.canvas({ padding: 0.5 });
     this.layer = L.geoJSON(geojson, layerOpts).addTo(this.map);
+    // Always keep symbol layer (proportional circles, dots) above polygons.
+    this.map.removeLayer(this.symbolLayer);
+    this.symbolLayer.addTo(this.map);
 
     // Pre-compute approximate centroids for proportional symbols
     this._centroidCache.clear();
