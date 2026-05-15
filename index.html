@@ -101,11 +101,16 @@
             <option value="choropleth">階級区分図（塗り分け）</option>
             <option value="symbol">比例シンボル図（円）</option>
             <option value="both">塗り分け+円 を重ね合わせ</option>
+            <option value="dot">ドット分布図</option>
           </select>
         </div>
         <div class="form-row" id="row-symbol-size" hidden>
           <label for="input-maxr">円の最大半径</label>
           <input type="number" id="input-maxr" min="8" max="80" value="32" />
+        </div>
+        <div class="form-row" id="row-dot-unit" hidden>
+          <label for="input-dotunit">1ドット = </label>
+          <input type="number" id="input-dotunit" min="1" value="10000" />
         </div>
       </section>
 

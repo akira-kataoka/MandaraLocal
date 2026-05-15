@@ -99,6 +99,8 @@ export class MandaraMap {
 
   _bindInteractions(feature, lyr) {
     lyr.on("mouseover", (e) => {
+      // Only thicken the outline. Leaflet's setStyle merges options, so the
+      // existing fillColor / fillOpacity are preserved.
       lyr.setStyle({ weight: 2, color: HOVER_OUTLINE });
       if (lyr.bringToFront) lyr.bringToFront();
       this._showTooltip(feature, e);
@@ -106,11 +108,13 @@ export class MandaraMap {
     });
     lyr.on("mousemove", (e) => this._showTooltip(feature, e));
     lyr.on("mouseout", () => {
-      this.layer.resetStyle(lyr);
-      // Re-apply choropleth color (resetStyle reverts to defaults)
+      // Revert outline only — never call resetStyle() here, that would
+      // repaint with the gray defaultStyle and erase the choropleth color.
       if (this._lookupFn) {
         const info = this._lookupFn(feature.properties.id);
         lyr.setStyle({ weight: 0.6, color: "#475569", fillColor: info.color, fillOpacity: 0.88 });
+      } else {
+        lyr.setStyle({ weight: 0.6, color: "#475569" });
       }
       this._hideTooltip();
       if (this._hoverHandler) this._hoverHandler(feature.properties.id, false);
@@ -222,6 +226,46 @@ export class MandaraMap {
   }
 
   /**
+   * Render dot-density: for each feature, drop floor(value/unit) random dots
+   * inside its polygon. Dots are 1px canvas pixels for performance.
+   *
+   * @param geojson  same FeatureCollection as setBaseGeo (needed for shapes)
+   * @param valueMap Map<id, number>
+   * @param unit     value per dot (e.g. 10000 → 1 dot = 10,000)
+   * @param color    dot color
+   */
+  applyDotDensity(geojson, valueMap, unit, color = "#1d4ed8") {
+    this.symbolLayer.clearLayers();
+    if (!valueMap || !geojson || unit <= 0) return;
+    const pts = [];
+    for (const feat of geojson.features) {
+      const id = feat.properties.id;
+      const v = valueMap.get(id);
+      if (!Number.isFinite(v) || v <= 0) continue;
+      const k = Math.min(2000, Math.floor(v / unit));
+      if (k <= 0) continue;
+      const polys = polygonsOf(feat.geometry);
+      const totalArea = polys.reduce((s, p) => s + Math.abs(ringSignedArea(p[0])), 0);
+      // distribute dots proportionally across multi-polygon parts by area
+      for (const poly of polys) {
+        const a = Math.abs(ringSignedArea(poly[0]));
+        const share = totalArea > 0 ? Math.round(k * (a / totalArea)) : 0;
+        for (let i = 0; i < share; i++) {
+          const p = randomPointInPolygon(poly);
+          if (p) pts.push(p);
+        }
+      }
+    }
+    // Render all dots as one CircleMarker layer for efficiency
+    for (const [lon, lat] of pts) {
+      L.circleMarker([lat, lon], {
+        radius: 1.3, color, fillColor: color, fillOpacity: 0.7, weight: 0,
+        interactive: false,
+      }).addTo(this.symbolLayer);
+    }
+  }
+
+  /**
    * Highlight a single feature by its properties.id (e.g. from scatter hover).
    * Restores other layers to their classified style.
    */
@@ -330,6 +374,53 @@ function ringCentroid(ring) {
   a /= 2;
   if (Math.abs(a) < 1e-12) return null;
   return [cx / (6 * a), cy / (6 * a)];
+}
+
+// ---- geometry helpers for dot density ----
+function polygonsOf(geom) {
+  if (!geom) return [];
+  if (geom.type === "Polygon") return [geom.coordinates];
+  if (geom.type === "MultiPolygon") return geom.coordinates;
+  return [];
+}
+function ringSignedArea(ring) {
+  let a = 0;
+  for (let i = 0, n = ring.length; i < n - 1; i++)
+    a += ring[i][0] * ring[i+1][1] - ring[i+1][0] * ring[i][1];
+  return a / 2;
+}
+function bboxOfPoly(poly) {
+  let mnx = Infinity, mny = Infinity, mxx = -Infinity, mxy = -Infinity;
+  for (const ring of poly) for (const [x, y] of ring) {
+    if (x < mnx) mnx = x; if (x > mxx) mxx = x;
+    if (y < mny) mny = y; if (y > mxy) mxy = y;
+  }
+  return [mnx, mny, mxx, mxy];
+}
+function pointInRing(pt, ring) {
+  const [x, y] = pt; let inside = false;
+  let j = ring.length - 1;
+  for (let i = 0; i < ring.length; i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi + 1e-30) + xi))
+      inside = !inside;
+    j = i;
+  }
+  return inside;
+}
+function pointInPolygon(pt, poly) {
+  if (!pointInRing(pt, poly[0])) return false;
+  for (let k = 1; k < poly.length; k++) if (pointInRing(pt, poly[k])) return false;
+  return true;
+}
+function randomPointInPolygon(poly) {
+  const [mnx, mny, mxx, mxy] = bboxOfPoly(poly);
+  for (let tries = 0; tries < 30; tries++) {
+    const x = mnx + Math.random() * (mxx - mnx);
+    const y = mny + Math.random() * (mxy - mny);
+    if (pointInPolygon([x, y], poly)) return [x, y];
+  }
+  return null;
 }
 
 function escapeHtml(s) {

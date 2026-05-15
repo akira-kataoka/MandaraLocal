@@ -51,6 +51,8 @@ const els = {
   selectMode:   $("select-mode"),
   rowSymbolSize:$("row-symbol-size"),
   inputMaxR:    $("input-maxr"),
+  rowDotUnit:   $("row-dot-unit"),
+  inputDotUnit: $("input-dotunit"),
   panelClass:   $("panel-class"),
   selectMethod: $("select-method"),
   inputClasses: $("input-classes"),
@@ -258,9 +260,11 @@ els.selectField.addEventListener("change", () => {
 });
 els.selectMode.addEventListener("change", () => {
   state.mode = els.selectMode.value;
-  els.rowSymbolSize.hidden = state.mode === "choropleth";
+  els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both");
+  els.rowDotUnit.hidden = state.mode !== "dot";
   refresh();
 });
+els.inputDotUnit.addEventListener("change", () => refresh());
 els.inputMaxR.addEventListener("change", () => {
   const n = clamp(parseInt(els.inputMaxR.value || "32", 10), 8, 80);
   els.inputMaxR.value = n;
@@ -395,9 +399,12 @@ function refresh() {
     mapper.applyChoropleth(state.valueMap, state.breaks, state.colors, state.field);
   }
 
-  // proportional symbols
+  // proportional symbols / dot density
   if (state.mode === "symbol" || state.mode === "both") {
     mapper.applyProportionalSymbols(state.valueMap, { maxRadiusPx: state.maxR });
+  } else if (state.mode === "dot") {
+    const unit = Math.max(1, parseFloat(els.inputDotUnit.value || "10000"));
+    mapper.applyDotDensity(state.geojson, state.valueMap, unit);
   } else {
     mapper.clearSymbols();
   }
