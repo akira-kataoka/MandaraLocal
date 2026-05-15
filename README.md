@@ -1,9 +1,9 @@
 # MandaraNext
 
-ローカル & 無料で動く、MANDARA インスパイア の次世代型地理情報分析支援ツール（Web版）。
+無料で動く、MANDARA インスパイア の次世代型地理情報分析支援ツール。
 都道府県・市町村データから階級区分図（コロプレス図）・比例シンボル図を作れます。
 
-🌐 **公開デモ**: https://akira-kataoka.github.io/MandaraLocal/
+🌐 **公開デモ**: https://akira-kataoka.github.io/MandaraNext/
 
 > 参考: 谷 謙二氏 [MANDARA](https://ktgis.net/mandara/) — 本プロジェクトは独立したオープン実装で、ライセンス・ソースコードは無関係です。
 

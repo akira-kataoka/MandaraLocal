@@ -10,12 +10,12 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
 
-  <link rel="stylesheet" href="css/style.css?v=24" />
+  <link rel="stylesheet" href="css/style.css?v=25" />
 </head>
 <body>
   <header class="app-header">
     <h1>MandaraNext</h1>
-    <span class="subtitle">地理情報分析支援システム（ローカル版）</span>
+    <span class="subtitle">地理情報分析支援システム</span>
     <div class="header-actions">
       <button id="btn-export-png" class="btn">PNG出力</button>
       <button id="btn-export-svg" class="btn">SVG出力</button>
@@ -196,7 +196,7 @@
           <select id="scatter-y"></select>
         </div>
         <div id="scatter-correlation" class="data-summary"></div>
-        <svg id="scatter-svg" width="280" height="220"></svg>
+        <svg id="scatter-svg" viewBox="0 0 280 220" preserveAspectRatio="xMidYMid meet"></svg>
       </section>
     </aside>
 
@@ -235,6 +235,6 @@
   <script src="https://unpkg.com/wanakana@5.3.1/wanakana.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=24"></script>
+  <script type="module" src="js/main.js?v=25"></script>
 </body>
 </html>
