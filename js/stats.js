@@ -6,7 +6,7 @@ export function computeStats(values) {
   const v = values.filter(x => Number.isFinite(x));
   const n = v.length;
   const missing = values.length - n;
-  if (n === 0) return { n: 0, missing, sum: null, mean: null, median: null, min: null, max: null, range: null, std: null, variance: null };
+  if (n === 0) return { n: 0, missing, sum: null, mean: null, median: null, min: null, max: null, range: null, std: null, variance: null, q1: null, q3: null, iqr: null, cv: null };
 
   const sorted = v.slice().sort((a, b) => a - b);
   const sum = v.reduce((a, b) => a + b, 0);
@@ -16,17 +16,28 @@ export function computeStats(values) {
   const median = n % 2
     ? sorted[(n - 1) / 2]
     : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+  const quantile = (p) => {
+    const ix = (n - 1) * p;
+    const lo = Math.floor(ix), hi = Math.ceil(ix);
+    return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (ix - lo);
+  };
+  const q1 = quantile(0.25);
+  const q3 = quantile(0.75);
+  const iqr = q3 - q1;
   // Population std (matches MANDARA's basic stats display)
   let ss2 = 0;
   for (const x of v) ss2 += (x - mean) * (x - mean);
   const variance = ss2 / n;
   const std = Math.sqrt(variance);
+  const cv = mean !== 0 ? std / Math.abs(mean) : null;   // coefficient of variation
 
   return {
     n, missing,
     sum, mean, median, min, max,
     range: max - min,
     std, variance,
+    q1, q3, iqr,
+    cv,
   };
 }
 

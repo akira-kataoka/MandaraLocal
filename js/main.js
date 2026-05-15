@@ -764,7 +764,11 @@ function renderStats(values) {
     ["最小", s.min != null ? formatNum(s.min) : "—"],
     ["最大", s.max != null ? formatNum(s.max) : "—"],
     ["範囲", s.range != null ? formatNum(s.range) : "—"],
+    ["第1四分位 (Q1)", s.q1 != null ? formatNum(s.q1) : "—"],
+    ["第3四分位 (Q3)", s.q3 != null ? formatNum(s.q3) : "—"],
+    ["四分位範囲 (IQR)", s.iqr != null ? formatNum(s.iqr) : "—"],
     ["標準偏差", s.std != null ? formatNum(s.std) : "—"],
+    ["変動係数 (CV)", s.cv != null ? (s.cv * 100).toFixed(1) + "%" : "—"],
   ];
   els.statsTable.innerHTML = rows.map(([k,v]) =>
     `<tr><td>${k}</td><td>${v}</td></tr>`
