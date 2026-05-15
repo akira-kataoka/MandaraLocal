@@ -247,12 +247,18 @@ async function loadChochoTowns() {
 
 async function applyLevel(level) {
   state.level = level;
+  // Defensive reset: always start with ALL level-specific UIs hidden,
+  // then let the active branch reveal what it needs.
+  els.rowChocho.hidden = true;
+  els.rowChochoMuni.hidden = true;
+  els.rowPrefFilter.hidden = true;
+  if (els.mapSearch) els.mapSearch.hidden = true;
+  if (els.searchSuggest) els.searchSuggest.hidden = true;
+
   if (level === "chocho") {
     state.dataset = null;
     return enterChochoMode();
   }
-  els.rowChocho.hidden = true;
-  els.rowChochoMuni.hidden = true;
   try {
     const g = await getGeo(level);
     state.geojson = g;
