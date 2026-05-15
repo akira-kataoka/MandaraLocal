@@ -499,6 +499,23 @@ function toggleTheme() {
   } catch {}
 })();
 
+// ----- Collapsible side panels -----
+(function setupCollapsiblePanels() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem("mandara_panels") || "{}"); } catch {}
+  for (const panel of document.querySelectorAll(".sidebar .panel")) {
+    const h2 = panel.querySelector("h2");
+    if (!h2) continue;
+    const key = h2.textContent.trim().slice(0, 32);
+    if (saved[key]) panel.classList.add("collapsed");
+    h2.addEventListener("click", () => {
+      panel.classList.toggle("collapsed");
+      saved[key] = panel.classList.contains("collapsed");
+      try { localStorage.setItem("mandara_panels", JSON.stringify(saved)); } catch {}
+    });
+  }
+})();
+
 function exportCurrentCsv() {
   if (!state.dataset) { setSummary("先にデータを読み込んでください", "warn"); return; }
   const f = state.dataset.fields;
