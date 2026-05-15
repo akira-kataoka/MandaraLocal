@@ -130,6 +130,16 @@ html, body {
 }
 .form-row.inline { gap: 4px; }
 .form-row.inline label { min-width: auto; color: var(--text); font-size: 13px; }
+.palette-preview {
+  display: flex;
+  height: 14px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.palette-preview span { flex: 1; height: 100%; }
+
 .form-row select,
 .form-row input[type="number"] {
   flex: 1;

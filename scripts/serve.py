@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tiny local web server for MandaraLocal.
+Tiny local web server for MandaraNext.
 
 Usage:
     python scripts/serve.py        # serves on http://localhost:8765
@@ -54,7 +54,7 @@ def main():
     url = f"http://localhost:{port}/"
 
     with ThreadedTCPServer(("", port), Handler) as httpd:
-        print(f"  MandaraLocal を {url} で配信中")
+        print(f"  MandaraNext を {url} で配信中")
         print(f"  公開ディレクトリ: {project_root}")
         print(f"  Ctrl+C で停止")
         try:

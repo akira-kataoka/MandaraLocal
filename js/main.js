@@ -76,6 +76,7 @@ const els = {
   inputClasses: $("input-classes"),
   selectPalette:$("select-palette"),
   chkReverse:   $("chk-reverse"),
+  palettePreview: $("palette-preview"),
   panelStats:   $("panel-stats"),
   statsTable:   $("stats-table"),
   chkOutliers:  $("chk-outliers"),
@@ -116,6 +117,7 @@ const els = {
   if (saved.reverse !== undefined) els.chkReverse.checked = !!saved.reverse;
   els.rowSymbolSize.hidden = state.mode === "choropleth";
 })();
+updatePalettePreview();
 
 // ----- Map -----
 const mapper  = new MandaraMap("map", els.tooltip);
@@ -453,16 +455,30 @@ els.inputClasses.addEventListener("change", () => {
   const n = clamp(parseInt(els.inputClasses.value || "5", 10), 2, 9);
   els.inputClasses.value = n;
   state.classes = n;
+  updatePalettePreview();
   refresh();
 });
 els.selectPalette.addEventListener("change", () => {
   state.palette = els.selectPalette.value;
+  updatePalettePreview();
   refresh();
 });
 els.chkReverse.addEventListener("change", () => {
   state.reverse = els.chkReverse.checked;
+  updatePalettePreview();
   refresh();
 });
+
+function updatePalettePreview() {
+  if (!els.palettePreview) return;
+  const cols = getPalette(state.palette, state.classes, state.reverse);
+  els.palettePreview.innerHTML = "";
+  for (const c of cols) {
+    const sp = document.createElement("span");
+    sp.style.background = c;
+    els.palettePreview.appendChild(sp);
+  }
+}
 els.chkOutliers.addEventListener("change", () => refresh());
 
 els.scatterX.addEventListener("change", drawScatter);
@@ -606,7 +622,7 @@ function refresh() {
     renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag });
     els.overlay.hidden = false;
     els.overlayTitle.textContent = state.field;
-    els.overlayFooter.textContent = `MandaraLocal · ${state.chochoPref}${state.chochoMuni} · ${new Date().toLocaleDateString("ja-JP")}`;
+    els.overlayFooter.textContent = `MandaraNext ·${state.chochoPref}${state.chochoMuni} · ${new Date().toLocaleDateString("ja-JP")}`;
     renderStats(values);
     renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, () => {});
     saveSettings(state);
@@ -638,7 +654,7 @@ function refresh() {
   renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag });
   els.overlay.hidden = false;
   els.overlayTitle.textContent = state.field;
-  els.overlayFooter.textContent = `MandaraLocal · ${new Date().toLocaleDateString("ja-JP")}`;
+  els.overlayFooter.textContent = `MandaraNext ·${new Date().toLocaleDateString("ja-JP")}`;
 
   renderStats(values);
 

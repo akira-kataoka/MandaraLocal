@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 > nul
 cd /d "%~dp0"
-echo === MandaraLocal 起動 ===
+echo === MandaraNext 起動 ===
 where python >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
   where py >nul 2>&1
