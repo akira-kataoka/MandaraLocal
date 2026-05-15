@@ -450,7 +450,8 @@ function drawScatter() {
   const xf = els.scatterX.value, yf = els.scatterY.value;
   const xs = state.dataset.rows.map(r => r.values[xf]);
   const ys = state.dataset.rows.map(r => r.values[yf]);
-  const { r, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf);
+  const ids = state.dataset.rows.map(r => r.key);
+  const { r, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover);
   if (r == null) {
     els.scatterCorr.textContent = `n=${n} — 相関係数を計算できません`;
   } else {
@@ -459,6 +460,25 @@ function drawScatter() {
     els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r = ${r.toFixed(3)}</strong> （${strength}${sign}の相関）`;
   }
 }
+
+function onScatterHover(id, isHot) {
+  if (isHot) mapper.highlightById(id);
+  else       mapper.clearHighlight();
+}
+
+function onMapHover(id, isHot) {
+  const sel = els.scatterSvg.querySelector(`circle[data-id="${id}"]`);
+  if (!sel) return;
+  if (isHot) {
+    sel.classList.add("is-hot");
+    sel.setAttribute("r", "5");
+  } else {
+    sel.classList.remove("is-hot");
+    sel.setAttribute("r", "3");
+  }
+}
+
+mapper.onFeatureHover(onMapHover);
 
 function setSummary(text, kind) {
   els.dataSummary.textContent = text;

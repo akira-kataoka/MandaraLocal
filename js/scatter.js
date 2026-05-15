@@ -8,15 +8,21 @@ const W = 280, H = 220;
 const PAD = { top: 10, right: 12, bottom: 28, left: 38 };
 
 /**
- * Draws a scatter plot of (xs, ys) into the supplied SVG element.
+ * Draws a scatter plot of (xs, ys, ids) into the supplied SVG element.
  * Also renders the OLS regression line for visual context.
  * Returns the Pearson correlation coefficient r.
+ *
+ * @param ids   parallel array of feature ids (same length as xs/ys).
+ *              Each circle is tagged with data-id for cross-highlighting.
+ * @param onHover (id, on) callback fired on circle mouseover/out
  */
-export function renderScatter(svgEl, xs, ys, xLabel, yLabel) {
+export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover = null) {
   // Pair up & drop missing
   const pairs = [];
   for (let i = 0; i < xs.length; i++) {
-    if (Number.isFinite(xs[i]) && Number.isFinite(ys[i])) pairs.push([xs[i], ys[i]]);
+    if (Number.isFinite(xs[i]) && Number.isFinite(ys[i])) {
+      pairs.push([xs[i], ys[i], ids ? ids[i] : null]);
+    }
   }
   svgEl.innerHTML = "";
   if (pairs.length < 2) return { r: null, n: pairs.length };
@@ -53,8 +59,23 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel) {
 
   // points
   const pts = el("g");
-  for (const [vx, vy] of pairs) {
-    pts.appendChild(circle(px(vx), py(vy), 3, "point"));
+  for (const [vx, vy, fid] of pairs) {
+    const c = circle(px(vx), py(vy), 3, "point");
+    if (fid != null) c.setAttribute("data-id", String(fid));
+    if (onHover && fid != null) {
+      c.addEventListener("mouseenter", () => {
+        c.classList.add("is-hot");
+        c.setAttribute("r", "5");
+        onHover(fid, true);
+      });
+      c.addEventListener("mouseleave", () => {
+        c.classList.remove("is-hot");
+        c.setAttribute("r", "3");
+        onHover(fid, false);
+      });
+      c.style.cursor = "pointer";
+    }
+    pts.appendChild(c);
   }
   svgEl.appendChild(pts);
 

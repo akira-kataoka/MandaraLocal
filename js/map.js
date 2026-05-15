@@ -100,13 +100,20 @@ export class MandaraMap {
   _bindInteractions(feature, lyr) {
     lyr.on("mouseover", (e) => {
       lyr.setStyle({ weight: 2, color: HOVER_OUTLINE });
-      lyr.bringToFront();
+      if (lyr.bringToFront) lyr.bringToFront();
       this._showTooltip(feature, e);
+      if (this._hoverHandler) this._hoverHandler(feature.properties.id, true);
     });
     lyr.on("mousemove", (e) => this._showTooltip(feature, e));
     lyr.on("mouseout", () => {
       this.layer.resetStyle(lyr);
+      // Re-apply choropleth color (resetStyle reverts to defaults)
+      if (this._lookupFn) {
+        const info = this._lookupFn(feature.properties.id);
+        lyr.setStyle({ weight: 0.6, color: "#475569", fillColor: info.color, fillOpacity: 0.88 });
+      }
       this._hideTooltip();
+      if (this._hoverHandler) this._hoverHandler(feature.properties.id, false);
     });
   }
 
@@ -212,6 +219,48 @@ export class MandaraMap {
 
   clearSymbols() {
     this.symbolLayer.clearLayers();
+  }
+
+  /**
+   * Highlight a single feature by its properties.id (e.g. from scatter hover).
+   * Restores other layers to their classified style.
+   */
+  highlightById(id) {
+    if (!this.layer) return;
+    this.layer.eachLayer((lyr) => {
+      if (lyr.feature.properties.id === id) {
+        lyr.setStyle({ weight: 3, color: "#dc2626", fillOpacity: 0.95 });
+        if (lyr.bringToFront) lyr.bringToFront();
+      } else {
+        // re-apply the choropleth style for this feature
+        if (this._lookupFn) {
+          const info = this._lookupFn(lyr.feature.properties.id);
+          lyr.setStyle({ weight: 0.6, color: "#475569", fillColor: info.color, fillOpacity: 0.88 });
+        } else {
+          lyr.setStyle(this._defaultStyle());
+        }
+      }
+    });
+  }
+
+  clearHighlight() {
+    if (!this.layer) return;
+    this.layer.eachLayer((lyr) => {
+      if (this._lookupFn) {
+        const info = this._lookupFn(lyr.feature.properties.id);
+        lyr.setStyle({ weight: 0.6, color: "#475569", fillColor: info.color, fillOpacity: 0.88 });
+      } else {
+        lyr.setStyle(this._defaultStyle());
+      }
+    });
+  }
+
+  /**
+   * Register a handler that's called on hover/leave with the feature's id.
+   * Used by the scatter plot to highlight the matching point.
+   */
+  onFeatureHover(handler) {
+    this._hoverHandler = handler;
   }
 
   getMapElement() { return this._mapEl; }

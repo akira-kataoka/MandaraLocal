@@ -192,7 +192,8 @@ details.derived .form-row input[type="text"] {
 #scatter-svg .grid line { stroke: #e5e7eb; stroke-width: 0.5; }
 #scatter-svg .axis line, #scatter-svg .axis path { stroke: #64748b; stroke-width: 0.8; fill: none; }
 #scatter-svg .axis text { fill: #475569; font-size: 9px; font-family: sans-serif; }
-#scatter-svg .point { fill: #2563eb; fill-opacity: 0.55; stroke: #1e3a8a; stroke-width: 0.4; }
+#scatter-svg .point { fill: #2563eb; fill-opacity: 0.55; stroke: #1e3a8a; stroke-width: 0.4; transition: fill 80ms; }
+#scatter-svg .point.is-hot { fill: #dc2626; fill-opacity: 0.95; stroke: #7f1d1d; stroke-width: 0.8; }
 #scatter-svg .regline { stroke: #ef4444; stroke-width: 1.4; stroke-dasharray: 4 3; fill: none; }
 #scatter-correlation strong { color: #1e3a8a; }
 .legend-row {
