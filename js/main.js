@@ -39,6 +39,7 @@ const els = {
   selectPrefFilter: $("select-pref-filter"),
   loadSample:   $("btn-load-sample"),
   csvFile:      $("csv-file"),
+  btnTemplate:  $("btn-download-template"),
   dataSummary:  $("data-summary"),
   panelField:   $("panel-field"),
   selectField:  $("select-field"),
@@ -282,6 +283,42 @@ els.chkReverse.addEventListener("change", () => {
 els.scatterX.addEventListener("change", drawScatter);
 els.scatterY.addEventListener("change", drawScatter);
 els.btnDerived.addEventListener("click", addDerivedField);
+els.btnTemplate.addEventListener("click", downloadTemplate);
+
+function downloadTemplate() {
+  if (!state.geojson) {
+    setSummary("地図データがまだ読み込まれていません", "warn"); return;
+  }
+  // Build per-level rows
+  let rows, header, fname;
+  if (state.level === "municipality") {
+    header = ["id","市区町村","都道府県","指標A","指標B"];
+    rows = state.geojson.features.map(f => {
+      const p = f.properties;
+      return [p.id, p.name_jp || p.name_kata || p.name_en || "", p.pref_name || "", "", ""];
+    }).sort((a,b) => a[0] - b[0]);
+    fname = "mandara_template_municipalities.csv";
+  } else {
+    header = ["都道府県","指標A","指標B"];
+    rows = state.geojson.features.map(f => [f.properties.nam_ja || f.properties.nam, "", ""])
+      .sort((a,b) => a[0].localeCompare(b[0], "ja"));
+    fname = "mandara_template_prefectures.csv";
+  }
+  const csv = [header.join(",")].concat(rows.map(r => r.map(csvEscape).join(","))).join("\n");
+  // Add BOM so Excel opens UTF-8 correctly
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`テンプレート「${fname}」をダウンロードしました（${rows.length}行）`, "success");
+}
+
+function csvEscape(v) {
+  const s = v == null ? "" : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
 
 els.btnPng.addEventListener("click", () => {
   const wrap = document.querySelector(".map-wrap");
