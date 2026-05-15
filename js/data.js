@@ -30,7 +30,11 @@ import { PREF_CODE_TO_NAME, PREF_NAME_TO_CODE } from "./pref_table.js";
  */
 export function parseCsvText(text, opts = {}) {
   const level = opts.level || "prefecture";
-  const parsed = Papa.parse(text.trim(), {
+  // Strip UTF-8 BOM if present, normalise line endings.
+  let body = text;
+  if (body.charCodeAt(0) === 0xFEFF) body = body.slice(1);
+  body = body.replace(/\r\n?/g, "\n").trim();
+  const parsed = Papa.parse(body, {
     header: true,
     skipEmptyLines: true,
     dynamicTyping: false,
@@ -38,10 +42,18 @@ export function parseCsvText(text, opts = {}) {
   if (!parsed.data || !parsed.data.length) {
     throw new Error("CSVデータが空です。");
   }
-  const headers = parsed.meta.fields;
+  const headers = (parsed.meta.fields || []).map(h => h && h.trim());
   if (headers.length < 2) {
     throw new Error("CSVには少なくとも2列必要です（1列目=地域、2列目以降=数値）。");
   }
+  // Reapply trimmed header names back onto every row so downstream lookups work.
+  const trimRows = parsed.data.map(row => {
+    const out = {};
+    for (const k of Object.keys(row)) out[(k || "").trim()] = row[k];
+    return out;
+  });
+  parsed.data.length = 0;
+  parsed.data.push(...trimRows);
   const keyHeader = headers[0];
   const rawFields = headers.slice(1);
   // Keep only fields with >50% numeric values (drops auxiliary text columns

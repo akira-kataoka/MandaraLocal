@@ -580,9 +580,12 @@ function onDatasetReady(ds, label) {
 
   const msg = `${label}: ${ds.rows.length}件 / ${ds.fields.length}列を読み込みました。`;
   const warn = ds.unmatched.length
-    ? ` 未マッチ ${ds.unmatched.length}件: ${ds.unmatched.slice(0,3).join("、")}${ds.unmatched.length>3 ? "…" : ""}`
+    ? ` ⚠ 地名と一致しなかった ${ds.unmatched.length}件: ${ds.unmatched.slice(0,5).join("、")}${ds.unmatched.length>5 ? `…他${ds.unmatched.length-5}件` : ""}`
     : "";
   setSummary(msg + warn, ds.unmatched.length ? "warn" : "success");
+  if (ds.rows.length === 0) {
+    setSummary(`${label}: マッチした行が0件です。1列目の地域名/コードを確認してください。`, "error");
+  }
 
   refresh();
 }
