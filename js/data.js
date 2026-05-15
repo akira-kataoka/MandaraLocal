@@ -65,7 +65,16 @@ export function parseCsvText(text, opts = {}) {
     if (!rawKey) continue;
     let code = null;
     let displayName = null;
-    if (level === "municipality") {
+    if (level === "chocho") {
+      // chocho: match against the town-name index supplied by main.js
+      const idx = opts.townIndex; // Map<normalized town name, {id,town}>
+      if (idx) {
+        const norm = rawKey.normalize("NFC").replace(/\s+/g, "");
+        const stripped = norm.replace(/[0-9一二三四五六七八九十]+丁目?$/u, "");
+        const hit = idx.get(norm) || idx.get(stripped);
+        if (hit) { code = hit.id; displayName = hit.town; }
+      }
+    } else if (level === "municipality") {
       const m = resolveMuniId(rawKey, opts.muniIndex);
       if (m) { code = m.id; displayName = m.name; }
     } else {
@@ -173,6 +182,24 @@ export async function loadSampleCsv(url, opts = {}) {
   if (!res.ok) throw new Error(`サンプル読み込み失敗 (${res.status})`);
   const text = await res.text();
   return parseCsvText(text, opts);
+}
+
+/**
+ * Build a town-name index from a town-list (chocho mode).
+ *   towns: [{ id, town, koaza, ... }]
+ *   returns Map<normalized name, {id, town}>
+ */
+export function buildTownIndex(towns) {
+  const idx = new Map();
+  for (const t of towns) {
+    const base = (t.town || "").normalize("NFC").replace(/\s+/g, "");
+    if (!base) continue;
+    idx.set(base, { id: t.id, town: t.town });
+    // No-suffix variant ("新宿一丁目" → "新宿")
+    const stripped = base.replace(/[0-9一二三四五六七八九十]+丁目?$/u, "");
+    if (stripped && stripped !== base) idx.set(stripped, { id: t.id, town: t.town });
+  }
+  return idx;
 }
 
 /**

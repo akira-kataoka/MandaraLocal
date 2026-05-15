@@ -2,7 +2,7 @@
 // main.js  -- App orchestration: state + DOM events
 // =====================================================================
 
-import { parseCsvText, loadCsvFile, loadSampleCsv, buildValueLookup, buildMuniIndex } from "./data.js";
+import { parseCsvText, loadCsvFile, loadSampleCsv, buildValueLookup, buildMuniIndex, buildTownIndex } from "./data.js";
 import { computeBreaks } from "./classification.js";
 import { getPalette } from "./color.js";
 import { computeStats, formatNum, detectOutliers } from "./stats.js";
@@ -19,6 +19,7 @@ const state = {
   chochoPref: "",        // chocho mode: current prefecture name (jp)
   chochoMuni: "",        // chocho mode: current municipality name (jp)
   chochoTowns: [],       // [{ id, town, lat, lng, koaza }]
+  townIndex: null,       // built when towns load
   dataset: null,         // { rows, fields, unmatched, level }
   field: null,
   fieldB: null,
@@ -223,6 +224,7 @@ async function loadChochoTowns() {
   setSummary(`町丁目を取得中…  ${state.chochoPref} ${state.chochoMuni}`, "muted");
   try {
     state.chochoTowns = await fetchTowns(state.chochoPref, state.chochoMuni);
+    state.townIndex = buildTownIndex(state.chochoTowns);
     mapper.applyTownPlot(state.chochoTowns);
     setSummary(`${state.chochoPref}${state.chochoMuni}: ${state.chochoTowns.length}町丁目を表示`, "success");
     if (state.dataset && state.dataset.level === "chocho" && state.field) refresh();
@@ -360,10 +362,22 @@ function applyMunicipalityRender(g) {
 }
 
 // ----- Wire UI -----
+function csvParseOpts() {
+  return {
+    level: state.level,
+    muniIndex: state.muniIndex,
+    townIndex: state.townIndex,
+  };
+}
+
 els.loadSample.addEventListener("click", async () => {
   try {
-    const ds = await loadSampleCsv(undefined, { level: state.level, muniIndex: state.muniIndex });
-    onDatasetReady(ds, state.level === "municipality" ? "sample_tokyo_wards.csv" : "sample_population.csv");
+    let target;
+    if (state.level === "municipality") target = "data/sample_all_municipalities.csv";
+    else if (state.level === "chocho")  target = "data/sample_chocho_shinjuku.csv";
+    else                                  target = "data/sample_population.csv";
+    const ds = await loadSampleCsv(target, csvParseOpts());
+    onDatasetReady(ds, target.split("/").pop());
   } catch (e) {
     setSummary("サンプル読み込み失敗: " + e.message, "error");
   }
@@ -373,7 +387,7 @@ els.csvFile.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
   try {
-    const ds = await loadCsvFile(file, { level: state.level, muniIndex: state.muniIndex });
+    const ds = await loadCsvFile(file, csvParseOpts());
     onDatasetReady(ds, file.name);
   } catch (err) {
     setSummary("CSV読み込み失敗: " + err.message, "error");
@@ -542,6 +556,21 @@ function refresh() {
   state.breaks = breaks;
   state.colors = getPalette(state.palette, Math.max(1, breaks.length - 1), state.reverse);
   state.valueMap = buildValueLookup(state.dataset, state.field);
+
+  // chocho mode: just paint town circles by value
+  if (state.level === "chocho") {
+    mapper.applyTownPlot(state.chochoTowns, state.valueMap, state.breaks, state.colors, state.field);
+    const naFlag = hasMissing(values);
+    renderLegend(els.legendBox, state.breaks, state.colors, { title: state.field, showNA: naFlag });
+    renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag });
+    els.overlay.hidden = false;
+    els.overlayTitle.textContent = state.field;
+    els.overlayFooter.textContent = `MandaraLocal · ${state.chochoPref}${state.chochoMuni} · ${new Date().toLocaleDateString("ja-JP")}`;
+    renderStats(values);
+    renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, () => {});
+    saveSettings(state);
+    return;
+  }
 
   // choropleth coloring (or reset to neutral if "symbol" only)
   if (state.mode === "symbol") {
