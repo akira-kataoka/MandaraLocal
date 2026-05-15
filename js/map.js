@@ -49,21 +49,26 @@ export class MandaraMap {
 
     this.tooltipEl = tooltipEl;
     this.layer = null;
-    this._lookupFn = null;     // (prefCode) -> {value, classIndex, color}
+    this._lookupFn = null;     // (code) -> {value, classIndex, color}
     this._fieldName = "";
     this._mapEl = document.getElementById(elId);
     this.symbolLayer = L.layerGroup().addTo(this.map);
-    this._centroidCache = new Map(); // prefCode -> [lat, lng]
+    this._centroidCache = new Map(); // code -> [lat, lng]
+    // Default: prefecture mode props
+    this._nameFor = (props) => props.nam_ja || props.nam || `#${props.id}`;
   }
 
   /**
-   * @param geojson GeoJSON FeatureCollection with properties.id = pref code
+   * @param geojson  GeoJSON FeatureCollection with properties.id present
+   * @param opts.nameFor (props) => string  -- override per-feature display name
    */
-  setBaseGeo(geojson) {
+  setBaseGeo(geojson, opts = {}) {
+    if (opts.nameFor) this._nameFor = opts.nameFor;
     if (this.layer) {
       this.map.removeLayer(this.layer);
       this.layer = null;
     }
+    this.symbolLayer.clearLayers();
     this.layer = L.geoJSON(geojson, {
       style: () => this._defaultStyle(),
       onEachFeature: (feat, lyr) => this._bindInteractions(feat, lyr),
@@ -104,7 +109,7 @@ export class MandaraMap {
   _showTooltip(feature, e) {
     if (!this.tooltipEl) return;
     const code = feature.properties.id;
-    const name = feature.properties.nam_ja || feature.properties.nam || `#${code}`;
+    const name = this._nameFor(feature.properties);
     let valueText = "";
     if (this._lookupFn) {
       const info = this._lookupFn(code);

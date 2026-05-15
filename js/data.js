@@ -11,7 +11,25 @@
 
 import { PREF_CODE_TO_NAME, PREF_NAME_TO_CODE } from "./pref_table.js";
 
-export function parseCsvText(text) {
+/**
+ * Parse CSV text into a uniform dataset.
+ *
+ * @param text CSV text
+ * @param opts.level  "prefecture" | "municipality"
+ * @param opts.muniIndex  for municipality level — Map<string(lowercase name), id>
+ *
+ * For prefecture level:
+ *   column 1 = pref name or pref code (1..47)
+ *   column 2..N = numeric fields
+ *
+ * For municipality level:
+ *   column 1 = municipality english name (matches GeoJSON shapeName)
+ *              OR  the synthetic numeric id (prefCode*1000+seq)
+ *              OR  "Tokyo,Chiyoda" style "pref,city" (then column 2 = city)
+ *   column 2..N = numeric fields
+ */
+export function parseCsvText(text, opts = {}) {
+  const level = opts.level || "prefecture";
   const parsed = Papa.parse(text.trim(), {
     header: true,
     skipEmptyLines: true,
@@ -33,7 +51,15 @@ export function parseCsvText(text) {
   for (const r of parsed.data) {
     const rawKey = String(r[keyHeader] ?? "").trim();
     if (!rawKey) continue;
-    const code = normalizeToPrefCode(rawKey);
+    let code = null;
+    let displayName = null;
+    if (level === "municipality") {
+      const m = resolveMuniId(rawKey, opts.muniIndex);
+      if (m) { code = m.id; displayName = m.name; }
+    } else {
+      code = normalizeToPrefCode(rawKey);
+      if (code != null) displayName = PREF_CODE_TO_NAME[code];
+    }
     if (code == null) {
       unmatched.push(rawKey);
       continue;
@@ -46,11 +72,42 @@ export function parseCsvText(text) {
     }
     rows.push({
       key: code,
-      name: PREF_CODE_TO_NAME[code],
+      name: displayName,
       values,
     });
   }
-  return { rows, fields, unmatched };
+  return { rows, fields, unmatched, level };
+}
+
+/**
+ * Resolve a free-text key against the municipality index.
+ * @param raw e.g. "Chiyoda" or "13001" or "Tokyo Chiyoda"
+ * @param muniIndex Map<lowercase name_en, {id, name_en, pref_code, pref_name}>
+ */
+function resolveMuniId(raw, muniIndex) {
+  if (!muniIndex) return null;
+  const s = raw.trim().normalize("NFC");
+  if (!s) return null;
+  // Numeric id
+  if (/^\d+$/.test(s)) {
+    const id = parseInt(s, 10);
+    for (const v of muniIndex.values()) if (v.id === id) return v;
+    return null;
+  }
+  // Direct match (Japanese as-is, English lowercased)
+  if (muniIndex.has(s)) return muniIndex.get(s);
+  const lower = s.toLowerCase();
+  if (muniIndex.has(lower)) return muniIndex.get(lower);
+  // Without trailing 都/道/府/県/区/市/町/村
+  const stripped = s.replace(/(都|道|府|県|区|市|町|村)$/u, "");
+  if (stripped && muniIndex.has(stripped)) return muniIndex.get(stripped);
+  // Try last token (e.g. "Tokyo Chiyoda" → "Chiyoda")
+  const parts = lower.split(/[\s,;]+/);
+  if (parts.length > 1) {
+    const tail = parts[parts.length - 1];
+    if (muniIndex.has(tail)) return muniIndex.get(tail);
+  }
+  return null;
 }
 
 function parseNumber(v) {
@@ -91,16 +148,48 @@ export function normalizeToPrefCode(raw) {
   return null;
 }
 
-export async function loadCsvFile(file) {
+export async function loadCsvFile(file, opts = {}) {
   const text = await file.text();
-  return parseCsvText(text);
+  return parseCsvText(text, opts);
 }
 
-export async function loadSampleCsv(url = "data/sample_population.csv") {
-  const res = await fetch(url);
+export async function loadSampleCsv(url, opts = {}) {
+  const target = url || (opts.level === "municipality"
+    ? "data/sample_tokyo_wards.csv"
+    : "data/sample_population.csv");
+  const res = await fetch(target);
   if (!res.ok) throw new Error(`サンプル読み込み失敗 (${res.status})`);
   const text = await res.text();
-  return parseCsvText(text);
+  return parseCsvText(text, opts);
+}
+
+/**
+ * Build the municipality lookup index from the GeoJSON FeatureCollection.
+ * Indexes:
+ *   - English name (lowercased)
+ *   - Japanese name as-is and without suffix (e.g. "新宿" -> 新宿区)
+ *   - prefecture-qualified Japanese (e.g. "東京都新宿区")
+ */
+export function buildMuniIndex(geojson) {
+  const idx = new Map();
+  const nfc = (s) => s ? s.normalize("NFC") : s;
+  for (const f of geojson.features) {
+    const p = f.properties;
+    const rec = {
+      id: p.id,
+      name_en: p.name_en,
+      name_jp: nfc(p.name_jp),
+      pref_code: p.pref_code,
+      pref_name: nfc(p.pref_name),
+    };
+    if (p.name_en) idx.set(p.name_en.toLowerCase(), rec);
+    if (rec.name_jp) {
+      idx.set(rec.name_jp, rec);
+      idx.set(rec.name_jp.replace(/(区|市|町|村)$/u, ""), rec);
+      if (rec.pref_name) idx.set(`${rec.pref_name}${rec.name_jp}`, rec);
+    }
+  }
+  return idx;
 }
 
 /**

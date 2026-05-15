@@ -2,7 +2,7 @@
 // main.js  -- App orchestration: state + DOM events
 // =====================================================================
 
-import { parseCsvText, loadCsvFile, loadSampleCsv, buildValueLookup } from "./data.js";
+import { parseCsvText, loadCsvFile, loadSampleCsv, buildValueLookup, buildMuniIndex } from "./data.js";
 import { computeBreaks } from "./classification.js";
 import { getPalette } from "./color.js";
 import { computeStats, formatNum } from "./stats.js";
@@ -13,23 +13,27 @@ import { loadSettings, saveSettings } from "./settings.js";
 
 // ----- State -----
 const state = {
-  dataset: null,        // { rows, fields, unmatched }
-  field: null,          // selected field name
+  level: "prefecture",   // "prefecture" | "municipality"
+  dataset: null,         // { rows, fields, unmatched, level }
+  field: null,
   classes: 5,
   method: "quantile",
   palette: "YlOrRd",
   reverse: false,
   geojson: null,
+  muniIndex: null,       // built once when municipality GeoJSON loaded
   breaks: [],
   colors: [],
   valueMap: null,
-  mode: "choropleth",   // "choropleth" | "symbol" | "both"
+  mode: "choropleth",
   maxR: 32,
 };
 
 // ----- DOM cache -----
 const $ = (id) => document.getElementById(id);
 const els = {
+  selectLevel:  $("select-level"),
+  hintLevel:    $("hint-level"),
   loadSample:   $("btn-load-sample"),
   csvFile:      $("csv-file"),
   dataSummary:  $("data-summary"),
@@ -73,24 +77,99 @@ const els = {
 // ----- Map -----
 const mapper = new MandaraMap("map", els.tooltip);
 
-// Load the prefecture GeoJSON on startup
-(async function bootstrap() {
+// ----- Geo data loaders (cached) -----
+const geoCache = { prefecture: null, municipality: null };
+let muniJpMap = null;   // id (string) -> { jp, en, pref }
+
+async function getMuniJpMap() {
+  if (muniJpMap) return muniJpMap;
   try {
-    const res = await fetch("data/japan_prefectures.geojson");
-    if (!res.ok) throw new Error(`GeoJSON load failed (${res.status})`);
-    state.geojson = await res.json();
-    mapper.setBaseGeo(state.geojson);
+    const res = await fetch("data/cities/muni_jp_names.json");
+    if (res.ok) muniJpMap = await res.json();
+    else muniJpMap = {};
+  } catch { muniJpMap = {}; }
+  return muniJpMap;
+}
+
+async function getGeo(level) {
+  if (geoCache[level]) return geoCache[level];
+  const url = level === "municipality"
+    ? "data/cities/japan_municipalities.geojson"
+    : "data/japan_prefectures.geojson";
+  setSummary(`${level === "municipality" ? "市町村" : "都道府県"}境界データを読み込み中…`, "muted");
+  const [resGeo] = await Promise.all([fetch(url), getMuniJpMap()]);
+  if (!resGeo.ok) throw new Error(`GeoJSON load failed (${resGeo.status})`);
+  const g = await resGeo.json();
+  // For municipality level, inject Japanese names into each feature
+  if (level === "municipality" && muniJpMap) {
+    for (const f of g.features) {
+      const rec = muniJpMap[String(f.properties.id)];
+      if (rec && rec.jp) f.properties.name_jp = rec.jp;
+    }
+  }
+  geoCache[level] = g;
+  return g;
+}
+
+async function applyLevel(level) {
+  state.level = level;
+  try {
+    const g = await getGeo(level);
+    state.geojson = g;
+    if (level === "municipality") {
+      state.muniIndex = buildMuniIndex(g);
+      mapper.setBaseGeo(g, {
+        nameFor: (p) => {
+          const main = p.name_jp || p.name_en || `#${p.id}`;
+          return p.name_jp ? `${main}（${p.pref_name || ""}）`
+                            : `${main}（${p.pref_name || ""}/英語）`;
+        }
+      });
+      const jpCount = Object.keys(muniJpMap || {}).length;
+      els.hintLevel.innerHTML = `${g.features.length}市町村ロード済み（うち${jpCount}件は日本語名対応）。<br/>
+        CSV: 1列目=日本語名 (例: <code>新宿区</code>) / 英語名 (例: <code>Chiyoda</code>) / id (例: <code>13001</code>)`;
+    } else {
+      state.muniIndex = null;
+      mapper.setBaseGeo(g, {
+        nameFor: (p) => p.nam_ja || p.nam || `#${p.id}`
+      });
+      els.hintLevel.innerHTML = `47都道府県ロード済み。<br/>
+        CSV: 1列目=都道府県名 (例: <code>東京都</code>) or コード (1〜47)`;
+    }
+    // Re-apply current dataset if its level matches
+    if (state.dataset && state.dataset.level === level && state.field) {
+      refresh();
+    } else {
+      // Different level → clear previous dataset/UI; user must reload CSV
+      state.dataset = null;
+      state.field = null;
+      state.valueMap = null;
+      mapper.resetColors();
+      mapper.clearSymbols();
+      els.overlay.hidden = true;
+      els.panelField.hidden = true;
+      els.panelClass.hidden = true;
+      els.panelStats.hidden = true;
+      els.panelLegend.hidden = true;
+    }
     setSummary("地図準備完了。サンプルまたはCSVを読み込んでください。", "muted");
   } catch (e) {
-    setSummary("⚠ 都道府県GeoJSONの読み込みに失敗しました: " + e.message, "error");
+    setSummary("⚠ GeoJSON読み込み失敗: " + e.message, "error");
   }
-})();
+}
+
+// initial load
+applyLevel(state.level);
+
+els.selectLevel.addEventListener("change", () => {
+  applyLevel(els.selectLevel.value);
+});
 
 // ----- Wire UI -----
 els.loadSample.addEventListener("click", async () => {
   try {
-    const ds = await loadSampleCsv();
-    onDatasetReady(ds, "sample_population.csv");
+    const ds = await loadSampleCsv(undefined, { level: state.level, muniIndex: state.muniIndex });
+    onDatasetReady(ds, state.level === "municipality" ? "sample_tokyo_wards.csv" : "sample_population.csv");
   } catch (e) {
     setSummary("サンプル読み込み失敗: " + e.message, "error");
   }
@@ -100,7 +179,7 @@ els.csvFile.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
   try {
-    const ds = await loadCsvFile(file);
+    const ds = await loadCsvFile(file, { level: state.level, muniIndex: state.muniIndex });
     onDatasetReady(ds, file.name);
   } catch (err) {
     setSummary("CSV読み込み失敗: " + err.message, "error");

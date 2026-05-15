@@ -18,6 +18,11 @@ import webbrowser
 from pathlib import Path
 
 
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     # Add / override MIME types
     extensions_map = {
@@ -48,8 +53,7 @@ def main():
     os.chdir(project_root)
     url = f"http://localhost:{port}/"
 
-    with socketserver.TCPServer(("", port), Handler) as httpd:
-        httpd.allow_reuse_address = True
+    with ThreadedTCPServer(("", port), Handler) as httpd:
         print(f"  MandaraLocal を {url} で配信中")
         print(f"  公開ディレクトリ: {project_root}")
         print(f"  Ctrl+C で停止")
