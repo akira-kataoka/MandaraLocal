@@ -1,0 +1,15 @@
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+.cache/
+node_modules/
+dist/
+
+# Intermediate data files (recreate via scripts/build_municipalities.py)
+data/cities/japan_municipalities_raw.geojson
+data/cities/13.topojson
+data/cities/13.geojson
