@@ -224,6 +224,47 @@ details.derived .form-row input[type="text"] {
   background: #e6eef5;
 }
 
+.map-search {
+  position: absolute;
+  top: 12px;
+  left: 60px;
+  z-index: 900;
+  width: 240px;
+}
+.map-search input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+.search-suggestions {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.search-suggestions li {
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f5f9;
+}
+.search-suggestions li:hover, .search-suggestions li.active {
+  background: #e0e7ff;
+}
+.search-suggestions .pref {
+  color: var(--muted);
+  font-size: 11px;
+  margin-left: 6px;
+}
+
 .map-overlay {
   position: absolute;
   bottom: 22px;

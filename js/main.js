@@ -66,6 +66,9 @@ const els = {
   scatterCorr:  $("scatter-correlation"),
   scatterSvg:   $("scatter-svg"),
   tooltip:      $("tooltip"),
+  mapSearch:      $("map-search"),
+  searchInput:    $("search-input"),
+  searchSuggest:  $("search-suggestions"),
   overlay:        $("map-overlay"),
   overlayTitle:   $("overlay-title"),
   overlayLegend:  $("overlay-legend"),
@@ -148,9 +151,12 @@ async function applyLevel(level) {
       const fallbackCount = g.features.length - jpCount;
       els.hintLevel.innerHTML = `${g.features.length}市町村ロード済み（漢字 ${jpCount} / カタカナ ${fallbackCount}）。<br/>
         CSV: 1列目=日本語名 (例: <code>新宿区</code>) / 英語名 (例: <code>Chiyoda</code>) / id (例: <code>13001</code>)`;
+      els.mapSearch.hidden = false;
     } else {
       state.muniIndex = null;
       els.rowPrefFilter.hidden = true;
+      els.mapSearch.hidden = true;
+      els.searchSuggest.hidden = true;
       mapper.setBaseGeo(g, {
         nameFor: (p) => p.nam_ja || p.nam || `#${p.id}`
       });
@@ -516,6 +522,79 @@ function onMapHover(id, isHot) {
 }
 
 mapper.onFeatureHover(onMapHover);
+
+// ----- Search -----
+let searchActiveIdx = -1;
+
+els.searchInput.addEventListener("input", () => {
+  const q = els.searchInput.value.trim();
+  if (!q || !state.geojson || state.level !== "municipality") {
+    els.searchSuggest.hidden = true; return;
+  }
+  const qLower = q.toLowerCase();
+  const hits = [];
+  for (const f of state.geojson.features) {
+    const p = f.properties;
+    const hay = [p.name_jp, p.name_kata, p.name_en].filter(Boolean);
+    if (hay.some(s => s.toLowerCase().includes(qLower) || s.startsWith(q))) {
+      hits.push(p);
+      if (hits.length >= 20) break;
+    }
+  }
+  els.searchSuggest.innerHTML = "";
+  if (!hits.length) {
+    els.searchSuggest.hidden = true; return;
+  }
+  for (const p of hits) {
+    const li = document.createElement("li");
+    const display = p.name_jp || p.name_kata || p.name_en;
+    li.innerHTML = `${display}<span class="pref">${p.pref_name || ""}</span>`;
+    li.dataset.id = p.id;
+    li.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      selectSuggestion(p.id);
+    });
+    els.searchSuggest.appendChild(li);
+  }
+  els.searchSuggest.hidden = false;
+  searchActiveIdx = -1;
+});
+
+els.searchInput.addEventListener("keydown", (e) => {
+  const items = [...els.searchSuggest.querySelectorAll("li")];
+  if (e.key === "ArrowDown" && items.length) {
+    e.preventDefault();
+    searchActiveIdx = Math.min(items.length - 1, searchActiveIdx + 1);
+    setActiveSuggestion(items);
+  } else if (e.key === "ArrowUp" && items.length) {
+    e.preventDefault();
+    searchActiveIdx = Math.max(0, searchActiveIdx - 1);
+    setActiveSuggestion(items);
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    const target = items[Math.max(0, searchActiveIdx)];
+    if (target) selectSuggestion(parseInt(target.dataset.id, 10));
+  } else if (e.key === "Escape") {
+    els.searchSuggest.hidden = true;
+  }
+});
+
+els.searchInput.addEventListener("blur", () => {
+  setTimeout(() => { els.searchSuggest.hidden = true; }, 150);
+});
+els.searchInput.addEventListener("focus", () => {
+  if (els.searchSuggest.children.length) els.searchSuggest.hidden = false;
+});
+
+function setActiveSuggestion(items) {
+  items.forEach((el, i) => el.classList.toggle("active", i === searchActiveIdx));
+}
+
+function selectSuggestion(id) {
+  mapper.zoomToFeature(id);
+  els.searchInput.value = "";
+  els.searchSuggest.hidden = true;
+}
 
 function setSummary(text, kind) {
   els.dataSummary.textContent = text;

@@ -263,6 +263,23 @@ export class MandaraMap {
     this._hoverHandler = handler;
   }
 
+  /**
+   * Zoom & highlight a feature by id. Useful from search results.
+   */
+  zoomToFeature(id) {
+    if (!this.layer) return;
+    let target = null;
+    this.layer.eachLayer((lyr) => {
+      if (lyr.feature.properties.id === id) target = lyr;
+    });
+    if (!target) return;
+    try {
+      this.map.fitBounds(target.getBounds(), { padding: [40, 40], maxZoom: 11 });
+    } catch (_) {}
+    this.highlightById(id);
+    setTimeout(() => this.clearHighlight(), 2500);
+  }
+
   getMapElement() { return this._mapEl; }
 }
 
