@@ -43,7 +43,19 @@ export function parseCsvText(text, opts = {}) {
     throw new Error("CSVには少なくとも2列必要です（1列目=地域、2列目以降=数値）。");
   }
   const keyHeader = headers[0];
-  const fields = headers.slice(1);
+  const rawFields = headers.slice(1);
+  // Keep only fields with >50% numeric values (drops auxiliary text columns
+  // like "市区町村" / "都道府県" used purely for readability).
+  const fields = rawFields.filter(f => {
+    let num = 0, nonEmpty = 0;
+    for (const row of parsed.data) {
+      const v = row[f];
+      if (v == null || String(v).trim() === "") continue;
+      nonEmpty++;
+      if (parseNumber(v) != null) num++;
+    }
+    return nonEmpty === 0 || num / nonEmpty >= 0.5;
+  });
 
   const rows = [];
   const unmatched = [];
@@ -155,7 +167,7 @@ export async function loadCsvFile(file, opts = {}) {
 
 export async function loadSampleCsv(url, opts = {}) {
   const target = url || (opts.level === "municipality"
-    ? "data/sample_tokyo_wards.csv"
+    ? "data/sample_all_municipalities.csv"
     : "data/sample_population.csv");
   const res = await fetch(target);
   if (!res.ok) throw new Error(`サンプル読み込み失敗 (${res.status})`);
