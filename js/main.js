@@ -17,6 +17,8 @@ const state = {
   level: "prefecture",   // "prefecture" | "municipality"
   dataset: null,         // { rows, fields, unmatched, level }
   field: null,
+  fieldB: null,
+  compare: false,
   classes: 5,
   method: "quantile",
   palette: "YlOrRd",
@@ -43,6 +45,13 @@ const els = {
   dataSummary:  $("data-summary"),
   panelField:   $("panel-field"),
   selectField:  $("select-field"),
+  chkCompare:   $("chk-compare"),
+  rowFieldB:    $("row-field-b"),
+  selectFieldB: $("select-field-b"),
+  paneB:        $("pane-b"),
+  overlayB:        $("map-overlay-b"),
+  overlayTitleB:   $("overlay-title-b"),
+  overlayLegendB:  $("overlay-legend-b"),
   derivedA:     $("derived-a"),
   derivedOp:    $("derived-op"),
   derivedB:     $("derived-b"),
@@ -94,7 +103,24 @@ const els = {
 })();
 
 // ----- Map -----
-const mapper = new MandaraMap("map", els.tooltip);
+const mapper  = new MandaraMap("map", els.tooltip);
+let mapperB = null;       // created lazily on compare-on
+let _syncing = false;     // re-entry guard for view sync
+
+function ensureMapperB() {
+  if (mapperB) return mapperB;
+  mapperB = new MandaraMap("map-b", null);   // no shared tooltip
+  // Two-way view sync
+  const sync = (src, dst) => () => {
+    if (_syncing) return;
+    _syncing = true;
+    dst.map.setView(src.map.getCenter(), src.map.getZoom(), { animate: false });
+    _syncing = false;
+  };
+  mapper.map.on("move zoom",  sync(mapper, mapperB));
+  mapperB.map.on("move zoom", sync(mapperB, mapper));
+  return mapperB;
+}
 
 // ----- Geo data loaders (cached) -----
 const geoCache = { prefecture: null, municipality: null };
@@ -258,6 +284,30 @@ els.selectField.addEventListener("change", () => {
   state.field = els.selectField.value;
   refresh();
 });
+els.selectFieldB.addEventListener("change", () => {
+  state.fieldB = els.selectFieldB.value;
+  if (state.compare) refresh();
+});
+els.chkCompare.addEventListener("change", () => {
+  state.compare = els.chkCompare.checked;
+  els.rowFieldB.hidden = !state.compare;
+  els.paneB.hidden = !state.compare;
+  if (state.compare) {
+    ensureMapperB();
+    // Apply the same base geo to the second mapper
+    if (state.geojson) {
+      mapperB.setBaseGeo(state.geojson, {
+        nameFor: state.level === "municipality"
+          ? (p) => (p.name_jp || p.name_kata || p.name_en || "#"+p.id) + `（${p.pref_name||""}）`
+          : (p) => p.nam_ja || p.nam || `#${p.id}`,
+      });
+      // Force Leaflet to recompute container size now that paneB is visible
+      setTimeout(() => mapperB && mapperB.map.invalidateSize(), 50);
+    }
+  }
+  setTimeout(() => mapper.map.invalidateSize(), 50);
+  if (state.dataset && state.field) refresh();
+});
 els.selectMode.addEventListener("change", () => {
   state.mode = els.selectMode.value;
   els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both");
@@ -417,6 +467,24 @@ function refresh() {
   els.overlayFooter.textContent = `MandaraLocal · ${new Date().toLocaleDateString("ja-JP")}`;
 
   renderStats(values);
+
+  // Compare pane (paneB)
+  if (state.compare && state.fieldB) {
+    const valuesB = state.dataset.rows.map(r => r.values[state.fieldB]);
+    const { breaks: breaksB } = computeBreaks(valuesB, state.classes, state.method);
+    const colorsB = getPalette(state.palette, Math.max(1, breaksB.length - 1), state.reverse);
+    const valueMapB = buildValueLookup(state.dataset, state.fieldB);
+    if (mapperB) {
+      mapperB.applyChoropleth(valueMapB, breaksB, colorsB, state.fieldB);
+    }
+    renderLegend(els.overlayLegendB, breaksB, colorsB, { showNA: false });
+    els.overlayB.hidden = false;
+    els.overlayTitleB.textContent = state.fieldB;
+  } else if (mapperB) {
+    mapperB.resetColors();
+    els.overlayB.hidden = true;
+  }
+
   saveSettings(state);
 }
 
@@ -440,7 +508,7 @@ function renderStats(values) {
 
 function populateFieldSelects() {
   const fields = state.dataset?.fields || [];
-  for (const sel of [els.selectField, els.derivedA, els.derivedB]) {
+  for (const sel of [els.selectField, els.selectFieldB, els.derivedA, els.derivedB]) {
     const prev = sel.value;
     sel.innerHTML = "";
     for (const f of fields) {
@@ -452,6 +520,10 @@ function populateFieldSelects() {
   }
   if (fields.length >= 1) els.derivedA.value = fields[0];
   if (fields.length >= 2) els.derivedB.value = fields[1];
+  if (!state.fieldB && fields.length >= 2) {
+    state.fieldB = fields[1];
+    els.selectFieldB.value = fields[1];
+  }
 }
 
 const OP_FN = { div: (a,b) => b===0 ? null : a/b, mul: (a,b)=>a*b, add: (a,b)=>a+b, sub: (a,b)=>a-b };

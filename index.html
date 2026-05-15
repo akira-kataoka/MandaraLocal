@@ -68,6 +68,13 @@
           <label for="select-field">対象列</label>
           <select id="select-field"></select>
         </div>
+        <div class="form-row inline">
+          <label><input type="checkbox" id="chk-compare" /> 比較表示（2列を並べる）</label>
+        </div>
+        <div class="form-row" id="row-field-b" hidden>
+          <label for="select-field-b">対象列B</label>
+          <select id="select-field-b"></select>
+        </div>
         <details class="derived">
           <summary>派生列を作る（A÷B など）</summary>
           <div class="form-row">
@@ -171,17 +178,26 @@
       </section>
     </aside>
 
-    <section class="map-wrap">
-      <div id="map"></div>
-      <div id="map-search" class="map-search" hidden>
-        <input type="text" id="search-input" placeholder="市町村名を検索 (例: 那覇)" autocomplete="off" />
-        <ul id="search-suggestions" class="search-suggestions" hidden></ul>
+    <section class="map-wrap" id="map-wrap">
+      <div class="map-pane" id="pane-a">
+        <div id="map"></div>
+        <div id="map-search" class="map-search" hidden>
+          <input type="text" id="search-input" placeholder="市町村名を検索 (例: 那覇)" autocomplete="off" />
+          <ul id="search-suggestions" class="search-suggestions" hidden></ul>
+        </div>
+        <div id="tooltip" class="map-tooltip" hidden></div>
+        <div id="map-overlay" class="map-overlay" hidden>
+          <div class="map-overlay-title" id="overlay-title"></div>
+          <div class="map-overlay-legend" id="overlay-legend"></div>
+          <div class="map-overlay-footer" id="overlay-footer"></div>
+        </div>
       </div>
-      <div id="tooltip" class="map-tooltip" hidden></div>
-      <div id="map-overlay" class="map-overlay" hidden>
-        <div class="map-overlay-title" id="overlay-title"></div>
-        <div class="map-overlay-legend" id="overlay-legend"></div>
-        <div class="map-overlay-footer" id="overlay-footer"></div>
+      <div class="map-pane" id="pane-b" hidden>
+        <div id="map-b"></div>
+        <div id="map-overlay-b" class="map-overlay" hidden>
+          <div class="map-overlay-title" id="overlay-title-b"></div>
+          <div class="map-overlay-legend" id="overlay-legend-b"></div>
+        </div>
       </div>
     </section>
   </main>

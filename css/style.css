@@ -217,8 +217,16 @@ details.derived .form-row input[type="text"] {
 .map-wrap {
   flex: 1;
   position: relative;
+  display: flex;
 }
-#map {
+.map-pane {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border-left: 1px solid var(--border);
+}
+.map-pane:first-child { border-left: none; }
+#map, #map-b {
   width: 100%;
   height: 100%;
   background: #e6eef5;
