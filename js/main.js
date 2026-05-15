@@ -100,6 +100,7 @@ const els = {
   btnPng:       $("btn-export-png"),
   btnSvg:       $("btn-export-svg"),
   btnCsv:       $("btn-export-csv"),
+  btnTheme:     $("btn-theme"),
 };
 
 // ----- Restore prior session settings -----
@@ -463,6 +464,18 @@ els.scatterY.addEventListener("change", drawScatter);
 els.btnDerived.addEventListener("click", addDerivedField);
 els.btnTemplate.addEventListener("click", downloadTemplate);
 els.btnCsv.addEventListener("click", exportCurrentCsv);
+els.btnTheme.addEventListener("click", toggleTheme);
+
+function toggleTheme() {
+  const next = document.body.classList.toggle("dark");
+  try { localStorage.setItem("mandara_theme", next ? "dark" : "light"); } catch {}
+}
+(function applyInitialTheme() {
+  try {
+    const t = localStorage.getItem("mandara_theme");
+    if (t === "dark") document.body.classList.add("dark");
+  } catch {}
+})();
 
 function exportCurrentCsv() {
   if (!state.dataset) { setSummary("先にデータを読み込んでください", "warn"); return; }
