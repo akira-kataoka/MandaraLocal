@@ -1,7 +1,9 @@
 # MandaraLocal
 
 ローカル & 無料で動く、MANDARA インスパイア の地理情報分析支援ツール（Web版）。
-ブラウザだけで、都道府県データから階級区分図（コロプレス図）を作れます。
+都道府県・市町村データから階級区分図（コロプレス図）・比例シンボル図を作れます。
+
+🌐 **公開デモ**: https://akira-kataoka.github.io/MandaraLocal/
 
 > 参考: 谷 謙二氏 [MANDARA](https://ktgis.net/mandara/) — 本プロジェクトは独立したオープン実装で、ライセンス・ソースコードは無関係です。
 
@@ -9,28 +11,26 @@
 
 ## 特徴
 
-- **完全ローカル動作**：自分のPCで完結。データは外部送信されません。
-- **コストゼロ**：すべて無料ライブラリ（CDN）と公開オープンデータ。
-- **Web展開そのまま**：ビルド不要の素のHTML/CSS/JS構成。GitHub Pages / Netlify / Cloudflare Pages にzipアップロードで動きます。
+- **完全ローカル動作可**：自分のPCで完結。データは外部送信されません。
+- **完全無料**：すべて無料ライブラリ（CDN）と公開オープンデータ。
+- **2つの地域レベル**：
+  - 都道府県（47件）
+  - 市町村（**1,742件 / 全国対応**）
+- **Web展開そのまま**：ビルド不要の素のHTML/CSS/JS構成。GitHub Pages で即公開。
 - **MANDARA ライクな操作感**：
-  - CSV読み込み（都道府県名 or 都道府県コード）
-  - 階級区分図（等値・等量・自然区分Jenks）
-  - 色パレット選択（YlOrRd, Blues, RdYlBu, Viridis 他）
+  - CSV読み込み（地域名/コード/英語表記いずれもOK）
+  - 階級区分図（等値・等量・自然区分Jenks）+ 対数スケール
+  - 8種の色パレット選択（YlOrRd, Blues, RdYlBu, Viridis 他）
+  - 比例シンボル図（円の大きさで量を表現）
   - 基本統計量パネル
-  - PNG / SVG エクスポート
-  - ホバーで都道府県名・値の表示
+  - PNG / SVG エクスポート（タイトル・凡例つき）
+  - ホバーで地域名・値の表示（日本語）
 
 ## 起動方法
 
 ### Windows
 
-ダブルクリック：
-
-```
-start.bat
-```
-
-`http://localhost:8765` がブラウザで自動的に開きます。
+[`start.bat`](start.bat) をダブルクリック → `http://localhost:8765/` がブラウザで自動的に開きます。
 
 ### Mac / Linux / 手動
 
@@ -43,91 +43,106 @@ python3 scripts/serve.py
 
 ## 使い方
 
-1. ブラウザで `http://localhost:8765` を開く
-2. 左サイドバーの「**サンプルデータを読み込む**」をクリック
-3. 「対象列」を切り替えて、人口・人口密度・高齢化率 などを地図化
-4. 区分方法・階級数・色パレットを変更して可視化を調整
-5. ヘッダの「**PNG出力**」「**SVG出力**」で書き出し
+1. 左サイドバーの「**分析レベル**」で「都道府県」または「市町村」を選ぶ
+2. 「**サンプルデータを読み込む**」をクリック
+3. 「対象列」「区分方法」「色パレット」「表現方法」を変更して可視化を調整
+4. ヘッダの「**PNG出力**」「**SVG出力**」で書き出し
 
-### 独自CSVの形式
-
+### 都道府県レベル CSV 形式
 ```csv
-都道府県,指標A,指標B
-北海道,1234,56.7
-青森県,890,12.3
+都道府県,人口
+東京都,14047594
+大阪府,8837685
 ...
 ```
 
-- **1列目**：都道府県名（「東京都」「東京」「Tokyo」のいずれもOK）または ISO 3166-2 都道府県コード（1〜47）
-- **2列目以降**：数値データ列。複数列OK。空欄や「-」「NA」は欠損として扱われます。
+1列目: 都道府県名（`東京都`/`東京`/`Tokyo`） or コード（1〜47）
 
-## Web公開（無料）
+### 市町村レベル CSV 形式
+```csv
+市区町村,人口
+新宿区,349385
+府中市,260274
+...
+```
 
-ビルド不要なので、リポジトリ全体を以下のいずれかにアップするだけ：
+1列目: 日本語名（`新宿区`）/ 英語名（`Shinjuku`）/ id（`13003`）どれでもマッチ
+
+## Web公開
+
+ビルド不要なので、リポジトリをそのまま静的ホスティングに上げるだけ：
 
 | ホスティング | 月額費用 | メモ |
 |---|---|---|
-| GitHub Pages | 0円 | リポジトリ Settings → Pages → main / root |
+| **GitHub Pages** | **0円** | このリポジトリで実装済み（[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)） |
 | Cloudflare Pages | 0円 | 帯域無制限 |
-| Netlify | 0円 | ドラッグ&ドロップでもOK |
-| Vercel | 0円 | 同上 |
+| Netlify / Vercel | 0円 | ドラッグ&ドロップでもOK |
 
-> 13MB のGeoJSONを配信するので、初回ロードは1〜3秒程度かかります。
-> 将来的に [TopoJSON 化](#次期計画) で 1〜2MB に圧縮可能。
+**ワンクリック公開**: [`auto_publish.bat`](auto_publish.bat) をダブルクリック → ブラウザで Authorize ボタン1回押すだけで GitHub Pages へ自動デプロイ。
 
-## 技術スタック
+## 技術スタック（全部CDN）
 
-| 役割 | 採用 | コスト |
+| 役割 | 採用 |
+|---|---|
+| 地図描画 | [Leaflet](https://leafletjs.com/) 1.9 (1,742市町村はCanvas高速描画) |
+| タイル | OpenStreetMap / 国土地理院タイル |
+| CSV | [PapaParse](https://www.papaparse.com/) |
+| 統計・分類 | [simple-statistics](https://simplestatistics.org/) (Jenks自然区分) |
+| 配色 | [chroma.js](https://gka.github.io/chroma.js/) |
+| 画像出力 | [html-to-image](https://github.com/bubkoo/html-to-image) |
+| ローマ字→カナ | [WanaKana](https://wanakana.com/) |
+
+## データソース（全部CC0/CC-BY）
+
+| データ | 出典 | ライセンス |
 |---|---|---|
-| 地図描画 | [Leaflet](https://leafletjs.com/) | 無料・OSS |
-| タイル | OpenStreetMap / 国土地理院タイル | 無料・公開 |
-| CSV | [PapaParse](https://www.papaparse.com/) | 無料・OSS |
-| 統計 | [simple-statistics](https://simplestatistics.org/) | 無料・OSS |
-| 配色 | [chroma.js](https://gka.github.io/chroma.js/) | 無料・OSS |
-| 画像出力 | [html-to-image](https://github.com/bubkoo/html-to-image) | 無料・OSS |
-| 境界データ | [dataofjapan/land](https://github.com/dataofjapan/land) (Public Domain) | 無料 |
-
-すべてCDN経由（`unpkg`）で取得。インストール不要。
+| 都道府県境界 | [dataofjapan/land](https://github.com/dataofjapan/land) | Public Domain |
+| 市町村境界 | [GeoBoundaries ADM2](https://www.geoboundaries.org/) | CC BY 4.0 |
+| 日本語マッピング | [Geolonia japanese-addresses](https://github.com/geolonia/japanese-addresses) | CC BY 4.0 |
+| サンプル人口データ | 総務省統計局 国勢調査2020年 | 出典明示で再利用可 |
 
 ## ディレクトリ構成
 
 ```
 MandaraLocal/
 ├── index.html
-├── start.bat           # Windows ワンクリック起動
-├── scripts/serve.py    # ローカルサーバー
+├── start.bat                  # Windows ワンクリック起動
+├── auto_publish.bat           # GitHub Pages ワンクリック公開
+├── scripts/
+│   ├── serve.py               # ローカルサーバー (threaded)
+│   ├── build_municipalities.py        # GeoBoundaries → pref結合
+│   ├── build_muni_jp_map.py           # Geolonia → 日本語マッピング
+│   ├── install_autostart.bat          # Windows ログイン時に自動起動
+│   └── ...
 ├── css/style.css
 ├── js/
-│   ├── main.js
-│   ├── map.js          # Leaflet 地図 + GeoJSON 描画
-│   ├── data.js         # CSV パーサ + 地域コード正規化
-│   ├── classification.js # 階級区分 (quantile/equal/Jenks)
-│   ├── color.js        # カラーパレット
-│   ├── legend.js       # 凡例描画
-│   ├── stats.js        # 記述統計
-│   ├── export.js       # PNG / SVG 出力
-│   └── pref_table.js   # 都道府県コード/名称テーブル
+│   ├── main.js                # アプリ全体の orchestration
+│   ├── map.js                 # Leaflet 描画
+│   ├── data.js                # CSV パーサ + 地域コード正規化
+│   ├── classification.js      # 階級区分 (quantile/equal/Jenks/log)
+│   ├── color.js               # カラーパレット
+│   ├── legend.js              # 凡例描画
+│   ├── stats.js               # 記述統計
+│   ├── export.js              # PNG / SVG 出力
+│   ├── settings.js            # localStorage 保存
+│   └── pref_table.js
 └── data/
-    ├── japan_prefectures.geojson  # 都道府県境界 (13MB)
-    └── sample_population.csv       # 2020年国勢調査サンプル
+    ├── japan_prefectures.geojson           # 都道府県境界 (13MB)
+    ├── sample_population.csv               # 都道府県サンプル
+    ├── sample_tokyo_wards.csv              # 市町村サンプル
+    └── cities/
+        ├── japan_municipalities.geojson    # 1,742市町村 (5.3MB)
+        └── muni_jp_names.json              # ローマ字↔日本語マッピング (97KB)
 ```
 
 ## 次期計画
 
-- [ ] **市町村レベル**の境界対応（国土数値情報 N03）
-- [ ] **TopoJSON化** で初回読み込み高速化（13MB → 1〜2MB）
-- [ ] **比例シンボル図**（円・四角の大きさで量を表現）
-- [ ] **ドット分布図**
-- [ ] **カートグラム**（変形地図）
+- [ ] **散布図 / 相関分析パネル**
+- [ ] **e-Stat API 連携** (公的統計を直接取込)
 - [ ] **時系列再生**（年次データの自動切替）
-- [ ] **e-Stat API 直接取り込み**
-- [ ] **複数列の相関分析・散布図**
-- [ ] **PWA化**（オフライン完全動作）
+- [ ] **カートグラム**（変形地図）
+- [ ] **政令市の区マッピング補完** (現在カバレッジ84%→100%へ)
 
 ## ライセンス
 
 本プロジェクトのコード: MIT
-
-同梱データ:
-- `data/japan_prefectures.geojson` — [dataofjapan/land](https://github.com/dataofjapan/land) (Public Domain CC0)
-- `data/sample_population.csv` — 総務省統計局 2020年国勢調査より作成（出典明示で再配布可）

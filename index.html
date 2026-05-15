@@ -114,6 +114,20 @@
         <h2>5. 凡例</h2>
         <div id="legend-container"></div>
       </section>
+
+      <section class="panel" id="panel-scatter" hidden>
+        <h2>6. 散布図（2列の相関）</h2>
+        <div class="form-row">
+          <label for="scatter-x">X軸</label>
+          <select id="scatter-x"></select>
+        </div>
+        <div class="form-row">
+          <label for="scatter-y">Y軸</label>
+          <select id="scatter-y"></select>
+        </div>
+        <div id="scatter-correlation" class="data-summary"></div>
+        <svg id="scatter-svg" width="280" height="220"></svg>
+      </section>
     </aside>
 
     <section class="map-wrap">

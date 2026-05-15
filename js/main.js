@@ -10,6 +10,7 @@ import { renderLegend } from "./legend.js";
 import { MandaraMap } from "./map.js";
 import { exportPng, exportSvg } from "./export.js";
 import { loadSettings, saveSettings } from "./settings.js";
+import { renderScatter } from "./scatter.js";
 
 // ----- State -----
 const state = {
@@ -51,6 +52,11 @@ const els = {
   statsTable:   $("stats-table"),
   panelLegend:  $("panel-legend"),
   legendBox:    $("legend-container"),
+  panelScatter: $("panel-scatter"),
+  scatterX:     $("scatter-x"),
+  scatterY:     $("scatter-y"),
+  scatterCorr:  $("scatter-correlation"),
+  scatterSvg:   $("scatter-svg"),
   tooltip:      $("tooltip"),
   overlay:        $("map-overlay"),
   overlayTitle:   $("overlay-title"),
@@ -163,6 +169,7 @@ async function applyLevel(level) {
       els.panelClass.hidden = true;
       els.panelStats.hidden = true;
       els.panelLegend.hidden = true;
+      els.panelScatter.hidden = true;
     }
     setSummary("地図準備完了。サンプルまたはCSVを読み込んでください。", "muted");
   } catch (e) {
@@ -234,6 +241,9 @@ els.chkReverse.addEventListener("change", () => {
   refresh();
 });
 
+els.scatterX.addEventListener("change", drawScatter);
+els.scatterY.addEventListener("change", drawScatter);
+
 els.btnPng.addEventListener("click", () => {
   const wrap = document.querySelector(".map-wrap");
   const fname = `mandara_${(state.field || "map").replace(/\s+/g, "_")}.png`;
@@ -274,6 +284,12 @@ function onDatasetReady(ds, label) {
   els.panelClass.hidden = false;
   els.panelStats.hidden = false;
   els.panelLegend.hidden = false;
+  if (ds.fields.length >= 2) {
+    els.panelScatter.hidden = false;
+    populateScatterSelectors(ds.fields);
+  } else {
+    els.panelScatter.hidden = true;
+  }
 
   const msg = `${label}: ${ds.rows.length}件 / ${ds.fields.length}列を読み込みました。`;
   const warn = ds.unmatched.length
@@ -336,6 +352,35 @@ function renderStats(values) {
   els.statsTable.innerHTML = rows.map(([k,v]) =>
     `<tr><td>${k}</td><td>${v}</td></tr>`
   ).join("");
+}
+
+function populateScatterSelectors(fields) {
+  for (const sel of [els.scatterX, els.scatterY]) {
+    sel.innerHTML = "";
+    for (const f of fields) {
+      const o = document.createElement("option");
+      o.value = f; o.textContent = f;
+      sel.appendChild(o);
+    }
+  }
+  els.scatterX.value = fields[0];
+  els.scatterY.value = fields[1] || fields[0];
+  drawScatter();
+}
+
+function drawScatter() {
+  if (!state.dataset) return;
+  const xf = els.scatterX.value, yf = els.scatterY.value;
+  const xs = state.dataset.rows.map(r => r.values[xf]);
+  const ys = state.dataset.rows.map(r => r.values[yf]);
+  const { r, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf);
+  if (r == null) {
+    els.scatterCorr.textContent = `n=${n} — 相関係数を計算できません`;
+  } else {
+    const strength = Math.abs(r) >= 0.7 ? "強い" : Math.abs(r) >= 0.4 ? "中程度の" : "弱い";
+    const sign = r >= 0 ? "正" : "負";
+    els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r = ${r.toFixed(3)}</strong> （${strength}${sign}の相関）`;
+  }
 }
 
 function setSummary(text, kind) {
