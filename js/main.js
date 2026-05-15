@@ -35,6 +35,8 @@ const $ = (id) => document.getElementById(id);
 const els = {
   selectLevel:  $("select-level"),
   hintLevel:    $("hint-level"),
+  rowPrefFilter:    $("row-pref-filter"),
+  selectPrefFilter: $("select-pref-filter"),
   loadSample:   $("btn-load-sample"),
   csvFile:      $("csv-file"),
   dataSummary:  $("data-summary"),
@@ -133,21 +135,16 @@ async function applyLevel(level) {
         }
       }
       state.muniIndex = buildMuniIndex(g);
-      mapper.setBaseGeo(g, {
-        nameFor: (p) => {
-          if (p.name_jp)
-            return `${p.name_jp}（${p.pref_name || ""}）`;
-          if (p.name_kata)
-            return `${p.name_kata}（${p.pref_name || ""}）`;
-          return `${p.name_en || "#"+p.id}（${p.pref_name || ""}）`;
-        }
-      });
+      populatePrefFilter(g);
+      els.rowPrefFilter.hidden = false;
+      applyMunicipalityRender(g);
       const jpCount = Object.keys(muniJpMap || {}).length;
       const fallbackCount = g.features.length - jpCount;
       els.hintLevel.innerHTML = `${g.features.length}市町村ロード済み（漢字 ${jpCount} / カタカナ ${fallbackCount}）。<br/>
         CSV: 1列目=日本語名 (例: <code>新宿区</code>) / 英語名 (例: <code>Chiyoda</code>) / id (例: <code>13001</code>)`;
     } else {
       state.muniIndex = null;
+      els.rowPrefFilter.hidden = true;
       mapper.setBaseGeo(g, {
         nameFor: (p) => p.nam_ja || p.nam || `#${p.id}`
       });
@@ -183,6 +180,42 @@ applyLevel(state.level);
 els.selectLevel.addEventListener("change", () => {
   applyLevel(els.selectLevel.value);
 });
+
+els.selectPrefFilter.addEventListener("change", () => {
+  if (state.geojson && state.level === "municipality") {
+    applyMunicipalityRender(state.geojson);
+    if (state.dataset && state.field) refresh();
+  }
+});
+
+function populatePrefFilter(g) {
+  const seen = new Map(); // code -> name
+  for (const f of g.features) {
+    const c = f.properties.pref_code;
+    if (c && !seen.has(c)) seen.set(c, f.properties.pref_name);
+  }
+  els.selectPrefFilter.innerHTML = '<option value="">全国（1,742件）</option>';
+  for (const code of [...seen.keys()].sort((a,b)=>a-b)) {
+    const o = document.createElement("option");
+    o.value = String(code);
+    o.textContent = `${seen.get(code) || "#"+code}`;
+    els.selectPrefFilter.appendChild(o);
+  }
+}
+
+function applyMunicipalityRender(g) {
+  const filterCode = els.selectPrefFilter.value
+    ? parseInt(els.selectPrefFilter.value, 10) : null;
+  const subset = filterCode == null ? g
+    : { type: "FeatureCollection", features: g.features.filter(f => f.properties.pref_code === filterCode) };
+  mapper.setBaseGeo(subset, {
+    nameFor: (p) => {
+      if (p.name_jp) return `${p.name_jp}（${p.pref_name || ""}）`;
+      if (p.name_kata) return `${p.name_kata}（${p.pref_name || ""}）`;
+      return `${p.name_en || "#"+p.id}（${p.pref_name || ""}）`;
+    }
+  });
+}
 
 // ----- Wire UI -----
 els.loadSample.addEventListener("click", async () => {
