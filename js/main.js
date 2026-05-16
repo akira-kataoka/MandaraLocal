@@ -1503,6 +1503,25 @@ els.chkScatterYx?.addEventListener("change", drawScatter);
 els.chkScatterZero?.addEventListener("change", drawScatter);
 els.chkScatterJitter?.addEventListener("change", drawScatter);
 els.chkScatterLowess?.addEventListener("change", drawScatter);
+// Cycle 195: clear every scatter overlay toggle in one click.
+document.getElementById("btn-scatter-clear-overlays")?.addEventListener("click", () => {
+  const toggles = [
+    "chk-scatter-stats", "chk-scatter-ci", "chk-scatter-pi",
+    "chk-scatter-yx", "chk-scatter-zero", "chk-scatter-jitter",
+    "chk-scatter-lowess",
+  ];
+  let any = false;
+  for (const id of toggles) {
+    const el = document.getElementById(id);
+    if (el && el.checked) { el.checked = false; any = true; }
+  }
+  if (any) {
+    drawScatter();
+    setSummary("散布図のオーバーレイをすべて解除しました", "muted");
+  } else {
+    setSummary("オーバーレイは既にすべて OFF です", "muted");
+  }
+});
 els.scatterLabels?.addEventListener("change", drawScatter);
 els.scatterDegree?.addEventListener("change", drawScatter);
 els.chkScatterLogX.addEventListener("change", drawScatter);
