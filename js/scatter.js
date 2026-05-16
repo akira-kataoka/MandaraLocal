@@ -778,13 +778,14 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
 
   // Cycle 227: optional statistics subtitle drawn inside the SVG so PNG/SVG
   // exports carry n / r / R² without the user having to caption the image.
+  // Cycle 295: font-size follows the axisFontSize selector (tickFs).
   if (opts.titleStats && Number.isFinite(r) && nValid >= 2) {
     const r2pct = (r * r * 100).toFixed(1);
     const t = el("text", {
       x: PAD.left + (W - PAD.left - PAD.right) / 2,
       y: 8,
       "text-anchor": "middle",
-      "font-size": 9, "font-weight": 600, fill: "#475569",
+      "font-size": tickFs, "font-weight": 600, fill: "#475569",
     });
     t.textContent = `n=${nValid}  r=${r.toFixed(3)}  R²=${r2pct}%`;
     svgEl.appendChild(t);

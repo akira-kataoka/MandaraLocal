@@ -80,10 +80,13 @@ export function renderBoxplot(svgEl, values, label, opts = {}) {
   tip.textContent = `平均 X̄ = ${formatNum(mean)}`;
   diamond.appendChild(tip);
   svgEl.appendChild(diamond);
-  // Small μ label above the marker
+  // Small μ label above the marker.
+  // Cycle 295: scale with axisFontSize (default 8 ≈ tickFs-1).
+  const _fsKey = opts.axisFontSize === "S" || opts.axisFontSize === "L" ? opts.axisFontSize : "M";
+  const _tickFs = _fsKey === "S" ? 7 : _fsKey === "L" ? 11 : 9;
   const meanLab = make("text", {
     x: mx, y: cy - dx - 2, "text-anchor": "middle",
-    "font-size": 8, "font-weight": 700, fill: "#dc2626", "font-family": "sans-serif",
+    "font-size": Math.max(7, _tickFs - 1), "font-weight": 700, fill: "#dc2626", "font-family": "sans-serif",
   });
   meanLab.textContent = "μ";
   svgEl.appendChild(meanLab);
