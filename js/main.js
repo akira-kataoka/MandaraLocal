@@ -62,6 +62,7 @@ const els = {
   csvFile:      $("csv-file"),
   csvMerge:     $("csv-merge"),
   btnTemplate:  $("btn-download-template"),
+  btnPaste:     $("btn-paste"),
   dataSummary:  $("data-summary"),
   panelField:   $("panel-field"),
   selectField:  $("select-field"),
@@ -1020,6 +1021,26 @@ els.scatterSwap?.addEventListener("click", () => {
 });
 els.btnDerived.addEventListener("click", addDerivedField);
 els.btnTemplate.addEventListener("click", downloadTemplate);
+
+els.btnPaste?.addEventListener("click", async () => {
+  if (!navigator.clipboard?.readText) {
+    setSummary("お使いのブラウザはクリップボード読込に未対応です", "warn"); return;
+  }
+  try {
+    let text = await navigator.clipboard.readText();
+    if (!text || !text.trim()) {
+      setSummary("クリップボードが空です", "warn"); return;
+    }
+    // Excel コピーは TSV。 \t を , に置換して既存パーサに渡す
+    if (text.includes("\t") && !text.includes(",")) {
+      text = text.replace(/\t/g, ",");
+    }
+    const ds = parseCsvText(text, csvParseOpts());
+    onDatasetReady(ds, "クリップボード");
+  } catch (e) {
+    setSummary("ペースト失敗: " + e.message, "error");
+  }
+});
 els.btnCsv.addEventListener("click", exportCurrentCsv);
 els.btnPdf.addEventListener("click", async () => {
   if (typeof htmlToImage === "undefined" || typeof window.jspdf === "undefined") {
