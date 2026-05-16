@@ -27,6 +27,8 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
   // semi-transparent histograms sharing the same bins.
   const groups = (opts.groups && opts.groups.length >= 2 && opts.groups.length <= 4) ? opts.groups : null;
   if (groups) {
+    // Cycle 262: facet (small multiples) when requested, else default overlay.
+    if (opts.facet) return renderFacetHistogram(svgEl, groups, label, bins, logX);
     return renderGroupHistogram(svgEl, groups, label, bins, logX);
   }
   // When log axis is requested, only positive values are usable.
@@ -265,6 +267,83 @@ function el(tag, attrs = {}) {
 
 // Cycle 176: render up to 4 histograms overlaid in the same panel for
 // visual distribution comparison (companion to grouped boxplot / ANOVA).
+// Cycle 262: faceted (small multiples) histogram. The SVG viewBox grows
+// vertically with the number of groups so each panel has a fair share of
+// vertical real-estate. X axis is shared (min/max across all groups), Y
+// axis is per-group so single-mode comparison stays readable.
+function renderFacetHistogram(svgEl, groups, label, bins, logX) {
+  const filtered = groups.map(g => ({
+    name: g.name,
+    v: g.values.filter(x => Number.isFinite(x) && (!logX || x > 0)),
+  })).filter(g => g.v.length >= 2);
+  if (filtered.length < 2) return { n: 0, binCount: 0, max: 0 };
+  const allVals = [].concat(...filtered.map(g => g.v));
+  const min = Math.min(...allVals);
+  const max = Math.max(...allVals);
+  if (min === max) return { n: allVals.length, binCount: 1, max: allVals.length };
+  const auto = Math.max(3, Math.min(30, Math.ceil(Math.log2(allVals.length) + 1)));
+  const k = Math.max(3, Math.min(30, bins || auto));
+  const sx = logX ? (x) => Math.log10(x) : (x) => x;
+  const sMin = sx(min), sMax = sx(max);
+  const width = (sMax - sMin) / k;
+  // Counts per group
+  const countsByGroup = filtered.map(g => {
+    const c = new Array(k).fill(0);
+    for (const x of g.v) {
+      let i = Math.floor((sx(x) - sMin) / width);
+      if (i >= k) i = k - 1;
+      c[i]++;
+    }
+    return c;
+  });
+  const facetH = 60;        // per-facet drawable height
+  const facetGap = 14;      // space between facets (label + gap)
+  const topPad = 18;        // for shared x-axis label
+  const innerW = W - PAD.left - PAD.right;
+  const totalH = topPad + filtered.length * (facetH + facetGap) + 16;
+  svgEl.setAttribute("viewBox", `0 0 ${W} ${totalH}`);
+  svgEl.setAttribute("height", String(totalH));
+  // Shared X axis at the top (3 ticks)
+  const xAt = (sval) => PAD.left + ((sval - sMin) / (sMax - sMin)) * innerW;
+  const axisTop = el("g", { class: "axis" });
+  for (const f of [0, 0.5, 1]) {
+    const tx = PAD.left + f * innerW;
+    axisTop.appendChild(text(tx, 10, formatShort(logX ? Math.pow(10, sMin + f * (sMax - sMin)) : sMin + f * (sMax - sMin)), "middle"));
+  }
+  svgEl.appendChild(axisTop);
+  // Per-facet panels
+  filtered.forEach((g, gi) => {
+    const facetTop = topPad + gi * (facetH + facetGap);
+    const facetBottom = facetTop + facetH;
+    const counts = countsByGroup[gi];
+    const maxCount = Math.max(...counts) || 1;
+    const color = GROUP_PALETTE[gi % GROUP_PALETTE.length];
+    // Panel name + n
+    const labelTxt = el("text", { x: PAD.left, y: facetTop - 2, "font-size": 10, "font-weight": 600, fill: "#1e293b" });
+    labelTxt.textContent = `${g.name.length > 18 ? g.name.slice(0, 17) + "…" : g.name} (n=${g.v.length})`;
+    svgEl.appendChild(labelTxt);
+    // Baseline
+    svgEl.appendChild(line(PAD.left, facetBottom, W - PAD.right, facetBottom));
+    // Bars
+    const barW = innerW / k;
+    counts.forEach((c, i) => {
+      if (c === 0) return;
+      const bx = PAD.left + i * barW;
+      const bh = (c / maxCount) * facetH;
+      const by = facetBottom - bh;
+      svgEl.appendChild(el("rect", {
+        x: bx, y: by, width: Math.max(0.5, barW - 0.4), height: bh,
+        fill: color, "fill-opacity": "0.6", stroke: color, "stroke-width": 0.4,
+      }));
+    });
+    // Right-side max count text
+    svgEl.appendChild(text(W - PAD.right + 2, facetTop + 8, `max=${maxCount}`, "start"));
+  });
+  // X axis label at the bottom (shared)
+  svgEl.appendChild(text(W / 2, totalH - 2, label || "", "middle"));
+  return { n: allVals.length, binCount: k, max: Math.max(...countsByGroup.flat()), groups: filtered.length, facet: true };
+}
+
 function renderGroupHistogram(svgEl, groups, label, bins, logX) {
   // Filter each group to positive values only when log axis is on.
   const filtered = groups.map(g => ({
