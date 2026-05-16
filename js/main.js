@@ -191,6 +191,11 @@ const els = {
   scatterLabels:   $("scatter-labels"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
+  panelPca:        $("panel-pca"),
+  pcaXList:        $("pca-x-list"),
+  pcaRun:          $("pca-run"),
+  pcaAdd:          $("pca-add"),
+  pcaResult:       $("pca-result"),
   panelKm:         $("panel-kmeans"),
   kmXList:         $("km-x-list"),
   kmK:             $("km-k"),
@@ -1991,6 +1996,212 @@ function renderKmResult(r) {
 els.kmRun?.addEventListener("click", runKmeansClustering);
 els.kmElbow?.addEventListener("click", runElbow);
 
+// ----- Principal Component Analysis (Cycle 147) -----
+function populatePcaSelectors(fields) {
+  if (!els.pcaXList) return;
+  const prevChecked = new Set([...els.pcaXList.querySelectorAll("input:checked")].map(el => el.value));
+  els.pcaXList.innerHTML = "";
+  for (const f of fields) {
+    const label = document.createElement("label");
+    label.style.cssText = "display:block;padding:1px 0;";
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.value = f;
+    if (prevChecked.has(f)) cb.checked = true;
+    label.appendChild(cb);
+    label.append(" " + f);
+    els.pcaXList.appendChild(label);
+  }
+}
+
+function runPca() {
+  if (!state.dataset) return;
+  const xFields = [...els.pcaXList.querySelectorAll("input:checked")].map(el => el.value);
+  if (xFields.length < 2) { setSummary("PCA には 2 つ以上の変数が必要です", "warn"); return; }
+  // Build standardized data matrix (complete cases)
+  const rawPoints = [];
+  const keys = [];
+  for (const r of state.dataset.rows) {
+    const row = [];
+    let ok = true;
+    for (const xf of xFields) {
+      const v = r.values[xf];
+      if (!Number.isFinite(v)) { ok = false; break; }
+      row.push(v);
+    }
+    if (ok) { rawPoints.push(row); keys.push(r.key); }
+  }
+  const n = rawPoints.length;
+  const d = xFields.length;
+  if (n < d + 1) { setSummary(`サンプル不足: n=${n}, d=${d}`, "warn"); return; }
+  // Standardize
+  const mean = new Array(d).fill(0);
+  for (const p of rawPoints) for (let j = 0; j < d; j++) mean[j] += p[j];
+  for (let j = 0; j < d; j++) mean[j] /= n;
+  const sd = new Array(d).fill(0);
+  for (const p of rawPoints) for (let j = 0; j < d; j++) sd[j] += (p[j] - mean[j]) ** 2;
+  for (let j = 0; j < d; j++) sd[j] = Math.sqrt(sd[j] / (n - 1)) || 1;
+  const Z = rawPoints.map(p => p.map((v, j) => (v - mean[j]) / sd[j]));
+  // Correlation matrix = Z' Z / (n-1)
+  const R = Array.from({ length: d }, () => new Array(d).fill(0));
+  for (let i = 0; i < d; i++) {
+    for (let j = i; j < d; j++) {
+      let s = 0;
+      for (let k = 0; k < n; k++) s += Z[k][i] * Z[k][j];
+      R[i][j] = R[j][i] = s / (n - 1);
+    }
+  }
+  // Jacobi eigendecomposition of symmetric matrix R
+  const { eigvals, V } = jacobiEigen(R);
+  // Sort eigenpairs by descending eigenvalue
+  const order = eigvals.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]).map(p => p[1]);
+  const sortedEigvals = order.map(i => eigvals[i]);
+  // Vsorted[i][k] = V[i][order[k]] for component k
+  const sortedV = Array.from({ length: d }, (_, i) =>
+    order.map(k => V[i][k])
+  );
+  const totalVar = sortedEigvals.reduce((s, v) => s + v, 0);
+  const ratios = sortedEigvals.map(v => v / totalVar);
+  let cum = 0;
+  const cumRatios = ratios.map(r => (cum += r));
+  // Loadings = eigenvector × √eigenvalue
+  const loadings = Array.from({ length: d }, (_, i) =>
+    sortedEigvals.map((lambda, k) => sortedV[i][k] * Math.sqrt(Math.max(0, lambda)))
+  );
+  // PC scores = Z × V (top 2 needed for "add" feature)
+  const scores = Z.map(z => sortedEigvals.map((_, k) =>
+    z.reduce((s, v, i) => s + v * sortedV[i][k], 0)
+  ));
+  state.pcaResult = { xFields, n, d, eigvals: sortedEigvals, ratios, cumRatios, loadings, scores, keys };
+  renderPcaResult(state.pcaResult);
+  if (els.pcaAdd) els.pcaAdd.disabled = false;
+}
+
+// Jacobi eigendecomposition for symmetric matrices. Returns eigvals + V
+// where V columns are eigenvectors (V[i][k] = element i of eigenvector k).
+function jacobiEigen(A) {
+  const n = A.length;
+  const m = A.map(r => r.slice());
+  const V = Array.from({ length: n }, (_, i) =>
+    Array.from({ length: n }, (_, j) => i === j ? 1 : 0));
+  for (let iter = 0; iter < 100; iter++) {
+    // Find largest off-diagonal element
+    let p = 0, q = 1, max = 0;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      if (Math.abs(m[i][j]) > max) { max = Math.abs(m[i][j]); p = i; q = j; }
+    }
+    if (max < 1e-12) break;
+    const theta = (m[q][q] - m[p][p]) / (2 * m[p][q]);
+    let t;
+    if (theta === 0) t = 1;
+    else {
+      const sign = theta > 0 ? 1 : -1;
+      t = sign / (Math.abs(theta) + Math.sqrt(theta * theta + 1));
+    }
+    const c = 1 / Math.sqrt(t * t + 1);
+    const s = t * c;
+    const mpp = m[p][p], mqq = m[q][q], mpq = m[p][q];
+    m[p][p] = mpp - t * mpq;
+    m[q][q] = mqq + t * mpq;
+    m[p][q] = m[q][p] = 0;
+    for (let i = 0; i < n; i++) {
+      if (i === p || i === q) continue;
+      const mip = m[i][p], miq = m[i][q];
+      m[i][p] = m[p][i] = c * mip - s * miq;
+      m[i][q] = m[q][i] = s * mip + c * miq;
+    }
+    for (let i = 0; i < n; i++) {
+      const vip = V[i][p], viq = V[i][q];
+      V[i][p] = c * vip - s * viq;
+      V[i][q] = s * vip + c * viq;
+    }
+  }
+  const eigvals = m.map((row, i) => row[i]);
+  return { eigvals, V };
+}
+
+function renderPcaResult(r) {
+  if (!els.pcaResult) return;
+  const fmt = (v, d = 3) => v == null ? "—" : v.toFixed(d);
+  const maxK = Math.min(r.d, 4);
+  // Variance explained table
+  let html = `<div class="mr-summary">n=${r.n}, 変数=${r.d}</div>`;
+  html += `<table style="margin-top:6px"><thead><tr>` +
+    `<th>主成分</th><th>固有値</th><th>寄与率</th><th>累積寄与率</th>` +
+    `</tr></thead><tbody>`;
+  for (let k = 0; k < r.d; k++) {
+    html += `<tr><td>PC${k + 1}</td>` +
+      `<td class="num">${fmt(r.eigvals[k])}</td>` +
+      `<td class="num">${fmt(r.ratios[k] * 100, 1)}%</td>` +
+      `<td class="num">${fmt(r.cumRatios[k] * 100, 1)}%</td></tr>`;
+  }
+  html += `</tbody></table>`;
+  // Loadings table
+  html += `<div style="margin-top:6px;font-size:11px;font-weight:600">因子負荷量 (|値| > 0.5 を強調)</div>`;
+  html += `<table><thead><tr><th>変数</th>`;
+  for (let k = 0; k < maxK; k++) html += `<th>PC${k + 1}</th>`;
+  html += `</tr></thead><tbody>`;
+  for (let i = 0; i < r.d; i++) {
+    html += `<tr><td>${escapeHtmlText(r.xFields[i])}</td>`;
+    for (let k = 0; k < maxK; k++) {
+      const l = r.loadings[i][k];
+      const cls = Math.abs(l) > 0.5 ? "is-sig" : "";
+      html += `<td class="num ${cls}">${l.toFixed(3)}</td>`;
+    }
+    html += `</tr>`;
+  }
+  html += `</tbody></table>`;
+  html += buildScreePlot(r);
+  els.pcaResult.innerHTML = html;
+}
+
+function buildScreePlot(r) {
+  const W = 280, H = 120, PAD = { top: 8, right: 8, bottom: 22, left: 28 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+  const maxK = Math.min(r.d, 8);
+  const maxRatio = Math.max(...r.ratios.slice(0, maxK));
+  const barW = innerW / maxK - 4;
+  let svg = `<div style="margin-top:6px;font-size:11px;font-weight:600">Scree プロット</div>`;
+  svg += `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="background:#fff;border:1px solid #e2e8f0">`;
+  svg += `<line x1="${PAD.left}" y1="${H - PAD.bottom}" x2="${W - PAD.right}" y2="${H - PAD.bottom}" stroke="#94a3b8"/>`;
+  svg += `<line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${H - PAD.bottom}" stroke="#94a3b8"/>`;
+  for (let k = 0; k < maxK; k++) {
+    const ratio = r.ratios[k];
+    const h = (ratio / maxRatio) * innerH;
+    const x = PAD.left + 2 + k * (barW + 4);
+    const y = H - PAD.bottom - h;
+    svg += `<rect x="${x}" y="${y}" width="${barW}" height="${h}" fill="#1e3a8a"/>`;
+    svg += `<text x="${x + barW / 2}" y="${H - PAD.bottom + 12}" font-size="9" text-anchor="middle" fill="#475569">PC${k + 1}</text>`;
+    svg += `<text x="${x + barW / 2}" y="${y - 2}" font-size="8" text-anchor="middle" fill="#1e293b">${(ratio * 100).toFixed(1)}%</text>`;
+  }
+  svg += `</svg>`;
+  return svg;
+}
+
+els.pcaRun?.addEventListener("click", runPca);
+
+els.pcaAdd?.addEventListener("click", () => {
+  const r = state.pcaResult;
+  if (!r || !state.dataset) return;
+  for (let k = 0; k < 2 && k < r.d; k++) {
+    let name = `PC${k + 1}`;
+    let suffix = 2;
+    while (state.dataset.fields.includes(name)) name = `PC${k + 1}_${suffix++}`;
+    const valMap = new Map();
+    for (let i = 0; i < r.keys.length; i++) valMap.set(r.keys[i], r.scores[i][k]);
+    for (const row of state.dataset.rows) {
+      row.values[name] = valMap.has(row.key) ? valMap.get(row.key) : null;
+    }
+    state.dataset.fields.push(name);
+    if (k === 0) state.field = name;
+  }
+  populateFieldSelects();
+  if (state.dataset.fields.length >= 2) populateScatterSelectors(state.dataset.fields);
+  els.selectField.value = state.field;
+  refresh();
+  setSummary("PC1, PC2 を派生列に追加して地図化しました", "success");
+});
+
 els.kmAdd?.addEventListener("click", () => {
   const r = state.kmResult;
   if (!r || !state.dataset) return;
@@ -3156,12 +3367,17 @@ function onDatasetReady(ds, label) {
       els.panelKm.hidden = false;
       populateKmSelectors(ds.fields);
     }
+    if (els.panelPca) {
+      els.panelPca.hidden = false;
+      populatePcaSelectors(ds.fields);
+    }
     populateScatterSelectors(ds.fields);
   } else {
     els.panelScatter.hidden = true;
     if (els.panelCorrMatrix) els.panelCorrMatrix.hidden = true;
     if (els.panelMr) els.panelMr.hidden = true;
     if (els.panelKm) els.panelKm.hidden = true;
+    if (els.panelPca) els.panelPca.hidden = true;
   }
   // Pre-populate pie field options for the new dataset
   populatePieFields();

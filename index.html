@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=146" />
+  <link rel="stylesheet" href="css/style.css?v=147" />
 </head>
 <body>
   <header class="app-header">
@@ -575,6 +575,20 @@
         <div id="mr-result" class="mr-result"></div>
       </section>
 
+      <section class="panel" id="panel-pca" hidden>
+        <h2>7e. 主成分分析 (PCA)</h2>
+        <div class="hint">複数列の分散を最大化する主成分軸を抽出。次元削減・構造発見。</div>
+        <div class="form-row">
+          <label style="align-self:flex-start">変数 X</label>
+          <div id="pca-x-list" style="flex:1;max-height:120px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px"></div>
+        </div>
+        <div class="form-row">
+          <button id="pca-run" class="btn btn-primary">PCA を実行</button>
+          <button id="pca-add" class="btn" disabled style="margin-left:auto">PC1, PC2 を列に追加</button>
+        </div>
+        <div id="pca-result" class="mr-result"></div>
+      </section>
+
       <section class="panel" id="panel-kmeans" hidden>
         <h2>7d. k-means クラスタリング</h2>
         <div class="hint">複数列の特徴ベクトル類似度で地域をグルーピング。z-score 標準化済み。</div>
@@ -705,7 +719,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=146"></script>
+  <script type="module" src="js/main.js?v=147"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
