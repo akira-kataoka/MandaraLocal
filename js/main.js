@@ -85,6 +85,7 @@ const els = {
   derivedName:  $("derived-name"),
   btnDerived:   $("btn-add-derived"),
   btnZscore:    $("btn-add-zscore"),
+  btnMinMax:    $("btn-add-minmax"),
   selectMode:   $("select-mode"),
   rowSymbolSize:$("row-symbol-size"),
   inputMaxR:    $("input-maxr"),
@@ -1044,6 +1045,29 @@ els.scatterSwap?.addEventListener("click", () => {
   drawScatter();
 });
 els.btnDerived.addEventListener("click", addDerivedField);
+els.btnMinMax?.addEventListener("click", () => {
+  if (!state.dataset) return;
+  const f = els.derivedA.value;
+  if (!f) { setSummary("A列を選んでください", "warn"); return; }
+  const name = `${f}_minmax`;
+  if (state.dataset.fields.includes(name)) {
+    setSummary(`列「${name}」はすでに存在します`, "warn"); return;
+  }
+  const vals = state.dataset.rows.map(r => r.values[f]).filter(Number.isFinite);
+  if (vals.length < 2) { setSummary("有効な値が2つ未満です", "warn"); return; }
+  const min = Math.min(...vals), max = Math.max(...vals);
+  if (min === max) { setSummary("最小=最大なのでmin-max正規化できません", "warn"); return; }
+  for (const r of state.dataset.rows) {
+    const v = r.values[f];
+    r.values[name] = Number.isFinite(v) ? (v - min) / (max - min) : null;
+  }
+  state.dataset.fields.push(name);
+  populateFieldSelects();
+  state.field = name; els.selectField.value = name;
+  refresh();
+  setSummary(`min-max列「${name}」を追加 (min=${min.toFixed(2)}, max=${max.toFixed(2)})`, "success");
+});
+
 els.btnZscore?.addEventListener("click", () => {
   if (!state.dataset) return;
   const f = els.derivedA.value;
