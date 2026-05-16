@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=96" />
+  <link rel="stylesheet" href="css/style.css?v=97" />
 </head>
 <body>
   <header class="app-header">
@@ -342,6 +342,14 @@
           <input id="input-map-title" type="text" placeholder="例: 都道府県人口分布 (2020年)" />
         </div>
         <div class="form-row">
+          <label for="input-map-subtitle">サブタイトル</label>
+          <input id="input-map-subtitle" type="text" placeholder="例: 国勢調査より作成" />
+        </div>
+        <div class="form-row">
+          <label for="input-map-author">作成者</label>
+          <input id="input-map-author" type="text" placeholder="例: 山田太郎" />
+        </div>
+        <div class="form-row">
           <label for="select-legend-pos">位置</label>
           <select id="select-legend-pos">
             <option value="br" selected>右下</option>
@@ -501,6 +509,7 @@
         </div>
         <div id="tooltip" class="map-tooltip" hidden></div>
         <div id="map-title" class="map-title" hidden></div>
+        <div id="map-subtitle" class="map-subtitle" hidden></div>
         <div id="north-arrow" class="north-arrow" title="北">
           <svg viewBox="0 0 32 40" width="32" height="40" aria-label="北矢印">
             <polygon points="16,3 24,28 16,22 8,28" fill="#1e293b" stroke="#1e293b" stroke-width="1" stroke-linejoin="round"/>
@@ -550,7 +559,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=96"></script>
+  <script type="module" src="js/main.js?v=97"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

@@ -68,6 +68,9 @@ const els = {
   inputDataSource: $("input-data-source"),
   inputMapTitle: $("input-map-title"),
   mapTitle:      $("map-title"),
+  inputMapSubtitle: $("input-map-subtitle"),
+  mapSubtitle:   $("map-subtitle"),
+  inputMapAuthor: $("input-map-author"),
   chkShowScale:  $("chk-show-scale"),
   chkShowNorth:  $("chk-show-north"),
   northArrow:    $("north-arrow"),
@@ -868,6 +871,23 @@ els.inputMapTitle?.addEventListener("input", () => {
   }
 });
 
+els.inputMapSubtitle?.addEventListener("input", () => {
+  if (!els.mapSubtitle) return;
+  const s = (els.inputMapSubtitle.value || "").trim();
+  if (s) {
+    els.mapSubtitle.textContent = s;
+    els.mapSubtitle.hidden = false;
+  } else {
+    els.mapSubtitle.textContent = "";
+    els.mapSubtitle.hidden = true;
+  }
+});
+
+els.inputMapAuthor?.addEventListener("input", () => {
+  // Author appears in the overlay footer, which is re-rendered by refresh().
+  if (state.dataset && state.field) refresh();
+});
+
 els.selectLegendPos?.addEventListener("change", () => {
   const pos = els.selectLegendPos.value;
   els.overlay.classList.remove("pos-br", "pos-bl", "pos-tr", "pos-tl");
@@ -1360,6 +1380,8 @@ function snapshotCurrent() {
     pieFields: [...(els.selectPieFields?.selectedOptions || [])].map(o => o.value),
     dataSource: els.inputDataSource?.value || "",
     mapTitle: els.inputMapTitle?.value || "",
+    mapSubtitle: els.inputMapSubtitle?.value || "",
+    mapAuthor: els.inputMapAuthor?.value || "",
     scatterColorBy: els.scatterColorBy?.value || "",
     showScale: !!els.chkShowScale?.checked,
     showNorth: !!els.chkShowNorth?.checked,
@@ -1442,6 +1464,13 @@ els.selectScene.addEventListener("change", async () => {
   if (snap.mapTitle !== undefined && els.inputMapTitle) {
     els.inputMapTitle.value = snap.mapTitle;
     els.inputMapTitle.dispatchEvent(new Event("input"));
+  }
+  if (snap.mapSubtitle !== undefined && els.inputMapSubtitle) {
+    els.inputMapSubtitle.value = snap.mapSubtitle;
+    els.inputMapSubtitle.dispatchEvent(new Event("input"));
+  }
+  if (snap.mapAuthor !== undefined && els.inputMapAuthor) {
+    els.inputMapAuthor.value = snap.mapAuthor;
   }
   if (snap.scatterColorBy !== undefined && els.scatterColorBy) {
     els.scatterColorBy.value = snap.scatterColorBy;
@@ -2064,7 +2093,12 @@ function refresh() {
   els.overlay.hidden = false;
   els.overlayTitle.textContent = state.field;
   const src = (els.inputDataSource?.value || "").trim();
-  els.overlayFooter.textContent = (src ? `出典: ${src} · ` : "") + `MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`;
+  const author = (els.inputMapAuthor?.value || "").trim();
+  const parts = [];
+  if (src) parts.push(`出典: ${src}`);
+  if (author) parts.push(`作成: ${author}`);
+  parts.push(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`);
+  els.overlayFooter.textContent = parts.join(" · ");
 
   renderStats(values);
 

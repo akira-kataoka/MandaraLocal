@@ -533,6 +533,31 @@ body.dark .map-title {
   border-color: #334155;
 }
 
+.map-subtitle {
+  position: absolute;
+  top: 38px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.85);
+  color: #334155;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 10px;
+  font-weight: 500;
+  font-size: 11px;
+  z-index: 699;
+  pointer-events: none;
+  max-width: 65%;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.dark .map-subtitle {
+  background: rgba(30,41,59,0.85); color: #cbd5e1;
+  border-color: #334155;
+}
+
 .north-arrow {
   position: absolute;
   top: 56px;
