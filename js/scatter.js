@@ -217,21 +217,54 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       yLo = yq1 - 1.5 * (yq3 - yq1); yHi = yq3 + 1.5 * (yq3 - yq1);
     }
     const labels = el("g", { class: "scatter-labels" });
+    const placed = []; // Bounding boxes of placed labels for collision detection
+    const fontSize = labelMode === "all" ? 8 : 9;
+    const fillColor = labelMode === "all" ? "#475569" : "#1e293b";
+    const fontWeight = labelMode === "all" ? "500" : "600";
+    // 8 candidate offsets around the point (Cycle 157 collision-avoidance):
+    // NE, E, SE, S, SW, W, NW, N — order = preferred placement.
+    const offsets = [
+      { dx:  5, dy: -3, anchor: "start" },
+      { dx:  6, dy:  3, anchor: "start" },
+      { dx:  5, dy:  8, anchor: "start" },
+      { dx:  0, dy: 10, anchor: "middle" },
+      { dx: -5, dy:  8, anchor: "end" },
+      { dx: -6, dy:  3, anchor: "end" },
+      { dx: -5, dy: -3, anchor: "end" },
+      { dx:  0, dy: -6, anchor: "middle" },
+    ];
+    const overlaps = (a, b) => !(a.x2 < b.x1 || b.x2 < a.x1 || a.y2 < b.y1 || b.y2 < a.y1);
+    // Pre-filter candidates so the "outliers" path can keep its original order.
+    const candidates = [];
     for (const [vx, vy, fid, nm] of pairs) {
       if (!nm) continue;
       if (labelMode === "outliers") {
         const isOutlier = vx < xLo || vx > xHi || vy < yLo || vy > yHi;
         if (!isOutlier) continue;
       }
-      const tx = pxAt(sx(vx)) + 5;
-      const ty = pyAt(sy(vy)) - 5;
-      const lbl = el("text", { x: tx, y: ty });
-      // "all" mode uses smaller font + lighter color to reduce visual noise
-      lbl.setAttribute("font-size", labelMode === "all" ? "8" : "9");
-      lbl.setAttribute("fill", labelMode === "all" ? "#475569" : "#1e293b");
-      lbl.setAttribute("font-weight", labelMode === "all" ? "500" : "600");
+      candidates.push([pxAt(sx(vx)), pyAt(sy(vy)), nm]);
+    }
+    for (const [cx, cy, nm] of candidates) {
+      const approxW = Math.max(8, nm.length * fontSize * 0.6);
+      let chosen = null;
+      for (const o of offsets) {
+        const tx = cx + o.dx;
+        const ty = cy + o.dy;
+        const x1 = o.anchor === "end" ? tx - approxW : o.anchor === "middle" ? tx - approxW / 2 : tx;
+        const bbox = { x1, x2: x1 + approxW, y1: ty - fontSize, y2: ty + 2 };
+        if (!placed.some(p => overlaps(p, bbox))) {
+          chosen = { tx, ty, anchor: o.anchor, bbox };
+          break;
+        }
+      }
+      if (!chosen) continue;  // All 8 positions overlap — skip to keep things readable
+      const lbl = el("text", { x: chosen.tx, y: chosen.ty, "text-anchor": chosen.anchor });
+      lbl.setAttribute("font-size", String(fontSize));
+      lbl.setAttribute("fill", fillColor);
+      lbl.setAttribute("font-weight", fontWeight);
       lbl.textContent = nm;
       labels.appendChild(lbl);
+      placed.push(chosen.bbox);
     }
     svgEl.appendChild(labels);
   }
