@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=228" />
+  <link rel="stylesheet" href="css/style.css?v=229" />
 </head>
 <body>
   <header class="app-header">
@@ -640,6 +640,11 @@
           </select>
           <input id="scatter-label-n" type="number" min="1" max="50" value="10" step="1"
             title="上位N件モードで表示する件数" style="width:54px;margin-left:6px" />
+          <select id="scatter-label-place" title="ラベル配置のアルゴリズム" style="margin-left:6px;font-size:11px">
+            <option value="auto" selected>自動回避</option>
+            <option value="corner">右上固定</option>
+            <option value="overlap">重なり許容</option>
+          </select>
         </div>
         <div class="form-row">
           <label for="scatter-degree">回帰次数</label>
@@ -887,7 +892,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=228"></script>
+  <script type="module" src="js/main.js?v=229"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

@@ -220,6 +220,7 @@ const els = {
   chkScatterLowess: $("chk-scatter-lowess"),
   scatterLabels:   $("scatter-labels"),
   scatterLabelN:   $("scatter-label-n"),
+  scatterLabelPlace: $("scatter-label-place"),
   btnScatterClearPins: $("btn-scatter-clear-pins"),
   btnScatterPinsCsv: $("btn-scatter-pins-csv"),
   scatterDegree:   $("scatter-degree"),
@@ -1954,6 +1955,7 @@ document.getElementById("btn-scatter-clear-overlays")?.addEventListener("click",
 els.scatterLabels?.addEventListener("change", drawScatter);
 els.scatterLabelN?.addEventListener("change", drawScatter);
 els.scatterLabelN?.addEventListener("input", drawScatter);
+els.scatterLabelPlace?.addEventListener("change", drawScatter);
 els.scatterDegree?.addEventListener("change", drawScatter);
 els.chkScatterLogX.addEventListener("change", drawScatter);
 els.chkScatterLogY.addEventListener("change", drawScatter);
@@ -6683,6 +6685,7 @@ function drawScatter() {
     lowess: !!els.chkScatterLowess?.checked,
     labels: els.scatterLabels?.value || "outliers",
     labelTopN: parseInt(els.scatterLabelN?.value || "10", 10) || 10,
+    labelPlace: els.scatterLabelPlace?.value || "auto",
     pinnedIds: state.pinnedScatterIds instanceof Set ? state.pinnedScatterIds : null,
     shapeFor,
     shapeLegend,

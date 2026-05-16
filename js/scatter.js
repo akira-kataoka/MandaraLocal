@@ -316,26 +316,35 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       });
       labels.appendChild(ring);
     }
+    // Cycle 229: label placement strategy.
+    //   "auto"    — original 8-direction collision-avoidance (default)
+    //   "corner"  — single NE offset; skip if it would overlap
+    //   "overlap" — single NE offset; never skip (let labels stack)
+    const placeMode = opts.labelPlace === "corner" || opts.labelPlace === "overlap"
+      ? opts.labelPlace : "auto";
+    const tryOffsets = placeMode === "auto" ? offsets : [offsets[0]];
     for (const [cx, cy, nm] of candidates) {
       const approxW = Math.max(8, nm.length * fontSize * 0.6);
       let chosen = null;
-      for (const o of offsets) {
+      for (const o of tryOffsets) {
         const tx = cx + o.dx;
         const ty = cy + o.dy;
         const x1 = o.anchor === "end" ? tx - approxW : o.anchor === "middle" ? tx - approxW / 2 : tx;
         const bbox = { x1, x2: x1 + approxW, y1: ty - fontSize, y2: ty + 2 };
-        if (!placed.some(p => overlaps(p, bbox))) {
+        if (placeMode === "overlap" || !placed.some(p => overlaps(p, bbox))) {
           chosen = { tx, ty, anchor: o.anchor, bbox };
           break;
         }
       }
-      if (!chosen) continue;  // All 8 positions overlap — skip to keep things readable
+      if (!chosen) continue;  // Position overlapped (auto/corner) — skip for readability
       const lbl = el("text", { x: chosen.tx, y: chosen.ty, "text-anchor": chosen.anchor });
       lbl.setAttribute("font-size", String(fontSize));
       lbl.setAttribute("fill", fillColor);
       lbl.setAttribute("font-weight", fontWeight);
       lbl.textContent = nm;
       labels.appendChild(lbl);
+      // In overlap mode we still track bboxes so consumers can introspect,
+      // but skipping the registration doesn't change visible behaviour.
       placed.push(chosen.bbox);
     }
     svgEl.appendChild(labels);
