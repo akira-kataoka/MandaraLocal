@@ -5772,11 +5772,18 @@ function onScatterHover(id, isHot) {
   else       mapper.clearHighlight();
 }
 function onScatterClick(id) {
-  if (state.level === "chocho") {
-    // Town points have no polygon — just highlight via tooltip
-    return;
+  if (state.level !== "chocho") {
+    // Town points have no polygon — skip the map zoom but still scroll the table.
+    mapper.zoomToFeature(id);
   }
-  mapper.zoomToFeature(id);
+  // Also scroll the data table to the corresponding row (Cycle 187)
+  const tr = els.tableWrap?.querySelector(`tr[data-id="${CSS.escape(String(id))}"]`);
+  if (tr) {
+    tr.scrollIntoView({ behavior: "smooth", block: "center" });
+    tr.classList.add("is-flashed");
+    setTimeout(() => tr.classList.remove("is-flashed"), 1500);
+  }
+  return;
 }
 
 function onMapHover(id, isHot) {

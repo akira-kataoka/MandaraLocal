@@ -480,6 +480,15 @@ body.dark .ct-result td.total { background: #78350f; }
 .table-wrap th.sort-asc::after { content: " ▲"; color: var(--accent); }
 .table-wrap th.sort-desc::after { content: " ▼"; color: var(--accent); }
 .table-wrap tbody tr:hover { background: #fef3c7; cursor: pointer; }
+/* Cycle 187: brief flash when a row is targeted from a scatter point click. */
+.table-wrap tbody tr.is-flashed {
+  animation: tableRowFlash 1.4s ease-out;
+}
+@keyframes tableRowFlash {
+  0%   { background: #fde68a; }
+  50%  { background: #fef3c7; }
+  100% { background: transparent; }
+}
 .table-wrap td.row-del { padding: 0 2px; width: 18px; text-align: center; }
 .table-wrap .row-del-btn {
   background: none; border: 0; cursor: pointer;
