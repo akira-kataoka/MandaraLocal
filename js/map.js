@@ -1032,18 +1032,35 @@ export class MandaraMap {
     this.pinLayer.clearLayers();
     if (!idSet || !idSet.size) return;
     const stroke = (typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color)) ? color : "#dc2626";
-    const drawRing = (latlng) => L.circleMarker(latlng, {
-      radius: 9, color: stroke, weight: 2.5,
-      fill: false, dashArray: "3 2",
-      interactive: false,
-    }).addTo(this.pinLayer);
+    // Cycle 274: build a 1-indexed lookup so the rings can carry the same
+    // pin number that the scatter chart / Markdown / CSV use.
+    const order = Array.from(idSet);
+    const numFor = (id) => order.indexOf(id) + 1;
+    const drawRing = (latlng, n) => {
+      L.circleMarker(latlng, {
+        radius: 10, color: stroke, weight: 2.5,
+        fill: true, fillColor: "#ffffff", fillOpacity: 0.85,
+        dashArray: "3 2",
+        interactive: false,
+      }).addTo(this.pinLayer);
+      if (n > 0) {
+        L.marker(latlng, {
+          interactive: false,
+          icon: L.divIcon({
+            className: "mandara-pin-num",
+            html: `<span style="display:inline-block;color:${stroke};font:700 10px/14px sans-serif;text-align:center;width:14px;height:14px">${n}</span>`,
+            iconSize: [14, 14], iconAnchor: [7, 7],
+          }),
+        }).addTo(this.pinLayer);
+      }
+    };
     if (this.layer) {
       this.layer.eachLayer((lyr) => {
         const id = lyr.feature?.properties?.id;
         if (id == null || !idSet.has(id)) return;
         try {
           const c = lyr.getBounds().getCenter();
-          drawRing(c);
+          drawRing(c, numFor(id));
         } catch {}
       });
     }
@@ -1053,7 +1070,7 @@ export class MandaraMap {
       this.symbolLayer.eachLayer((s) => {
         const tid = s.feature?.properties?.id ?? s.options?._townId;
         if (tid != null && idSet.has(tid) && typeof s.getLatLng === "function") {
-          drawRing(s.getLatLng());
+          drawRing(s.getLatLng(), numFor(tid));
         }
       });
     }
