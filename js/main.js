@@ -4160,7 +4160,8 @@ function onDatasetReady(ds, label) {
   // Detect time series
   setupTimeSeriesPanel();
 
-  const msg = `${label}: ${ds.rows.length}件 / ${ds.fields.length}列を読み込みました。`;
+  const encTag = ds.encoding && ds.encoding !== "UTF-8" ? ` [${ds.encoding}]` : "";
+  const msg = `${label}${encTag}: ${ds.rows.length}件 / ${ds.fields.length}列を読み込みました。`;
   const warn = ds.unmatched.length
     ? ` ⚠ 地名と一致しなかった ${ds.unmatched.length}件: ${ds.unmatched.slice(0,5).join("、")}${ds.unmatched.length>5 ? `…他${ds.unmatched.length-5}件` : ""}`
     : "";

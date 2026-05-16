@@ -196,10 +196,36 @@ export async function loadCsvFile(file, opts = {}) {
       if (idx >= 0 && idx < sheetNames.length) chosen = sheetNames[idx];
     }
     const csv = XLSX.utils.sheet_to_csv(wb.Sheets[chosen]);
-    return parseCsvText(csv, opts);
+    const ds = parseCsvText(csv, opts);
+    ds.encoding = "Excel";
+    return ds;
   }
-  const text = await file.text();
-  return parseCsvText(text, opts);
+  // CSV: try UTF-8 first; fall back to Shift_JIS if the file looks garbled.
+  // Many JP government CSVs (e-Stat etc.) are still distributed as Shift_JIS.
+  const buf = await file.arrayBuffer();
+  const { text, encoding } = decodeCsvBytes(buf);
+  const ds = parseCsvText(text, opts);
+  ds.encoding = encoding;
+  return ds;
+}
+
+// Decode a byte buffer as UTF-8; if the result contains many replacement
+// characters (U+FFFD), retry as Shift_JIS. Returns { text, encoding }.
+function decodeCsvBytes(buf) {
+  const bytes = new Uint8Array(buf);
+  // Try UTF-8 in non-fatal mode so we can inspect replacement count.
+  const utf8 = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  const replCount = (utf8.match(/�/g) || []).length;
+  // Threshold: ~0.5% of characters being replacement → assume not UTF-8
+  if (replCount / Math.max(1, utf8.length) > 0.005) {
+    try {
+      const sjis = new TextDecoder("shift_jis").decode(bytes);
+      return { text: sjis, encoding: "Shift_JIS" };
+    } catch (_) {
+      // Browser doesn't support shift_jis (very rare) — keep UTF-8.
+    }
+  }
+  return { text: utf8, encoding: "UTF-8" };
 }
 
 export async function loadSampleCsv(url, opts = {}) {
