@@ -2051,8 +2051,14 @@ function runKmeansClustering() {
   const K = parseInt(els.kmK.value, 10) || 3;
   const out = kmeansCore(xFields, K);
   if (!out) { setSummary("サンプル不足、または有効データなし", "warn"); return; }
-  const sil = silhouetteScore(out.Z, out.assignments, K);
-  state.kmResult = { K, xFields, n: out.n, iterations: out.iter, wss: out.wss, silhouette: sil, keys: out.keys, assignments: out.assignments };
+  const silArr = silhouetteScores(out.Z, out.assignments, K);
+  let sil = null;
+  if (silArr) {
+    let s = 0, c = 0;
+    for (const v of silArr) if (v != null) { s += v; c++; }
+    sil = c > 0 ? s / c : null;
+  }
+  state.kmResult = { K, xFields, n: out.n, iterations: out.iter, wss: out.wss, silhouette: sil, silArr, keys: out.keys, assignments: out.assignments };
   renderKmResult(state.kmResult);
   if (els.kmAdd) els.kmAdd.disabled = false;
   if (els.kmCsv) els.kmCsv.disabled = false;
@@ -2119,19 +2125,18 @@ function euclidSq(a, b) {
   return s;
 }
 
-// Silhouette score for clustering quality (Cycle 162). Returns the average
-// silhouette over all points in [-1, +1]; higher = better cluster separation.
-function silhouetteScore(points, assignments, K) {
+// Per-point silhouette values (Cycle 162/163). Returns an array of length n;
+// entries are null for singletons (a single-member cluster has no internal a).
+function silhouetteScores(points, assignments, K) {
   const n = points.length;
   if (n < 2 || K < 2) return null;
   const clusters = Array.from({ length: K }, () => []);
   for (let i = 0; i < n; i++) clusters[assignments[i]].push(i);
   const euclid = (a, b) => Math.sqrt(euclidSq(a, b));
-  let sum = 0;
-  let count = 0;
+  const scores = new Array(n).fill(null);
   for (let i = 0; i < n; i++) {
     const ki = assignments[i];
-    if (clusters[ki].length <= 1) continue; // s undefined for singletons → skip
+    if (clusters[ki].length <= 1) continue;
     let aSum = 0;
     for (const j of clusters[ki]) if (j !== i) aSum += euclid(points[i], points[j]);
     const a = aSum / (clusters[ki].length - 1);
@@ -2144,10 +2149,16 @@ function silhouetteScore(points, assignments, K) {
       if (meanB < b) b = meanB;
     }
     if (!Number.isFinite(b)) continue;
-    const s = a === 0 && b === 0 ? 0 : (b - a) / Math.max(a, b);
-    sum += s;
-    count++;
+    scores[i] = a === 0 && b === 0 ? 0 : (b - a) / Math.max(a, b);
   }
+  return scores;
+}
+
+function silhouetteScore(points, assignments, K) {
+  const arr = silhouetteScores(points, assignments, K);
+  if (!arr) return null;
+  let sum = 0, count = 0;
+  for (const s of arr) if (s != null) { sum += s; count++; }
   return count > 0 ? sum / count : null;
 }
 
@@ -2157,6 +2168,61 @@ function silhouetteLabel(s) {
   if (s >= 0.25) return "弱いが妥当な構造";
   if (s > 0) return "弱い構造（要改善）";
   return "構造なし";
+}
+
+// Build a silhouette plot SVG (Cycle 163). Each point becomes a horizontal
+// bar; bars are grouped by cluster and sorted descending within a cluster.
+function buildSilhouettePlot(scores, assignments, K, meanS) {
+  if (!scores) return "";
+  const palette = ["#2563eb", "#dc2626", "#16a34a", "#d97706", "#9333ea", "#0891b2", "#db2777", "#65a30d"];
+  // Group + sort descending within each cluster
+  const groups = Array.from({ length: K }, () => []);
+  for (let i = 0; i < scores.length; i++) {
+    if (scores[i] != null) groups[assignments[i]].push(scores[i]);
+  }
+  for (const g of groups) g.sort((a, b) => b - a);
+  const totalBars = groups.reduce((s, g) => s + g.length, 0);
+  if (totalBars === 0) return "";
+  const W = 320, H = Math.min(260, Math.max(140, totalBars * 4 + 40));
+  const PAD = { top: 8, right: 12, bottom: 22, left: 30 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+  const barH = Math.max(1.5, innerH / totalBars);
+  const zeroX = PAD.left + (0 - -1) / 2 * innerW;  // s in [-1, 1]
+  const xAt = (s) => PAD.left + (s + 1) / 2 * innerW;
+  let svg = `<div style="margin-top:6px;font-size:11px;font-weight:600">シルエットプロット</div>`;
+  svg += `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="background:#fff;border:1px solid #e2e8f0">`;
+  // Frame
+  svg += `<rect x="${PAD.left}" y="${PAD.top}" width="${innerW}" height="${innerH}" fill="none" stroke="#cbd5e1"/>`;
+  // 0 axis
+  svg += `<line x1="${zeroX}" y1="${PAD.top}" x2="${zeroX}" y2="${H - PAD.bottom}" stroke="#94a3b8" stroke-dasharray="2,2"/>`;
+  // Mean line (red)
+  if (meanS != null) {
+    const mx = xAt(meanS);
+    svg += `<line x1="${mx}" y1="${PAD.top}" x2="${mx}" y2="${H - PAD.bottom}" stroke="#dc2626" stroke-width="1" stroke-dasharray="3,2"/>`;
+  }
+  // Draw bars
+  let y = PAD.top;
+  for (let k = 0; k < K; k++) {
+    const color = palette[k % palette.length];
+    for (const s of groups[k]) {
+      const x1 = s >= 0 ? zeroX : xAt(s);
+      const w = Math.abs(xAt(s) - zeroX);
+      svg += `<rect x="${x1.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${(barH - 0.4).toFixed(1)}" fill="${color}" opacity="0.85"/>`;
+      y += barH;
+    }
+    // Cluster label
+    svg += `<text x="${PAD.left - 4}" y="${(y - groups[k].length * barH / 2 + 3).toFixed(1)}" font-size="9" text-anchor="end" fill="#475569">C${k + 1}</text>`;
+  }
+  // X axis ticks
+  for (const t of [-1, -0.5, 0, 0.5, 1]) {
+    const x = xAt(t);
+    svg += `<line x1="${x}" y1="${H - PAD.bottom}" x2="${x}" y2="${H - PAD.bottom + 2}" stroke="#94a3b8"/>`;
+    svg += `<text x="${x}" y="${H - PAD.bottom + 12}" font-size="8" text-anchor="middle" fill="#475569">${t}</text>`;
+  }
+  svg += `<text x="${W / 2}" y="${H - 4}" font-size="9" text-anchor="middle" fill="#475569">シルエット係数</text>`;
+  svg += `</svg>`;
+  return svg;
 }
 
 function renderKmResult(r) {
@@ -2172,6 +2238,7 @@ function renderKmResult(r) {
     html += `<tr><td>${k + 1}</td><td class="num">${sizes[k]}</td><td class="num">${(sizes[k] / r.n * 100).toFixed(1)}%</td></tr>`;
   }
   html += "</tbody></table>";
+  if (r.silArr) html += buildSilhouettePlot(r.silArr, r.assignments, r.K, r.silhouette);
   els.kmResult.innerHTML = html;
 }
 
@@ -2595,8 +2662,14 @@ function runHierarchical() {
     assignments[i] = rootMap.get(root);
   }
   const Kfinal = rootMap.size;
-  const sil = silhouetteScore(Z, assignments, Kfinal);
-  state.hcResult = { xFields, n, K: Kfinal, linkage, silhouette: sil, keys, assignments, merges: allMerges };
+  const silArr = silhouetteScores(Z, assignments, Kfinal);
+  let sil = null;
+  if (silArr) {
+    let s = 0, c = 0;
+    for (const v of silArr) if (v != null) { s += v; c++; }
+    sil = c > 0 ? s / c : null;
+  }
+  state.hcResult = { xFields, n, K: Kfinal, linkage, silhouette: sil, silArr, keys, assignments, merges: allMerges };
   renderHcResult(state.hcResult);
   if (els.hcAdd) els.hcAdd.disabled = false;
   if (els.hcCsv) els.hcCsv.disabled = false;
@@ -2621,6 +2694,7 @@ function renderHcResult(r) {
     html += `<tr><td>${k + 1}</td><td class="num">${sizes[k]}</td><td class="num">${(sizes[k] / r.n * 100).toFixed(1)}%</td></tr>`;
   }
   html += "</tbody></table>";
+  if (r.silArr) html += buildSilhouettePlot(r.silArr, r.assignments, r.K, r.silhouette);
   html += buildDendrogram(r);
   els.hcResult.innerHTML = html;
 }
