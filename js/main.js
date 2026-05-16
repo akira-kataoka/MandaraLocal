@@ -1846,6 +1846,7 @@ els.btnScatterClearPins?.addEventListener("click", () => {
   syncScatterPinBtn();
   drawScatter();
   if (typeof refreshTable === "function") refreshTable();
+  mapper.clearPinned();
   setSummary("散布図のピンを解除しました", "muted");
 });
 
@@ -4933,6 +4934,7 @@ function onDatasetReady(ds, label) {
   // Cycle 212: discard any scatter pins from the previous dataset.
   state.pinnedScatterIds = new Set();
   syncScatterPinBtn();
+  mapper.clearPinned?.();
   if (els.tableColPicker) els.tableColPicker.hidden = true;
   // pick first numeric field as default
   state.field = ds.fields[0];
@@ -5333,6 +5335,14 @@ function refresh() {
 
   // Standard deviation ellipse
   applySdeDisplay();
+
+  // Cycle 216: re-render scatter pins on the map after a fresh choropleth
+  // pass, since applyChoropleth rebuilds the polygon layer.
+  if (state.pinnedScatterIds?.size) {
+    mapper.markPinned(state.pinnedScatterIds);
+  } else {
+    mapper.clearPinned?.();
+  }
 
   saveSettings(state);
 }
@@ -6541,6 +6551,8 @@ function onScatterClick(id, ev) {
     drawScatter();
     // Cycle 215: keep the table's pin highlight in sync.
     if (typeof refreshTable === "function") refreshTable();
+    // Cycle 216: render the pin rings on the map too.
+    mapper.markPinned(state.pinnedScatterIds);
     return;
   }
   if (state.level !== "chocho") {

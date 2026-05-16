@@ -102,6 +102,9 @@ export class MandaraMap {
     this._fieldName = "";
     this._mapEl = document.getElementById(elId);
     this.symbolLayer = L.layerGroup().addTo(this.map);
+    // Cycle 216: independent overlay for "pinned" scatter points so the
+    // permanent red ring stays visible across choropleth / outlier redraws.
+    this.pinLayer = L.layerGroup().addTo(this.map);
     this._centroidCache = new Map(); // code -> [lat, lng]
     // Default: prefecture mode props
     this._nameFor = (props) => props.nam_ja || props.nam || `#${props.id}`;
@@ -1017,6 +1020,43 @@ export class MandaraMap {
       if (isOutlier && lyr.bringToFront) lyr.bringToFront();
     });
     this.symbolLayer.eachLayer(s => s.bringToFront && s.bringToFront());
+  }
+
+  /**
+   * Cycle 216: render persistent ring markers for pinned features (or town
+   * points in chocho mode). Always works off the layer's bounds-center.
+   */
+  markPinned(idSet) {
+    this.pinLayer.clearLayers();
+    if (!idSet || !idSet.size) return;
+    const drawRing = (latlng) => L.circleMarker(latlng, {
+      radius: 9, color: "#dc2626", weight: 2.5,
+      fill: false, dashArray: "3 2",
+      interactive: false,
+    }).addTo(this.pinLayer);
+    if (this.layer) {
+      this.layer.eachLayer((lyr) => {
+        const id = lyr.feature?.properties?.id;
+        if (id == null || !idSet.has(id)) return;
+        try {
+          const c = lyr.getBounds().getCenter();
+          drawRing(c);
+        } catch {}
+      });
+    }
+    // Town points (chocho mode) — pinned id might be a town code rather than
+    // a polygon. Walk symbolLayer for circleMarkers carrying a matching id.
+    if (this.symbolLayer) {
+      this.symbolLayer.eachLayer((s) => {
+        const tid = s.feature?.properties?.id ?? s.options?._townId;
+        if (tid != null && idSet.has(tid) && typeof s.getLatLng === "function") {
+          drawRing(s.getLatLng());
+        }
+      });
+    }
+  }
+  clearPinned() {
+    this.pinLayer.clearLayers();
   }
 
   clearOutlierMarks() {
