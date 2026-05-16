@@ -2009,6 +2009,7 @@ els.btnScatterPinBrush?.addEventListener("click", () => {
   mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
   // Cycle 261: brush bbox served its purpose once promoted to pins.
   mapper.clearBrushBounds?.();
+  state.lastBrushBounds = null;
   setSummary(`brush 選択 ${sel.size} 件中 ${added} 件を新規ピン留め（計 ${state.pinnedScatterIds.size} 件）`, "success");
 });
 
@@ -4271,6 +4272,16 @@ function buildAnalysisMarkdown() {
     }
     lines.push("");
   }
+  // Cycle 270: brush selection bbox (lat/lng) when one is active.
+  if (state.lastBrushBounds && Number.isFinite(state.lastBrushBounds.north)) {
+    const b = state.lastBrushBounds;
+    lines.push(`## brush 選択地理範囲`);
+    lines.push(`- 件数: ${b.n}`);
+    lines.push(`- 緯度: ${fmt(b.south, 4)} 〜 ${fmt(b.north, 4)}`);
+    lines.push(`- 経度: ${fmt(b.west, 4)} 〜 ${fmt(b.east, 4)}`);
+    lines.push("");
+  }
+
   // Cycle 239: list pinned scatter points so reviewers see which regions the
   // analyst flagged. Up to 20 rows; overflow collapsed into "他N件".
   const pinned = state.pinnedScatterIds;
@@ -4340,6 +4351,7 @@ els.btnViewReset?.addEventListener("click", () => {
   if (typeof syncBrushPinBtn === "function") syncBrushPinBtn();
   mapper.clearPinned?.();
   mapper.clearBrushBounds?.();
+  state.lastBrushBounds = null;
   // Attribute filter
   if (Array.isArray(filterStack)) filterStack.length = 0;
   state.filteredKeys = null;
@@ -4412,7 +4424,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "269"; // bumped each polish cycle
+const APP_VERSION = "270"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -5569,6 +5581,7 @@ function onDatasetReady(ds, label) {
   // Cycle 212: discard any scatter pins from the previous dataset.
   state.pinnedScatterIds = new Set();
   state.lastBrushIds = null;
+  state.lastBrushBounds = null;
   syncScatterPinBtn();
   if (typeof syncBrushPinBtn === "function") syncBrushPinBtn();
   mapper.clearPinned?.();
@@ -7226,7 +7239,8 @@ function drawScatter() {
       state.lastBrushIds = new Set(ids);
       syncBrushPinBtn();
       // Cycle 261: also outline the geographical bbox of the selection.
-      mapper.showBrushBounds?.(state.lastBrushIds);
+      // Cycle 270: stash the resolved bbox for the analysis Markdown.
+      state.lastBrushBounds = mapper.showBrushBounds?.(state.lastBrushIds) || null;
       setSummary(`${ids.size} 件を地図でハイライト中（散布図 brush 選択）`, "success");
     },
     sizeFor,

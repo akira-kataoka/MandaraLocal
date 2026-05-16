@@ -1090,13 +1090,20 @@ export class MandaraMap {
         }
       });
     }
-    if (!count) return false;
+    if (!count) return null;
     L.rectangle(bounds, {
       color: "#7c3aed", weight: 1.5,
       fillColor: "#7c3aed", fillOpacity: 0.08,
       dashArray: "4 3", interactive: false,
     }).addTo(this._brushBoundsLayer);
-    return true;
+    // Cycle 270: return the resolved bbox so callers can stash it for Markdown.
+    return {
+      south: bounds.getSouth(),
+      west:  bounds.getWest(),
+      north: bounds.getNorth(),
+      east:  bounds.getEast(),
+      n: count,
+    };
   }
   clearBrushBounds() {
     this._brushBoundsLayer?.clearLayers();
