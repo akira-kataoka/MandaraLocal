@@ -850,6 +850,67 @@ export class MandaraMap {
     if (this._areaCleanup) this._areaCleanup();
   }
 
+  /**
+   * Buffer-search tool. User clicks the map → a circle of radius `radiusKm`
+   * is drawn, and every feature (polygon centroid or town point) inside
+   * that circle is highlighted via markOutliers().
+   * MANDARA 「空間検索」相当。
+   *
+   * @param onHit (idsSet, hitCount, totalCount) callback after each click
+   */
+  enableBufferTool(radiusKm, onHit) {
+    if (this._bufferCleanup) this._bufferCleanup();
+    if (!this._bufferLayer) this._bufferLayer = L.layerGroup().addTo(this.map);
+    const me = this;
+    const container = this.map.getContainer();
+    container.style.cursor = "crosshair";
+
+    const onClick = (e) => {
+      me._bufferLayer.clearLayers();
+      const center = e.latlng;
+      // 1) draw a circle (radiusKm * 1000 m). Leaflet L.circle takes meters.
+      L.circle(center, {
+        radius: radiusKm * 1000,
+        color: "#9333ea", weight: 1.5, dashArray: "4 4",
+        fillColor: "#a855f7", fillOpacity: 0.12,
+      }).addTo(me._bufferLayer);
+      L.circleMarker(center, {
+        radius: 4, color: "#7e22ce", fillColor: "#a855f7", fillOpacity: 1, weight: 0,
+      }).addTo(me._bufferLayer);
+
+      // 2) find all features whose centroid is inside the circle
+      const hits = new Set();
+      let total = 0;
+      // Polygon layer
+      if (me.layer) {
+        me.layer.eachLayer((lyr) => {
+          total++;
+          let c;
+          try { c = lyr.getBounds().getCenter(); } catch { return; }
+          if (me.map.distance(c, center) <= radiusKm * 1000) {
+            hits.add(lyr.feature.properties.id);
+          }
+        });
+        me.markOutliers(hits);
+      }
+      if (onHit) onHit(hits, hits.size, total);
+    };
+
+    this.map.on("click", onClick);
+    this._bufferCleanup = () => {
+      this.map.off("click", onClick);
+      container.style.cursor = "";
+      if (this._bufferLayer) this._bufferLayer.clearLayers();
+      this.clearOutlierMarks();
+      this._bufferCleanup = null;
+    };
+    return this._bufferCleanup;
+  }
+
+  disableBufferTool() {
+    if (this._bufferCleanup) this._bufferCleanup();
+  }
+
   getMapElement() { return this._mapEl; }
 }
 

@@ -132,6 +132,8 @@ const els = {
   btnCsv:       $("btn-export-csv"),
   btnMeasure:   $("btn-measure"),
   btnArea:      $("btn-area"),
+  btnBuffer:    $("btn-buffer"),
+  inputBufferKm:$("input-buffer-km"),
   btnTheme:     $("btn-theme"),
 };
 
@@ -782,11 +784,13 @@ els.tsSpeed.addEventListener("change", () => {
 
 let measureOn = false;
 let areaOn = false;
+let bufferOn = false;
 
 function toggleMeasure(on) {
   measureOn = on;
   if (on) {
     if (areaOn) toggleArea(false);
+    if (bufferOn) toggleBuffer(false);
     mapper.enableMeasureTool();
     els.btnMeasure.classList.add("btn-primary");
     setSummary("地図を2点クリックして距離を測定。3点目で再開始。", "muted");
@@ -799,6 +803,7 @@ function toggleArea(on) {
   areaOn = on;
   if (on) {
     if (measureOn) toggleMeasure(false);
+    if (bufferOn) toggleBuffer(false);
     mapper.enableAreaTool();
     els.btnArea.classList.add("btn-primary");
     setSummary("クリックで頂点を追加・ダブルクリックで面積を確定 (km² / m²)", "muted");
@@ -807,8 +812,28 @@ function toggleArea(on) {
     els.btnArea.classList.remove("btn-primary");
   }
 }
+function toggleBuffer(on) {
+  bufferOn = on;
+  if (on) {
+    if (measureOn) toggleMeasure(false);
+    if (areaOn) toggleArea(false);
+    const km = Math.max(0.1, parseFloat(els.inputBufferKm.value || "10"));
+    mapper.enableBufferTool(km, (hits, hitCount, totalCount) => {
+      setSummary(`半径${km}km 圏内: ${hitCount}/${totalCount} 件を強調`, "success");
+    });
+    els.btnBuffer.classList.add("btn-primary");
+    setSummary(`地図上の任意の点をクリック → 半径 ${els.inputBufferKm.value}km の地域を強調`, "muted");
+  } else {
+    mapper.disableBufferTool();
+    els.btnBuffer.classList.remove("btn-primary");
+  }
+}
 els.btnMeasure.addEventListener("click", () => toggleMeasure(!measureOn));
 els.btnArea.addEventListener("click", () => toggleArea(!areaOn));
+els.btnBuffer.addEventListener("click", () => toggleBuffer(!bufferOn));
+els.inputBufferKm.addEventListener("change", () => {
+  if (bufferOn) { toggleBuffer(false); toggleBuffer(true); }
+});
 
 function toggleTheme() {
   const next = document.body.classList.toggle("dark");
