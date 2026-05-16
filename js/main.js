@@ -130,6 +130,7 @@ const els = {
   scatterPng:   $("scatter-png"),
   scatterSwap:  $("scatter-swap"),
   dataQuality:  $("data-quality"),
+  rankingBox:   $("ranking-box"),
   panelCt:      $("panel-crosstab"),
   ctRow:        $("ct-row"),
   ctCol:        $("ct-col"),
@@ -1921,6 +1922,9 @@ function refresh() {
   // Outlier highlight
   applyOutlierHighlight(values);
 
+  // Ranking
+  renderRanking();
+
   // Standard deviation ellipse
   applySdeDisplay();
 
@@ -2107,6 +2111,28 @@ function tsStop() {
   tsState.timer = null;
   els.tsPlay.hidden = false;
   els.tsStop.hidden = true;
+}
+
+function renderRanking() {
+  if (!els.rankingBox || !state.dataset || !state.field) return;
+  const rows = state.dataset.rows
+    .filter(r => Number.isFinite(r.values[state.field]))
+    .sort((a, b) => b.values[state.field] - a.values[state.field]);
+  const top = rows.slice(0, 5);
+  const bot = rows.slice(-5).reverse();
+  const buildRow = (r, i, prefix = "") => {
+    const v = r.values[state.field];
+    return `<div class="rk-row" data-id="${r.key}"><span class="rk-pos">${prefix}${i+1}</span><span class="rk-name">${escapeHtmlText(r.name || "#"+r.key)}</span><span class="rk-val">${formatNum(v)}</span></div>`;
+  };
+  els.rankingBox.innerHTML =
+    `<div class="rk-section">上位 5</div>${top.map((r,i) => buildRow(r, i)).join("")}` +
+    `<div class="rk-section">下位 5</div>${bot.map((r,i) => buildRow(r, i)).join("")}`;
+  els.rankingBox.querySelectorAll(".rk-row").forEach(el => {
+    const id = parseInt(el.dataset.id, 10) || el.dataset.id;
+    el.addEventListener("mouseenter", () => mapper.highlightById(isNaN(id) ? el.dataset.id : id));
+    el.addEventListener("mouseleave", () => mapper.clearHighlight());
+    el.addEventListener("click", () => mapper.zoomToFeature(isNaN(id) ? el.dataset.id : id));
+  });
 }
 
 function renderDataQuality() {

@@ -281,6 +281,19 @@ details.derived .form-row input[type="text"] {
 .outlier-list .ol-item { padding: 1px 0; cursor: pointer; }
 .outlier-list .ol-item:hover { background: #fef3c7; }
 
+#ranking-box .rk-section {
+  font-weight: 600; color: var(--muted); margin-top: 4px; font-size: 11px;
+}
+#ranking-box .rk-row {
+  display: flex; gap: 6px; padding: 2px 4px;
+  border-radius: 3px; cursor: pointer; font-size: 11px;
+}
+#ranking-box .rk-row:hover { background: #fef3c7; }
+#ranking-box .rk-pos { color: var(--accent); width: 18px; text-align: right; font-weight: 600; }
+#ranking-box .rk-name { flex: 1; }
+#ranking-box .rk-val { font-variant-numeric: tabular-nums; color: var(--text); }
+body.dark #ranking-box .rk-row:hover { background: #1e3a8a; }
+
 .ct-result { margin-top: 8px; overflow-x: auto; }
 .ct-result table { border-collapse: collapse; font-size: 11px; width: 100%; }
 .ct-result th, .ct-result td {
