@@ -2827,13 +2827,24 @@ function runSplom() {
         const innerH = cell - 2 * pad;
         const px = (v) => x0 + pad + ((v - rx.min) / xRange) * innerW;
         const py = (v) => y0 + pad + innerH - ((v - ry.min) / yRange) * innerH;
+        // Compute Pearson r for this pair using complete cases (Cycle 177).
+        const xVals = [], yVals = [];
         for (let k = 0; k < cols[0].length; k++) {
           const xv = cols[j][k], yv = cols[i][k];
           if (!Number.isFinite(xv) || !Number.isFinite(yv)) continue;
+          xVals.push(xv); yVals.push(yv);
           html += `<circle cx="${px(xv).toFixed(1)}" cy="${py(yv).toFixed(1)}" r="1.4" fill="rgba(15,23,42,0.5)"/>`;
         }
+        // r overlay top-left
+        const rVal = (xVals.length >= 3) ? pearsonR(xVals, yVals) : null;
+        if (rVal != null) {
+          const abs = Math.abs(rVal);
+          const color = rVal >= 0.5 ? "#dc2626" : rVal <= -0.5 ? "#2563eb" : (abs >= 0.3 ? "#475569" : "#94a3b8");
+          const weight = abs >= 0.5 ? 700 : 500;
+          html += `<text x="${x0 + 4}" y="${y0 + 12}" font-size="9" font-weight="${weight}" fill="${color}">r=${rVal.toFixed(2)}</text>`;
+        }
         // Cell is clickable to load this pair into the main scatter panel
-        html += `<rect x="${x0}" y="${y0}" width="${cell}" height="${cell}" fill="transparent" data-xi="${j}" data-yi="${i}" style="cursor:pointer"><title>${escapeHtmlText(xFields[j])} × ${escapeHtmlText(xFields[i])}</title></rect>`;
+        html += `<rect x="${x0}" y="${y0}" width="${cell}" height="${cell}" fill="transparent" data-xi="${j}" data-yi="${i}" style="cursor:pointer"><title>${escapeHtmlText(xFields[j])} × ${escapeHtmlText(xFields[i])}${rVal != null ? ` : r=${rVal.toFixed(3)}` : ""}</title></rect>`;
       }
     }
   }
