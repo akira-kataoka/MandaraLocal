@@ -2566,8 +2566,8 @@ function refresh() {
       setSummary("LISA を計算できません（有効データが少ない or 重心が取得できない）", "warn");
     } else {
       mapper.applyColorMap(out.colorById, state.field);
-      renderLisaLegend(els.legendBox, out.globalI, out.n);
-      renderLisaLegend(els.overlayLegend, out.globalI, out.n);
+      renderLisaLegend(els.legendBox, out);
+      renderLisaLegend(els.overlayLegend, out);
       els.overlay.hidden = false;
       els.overlayTitle.textContent = `LISA: ${state.field}`;
       const src = (els.inputDataSource?.value || "").trim();
@@ -3647,7 +3647,7 @@ const BIVARIATE_PALETTE = [
 
 // Local Moran's I (LISA) — Cycle 130. 4-category cluster colors borrowed from
 // the GeoDa convention so output is interchangeable with academic LISA maps.
-const LISA_COLORS = { HH: "#d7191c", LL: "#2c7bb6", HL: "#fdae61", LH: "#abd9e9", NA: "#e5e7eb" };
+const LISA_COLORS = { HH: "#d7191c", LL: "#2c7bb6", HL: "#fdae61", LH: "#abd9e9", NS: "#e5e7eb", NA: "#e5e7eb" };
 
 function runLisa() {
   if (!state.geojson || !state.valueMap) return null;
@@ -3673,21 +3673,63 @@ function runLisa() {
     return idx;
   });
   // Local Moran's I_i = z_i × mean(z_neighbors). 4-quadrant classification.
-  const colorById = new Map();
+  const obs = new Array(n);
+  const meanZnbrs = new Array(n);
   let globalI = 0;
   for (let i = 0; i < n; i++) {
-    const meanZnbr = neighbors[i].reduce((s, j) => s + z[j], 0) / neighbors[i].length;
-    const Ii = z[i] * meanZnbr;
-    globalI += Ii;
-    let cat;
-    if (z[i] >= 0 && meanZnbr >= 0) cat = "HH";
-    else if (z[i] <  0 && meanZnbr <  0) cat = "LL";
-    else if (z[i] >= 0 && meanZnbr <  0) cat = "HL";
-    else                                  cat = "LH";
-    colorById.set(items[i].id, LISA_COLORS[cat]);
+    meanZnbrs[i] = neighbors[i].reduce((s, j) => s + z[j], 0) / neighbors[i].length;
+    obs[i] = z[i] * meanZnbrs[i];
+    globalI += obs[i];
   }
   globalI /= n;
-  return { colorById, globalI, n };
+
+  // Permutation test (Cycle 131): shuffle the z values of *other* regions
+  // PERM times, recompute I_i, and count how often |I_perm| >= |I_obs|.
+  const PERM = 199;
+  const counts = new Array(n).fill(0);
+  const pool = z.slice();          // we sample from z minus self each iteration
+  const buf  = new Array(K);
+  for (let it = 0; it < PERM; it++) {
+    // Fisher-Yates shuffle into a copy of `z`, then for each i sample K from
+    // the shuffled pool excluding position i.
+    const shuf = pool.slice();
+    for (let k = shuf.length - 1; k > 0; k--) {
+      const r = Math.floor(Math.random() * (k + 1));
+      [shuf[k], shuf[r]] = [shuf[r], shuf[k]];
+    }
+    for (let i = 0; i < n; i++) {
+      // pick first K positions that are not i
+      let bIdx = 0;
+      for (let p = 0; p < shuf.length && bIdx < K; p++) {
+        if (p === i) continue;
+        buf[bIdx++] = shuf[p];
+      }
+      let s = 0;
+      for (let q = 0; q < bIdx; q++) s += buf[q];
+      const Iperm = z[i] * (s / bIdx);
+      if (Math.abs(Iperm) >= Math.abs(obs[i])) counts[i]++;
+    }
+  }
+
+  // Build colored output. Pseudo p = (count + 1) / (PERM + 1).
+  const ALPHA = 0.05;
+  const colorById = new Map();
+  let sigCount = 0;
+  const catTally = { HH: 0, LL: 0, HL: 0, LH: 0, NS: 0 };
+  for (let i = 0; i < n; i++) {
+    const p = (counts[i] + 1) / (PERM + 1);
+    const isSig = p < ALPHA;
+    let cat;
+    if (!isSig) cat = "NS";
+    else if (z[i] >= 0 && meanZnbrs[i] >= 0) cat = "HH";
+    else if (z[i] <  0 && meanZnbrs[i] <  0) cat = "LL";
+    else if (z[i] >= 0 && meanZnbrs[i] <  0) cat = "HL";
+    else                                      cat = "LH";
+    catTally[cat]++;
+    if (isSig) sigCount++;
+    colorById.set(items[i].id, LISA_COLORS[cat]);
+  }
+  return { colorById, globalI, n, sigCount, catTally, perm: PERM, alpha: ALPHA };
 }
 
 function haversineDist(lat1, lng1, lat2, lng2) {
@@ -3699,29 +3741,36 @@ function haversineDist(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function renderLisaLegend(container, globalI, n) {
+function renderLisaLegend(container, result) {
   container.innerHTML = "";
+  const { globalI, n, sigCount, catTally, perm, alpha } = result;
   const wrap = document.createElement("div");
   wrap.style.cssText = "font-size:11px;";
   const head = document.createElement("div");
   head.style.fontWeight = "600";
-  head.style.marginBottom = "4px";
+  head.style.marginBottom = "2px";
   head.textContent = `LISA クラスター (n=${n}, 全体 I=${globalI.toFixed(3)})`;
   wrap.appendChild(head);
+  const sub = document.createElement("div");
+  sub.style.cssText = "font-size:10px;color:var(--muted);margin-bottom:4px;";
+  sub.textContent = `有意 ${sigCount}/${n} (p < ${alpha}, ${perm}回順列検定)`;
+  wrap.appendChild(sub);
   const items = [
-    ["HH", "ホットスポット（高値が高値に囲まれる）"],
-    ["LL", "コールドスポット（低値が低値に囲まれる）"],
-    ["HL", "高値の孤立（周囲は低値）"],
-    ["LH", "低値の孤立（周囲は高値）"],
+    ["HH", "ホットスポット（高×高）"],
+    ["LL", "コールドスポット（低×低）"],
+    ["HL", "高値の孤立（周囲は低）"],
+    ["LH", "低値の孤立（周囲は高）"],
+    ["NA", "有意でない (NS)"],
   ];
   for (const [k, desc] of items) {
+    const cnt = catTally[k === "NA" ? "NS" : k] ?? 0;
     const row = document.createElement("div");
     row.style.cssText = "display:flex;align-items:center;gap:6px;padding:1px 0;";
     const sw = document.createElement("span");
     sw.style.cssText = `display:inline-block;width:14px;height:14px;background:${LISA_COLORS[k]};border:1px solid #cbd5e1;`;
     row.appendChild(sw);
     const lab = document.createElement("span");
-    lab.innerHTML = `<strong>${k}</strong> ${desc}`;
+    lab.innerHTML = `<strong>${k === "NA" ? "NS" : k}</strong> ${desc} <small style="color:var(--muted)">(${cnt}件)</small>`;
     row.appendChild(lab);
     wrap.appendChild(row);
   }
