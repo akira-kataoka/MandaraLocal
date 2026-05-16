@@ -4375,14 +4375,22 @@ window.addEventListener("keydown", (e) => {
     e.preventDefault();
     showHelpModal();
   } else if (e.key === "Escape") {
-    document.getElementById("help-modal")?.remove();
-    document.getElementById("qr-modal")?.remove();
+    // Cycle 265: Shift+Esc clears all pins; plain Esc just closes modals.
+    if (e.shiftKey && !inField) {
+      if (state.pinnedScatterIds?.size) {
+        e.preventDefault();
+        els.btnClearPins?.click();
+      }
+    } else {
+      document.getElementById("help-modal")?.remove();
+      document.getElementById("qr-modal")?.remove();
+    }
   }
 });
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "264"; // bumped each polish cycle
+const APP_VERSION = "265"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -4408,6 +4416,7 @@ function showHelpModal() {
       <code>Ctrl/⌘+Shift+T</code><span>同結果を平文（Word/メール向け）で</span>
       <code>?</code><span>このヘルプを表示</span>
       <code>Esc</code><span>ヘルプ / QR モーダルを閉じる</span>
+      <code>Shift+Esc</code><span>ピン留めを全解除</span>
       <code>Z</code><span>Zen モード切替（サイドバー隠して地図全画面）</span>
 
       <strong>散布図</strong><span></span>
