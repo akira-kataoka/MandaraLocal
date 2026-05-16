@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=94" />
+  <link rel="stylesheet" href="css/style.css?v=95" />
 </head>
 <body>
   <header class="app-header">
@@ -454,6 +454,10 @@
           <label for="scatter-y">Y軸</label>
           <select id="scatter-y"></select>
         </div>
+        <div class="form-row">
+          <label for="scatter-color-by">色分け列</label>
+          <select id="scatter-color-by"><option value="">— なし（地図色）—</option></select>
+        </div>
         <div id="scatter-correlation" class="data-summary"></div>
         <svg id="scatter-svg" viewBox="0 0 280 220" preserveAspectRatio="xMidYMid meet"></svg>
         <div class="form-row">
@@ -535,7 +539,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=94"></script>
+  <script type="module" src="js/main.js?v=95"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

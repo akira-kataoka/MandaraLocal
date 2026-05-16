@@ -165,6 +165,7 @@ const els = {
   panelScatter: $("panel-scatter"),
   scatterX:     $("scatter-x"),
   scatterY:     $("scatter-y"),
+  scatterColorBy: $("scatter-color-by"),
   chkScatterLogX: $("chk-scatter-logx"),
   chkScatterLogY: $("chk-scatter-logy"),
   scatterCorr:  $("scatter-correlation"),
@@ -1067,6 +1068,7 @@ function clearAttributeFilter() {
 
 els.scatterX.addEventListener("change", drawScatter);
 els.scatterY.addEventListener("change", drawScatter);
+els.scatterColorBy?.addEventListener("change", drawScatter);
 els.chkScatterLogX.addEventListener("change", drawScatter);
 els.chkScatterLogY.addEventListener("change", drawScatter);
 els.scatterSwap?.addEventListener("click", () => {
@@ -1347,6 +1349,7 @@ function snapshotCurrent() {
     pieFields: [...(els.selectPieFields?.selectedOptions || [])].map(o => o.value),
     dataSource: els.inputDataSource?.value || "",
     mapTitle: els.inputMapTitle?.value || "",
+    scatterColorBy: els.scatterColorBy?.value || "",
   };
 }
 let demoScenes = {}; // name → snapshot, loaded from data/scenes/index.json
@@ -1426,6 +1429,9 @@ els.selectScene.addEventListener("change", async () => {
   if (snap.mapTitle !== undefined && els.inputMapTitle) {
     els.inputMapTitle.value = snap.mapTitle;
     els.inputMapTitle.dispatchEvent(new Event("input"));
+  }
+  if (snap.scatterColorBy !== undefined && els.scatterColorBy) {
+    els.scatterColorBy.value = snap.scatterColorBy;
   }
   // Apply visibility toggles
   els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both" || state.mode === "graduated");
@@ -2463,6 +2469,18 @@ function populateScatterSelectors(fields) {
   }
   els.scatterX.value = fields[0];
   els.scatterY.value = fields[1] || fields[0];
+  // Color-by selector: numeric fields are binned into quartile categories
+  // implicitly by the drawScatter step. We just need an option list.
+  if (els.scatterColorBy) {
+    const prev = els.scatterColorBy.value;
+    els.scatterColorBy.innerHTML = '<option value="">— なし（地図色）—</option>';
+    for (const f of fields) {
+      const o = document.createElement("option");
+      o.value = f; o.textContent = f;
+      els.scatterColorBy.appendChild(o);
+    }
+    if (fields.includes(prev)) els.scatterColorBy.value = prev;
+  }
   drawScatter();
 }
 
@@ -2482,10 +2500,40 @@ function drawScatter() {
     return idx < 0 ? null : state.colors[idx];
   };
   const names = state.dataset.rows.map(r => r.name || ("#" + r.key));
+  // Optional 3rd-variable categorical coloring. If the chosen column is numeric,
+  // bin into quartile labels (Q1/Q2/Q3/Q4) so it still renders as discrete series.
+  const colorByField = els.scatterColorBy?.value || "";
+  let categoryFor = null;
+  if (colorByField) {
+    const rowsByKey = new Map(state.dataset.rows.map(r => [r.key, r]));
+    const allVals = state.dataset.rows.map(r => r.values[colorByField]);
+    const numeric = allVals.filter(v => Number.isFinite(v));
+    const isNumeric = numeric.length >= state.dataset.rows.length * 0.5;
+    if (isNumeric && numeric.length >= 4) {
+      const sorted = numeric.slice().sort((a, b) => a - b);
+      const q = (p) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
+      const q1 = q(0.25), q2 = q(0.5), q3 = q(0.75);
+      categoryFor = (id) => {
+        const row = rowsByKey.get(id);
+        const v = row?.values[colorByField];
+        if (!Number.isFinite(v)) return null;
+        if (v <= q1) return `Q1 (≤${formatNum(q1)})`;
+        if (v <= q2) return `Q2 (≤${formatNum(q2)})`;
+        if (v <= q3) return `Q3 (≤${formatNum(q3)})`;
+        return `Q4 (>${formatNum(q3)})`;
+      };
+    } else {
+      categoryFor = (id) => {
+        const row = rowsByKey.get(id);
+        const v = row?.values[colorByField];
+        return v == null ? null : String(v);
+      };
+    }
+  }
   const { r, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick, {
     logX: els.chkScatterLogX.checked,
     logY: els.chkScatterLogY.checked,
-  }, colorFor, names);
+  }, colorFor, names, categoryFor);
   if (r == null) {
     els.scatterCorr.textContent = `n=${n} — 相関係数を計算できません`;
   } else {

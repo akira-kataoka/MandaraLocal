@@ -16,7 +16,13 @@ const PAD = { top: 10, right: 12, bottom: 28, left: 38 };
  *              Each circle is tagged with data-id for cross-highlighting.
  * @param onHover (id, on) callback fired on circle mouseover/out
  */
-export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover = null, onSelect = null, opts = {}, colorFor = null, names = null) {
+// Discrete palette for category-based series coloring (8 hues, then cycles).
+const SERIES_PALETTE = [
+  "#2563eb", "#dc2626", "#16a34a", "#d97706",
+  "#9333ea", "#0891b2", "#db2777", "#65a30d",
+];
+
+export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover = null, onSelect = null, opts = {}, colorFor = null, names = null, categoryFor = null) {
   const logX = !!opts.logX;
   const logY = !!opts.logY;
   // Pair up & drop missing (drop non-positive when using log)
@@ -27,6 +33,23 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       if (logY && ys[i] <= 0) continue;
       pairs.push([xs[i], ys[i], ids ? ids[i] : null, names ? names[i] : null]);
     }
+  }
+  // Build category → color map if categoryFor is provided. Top-N (≤8) get
+  // distinct hues; the rest collapse to "その他".
+  let catMap = null;
+  if (categoryFor && ids) {
+    const counts = new Map();
+    for (let i = 0; i < ids.length; i++) {
+      const c = categoryFor(ids[i]);
+      if (c == null || c === "") continue;
+      counts.set(c, (counts.get(c) || 0) + 1);
+    }
+    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    catMap = new Map();
+    sorted.slice(0, SERIES_PALETTE.length).forEach(([cat], i) => {
+      catMap.set(cat, SERIES_PALETTE[i]);
+    });
+    if (sorted.length > SERIES_PALETTE.length) catMap.set("__other__", "#94a3b8");
   }
   svgEl.innerHTML = "";
   if (pairs.length < 2) return { r: null, n: pairs.length };
@@ -77,14 +100,21 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   for (const [vx, vy, fid] of pairs) {
     const c = circle(px(vx), py(vy), 3, "point");
     if (fid != null) c.setAttribute("data-id", String(fid));
-    if (colorFor && fid != null) {
-      const col = colorFor(fid);
-      if (col) {
-        c.style.fill = col;
-        c.style.fillOpacity = "0.85";
-        c.style.stroke = "#1e293b";
-        c.style.strokeWidth = "0.6";
+    // Priority: categoryFor (when set) overrides map-class colorFor.
+    let appliedColor = null;
+    if (catMap && fid != null) {
+      const raw = categoryFor(fid);
+      if (raw != null && raw !== "") {
+        appliedColor = catMap.get(raw) || catMap.get("__other__") || null;
       }
+    } else if (colorFor && fid != null) {
+      appliedColor = colorFor(fid);
+    }
+    if (appliedColor) {
+      c.style.fill = appliedColor;
+      c.style.fillOpacity = "0.85";
+      c.style.stroke = "#1e293b";
+      c.style.strokeWidth = "0.6";
     }
     if (onHover && fid != null) {
       c.addEventListener("mouseenter", () => {
@@ -171,6 +201,35 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     });
     eqEl.textContent = `${eq}   R²=${r2.toFixed(3)}`;
     svgEl.appendChild(eqEl);
+  }
+
+  // Series legend (bottom-right, drawn inside the SVG so PNG export captures it).
+  if (catMap && catMap.size > 0) {
+    const entries = [...catMap.entries()];
+    const lg = el("g", { class: "scatter-legend" });
+    const lineH = 11;
+    const startY = PAD.top + 4;
+    const rightX = W - PAD.right - 4;
+    const bg = el("rect", {
+      x: rightX - 88, y: startY - 9,
+      width: 86, height: entries.length * lineH + 6,
+      fill: "rgba(255,255,255,0.85)", stroke: "#cbd5e1", "stroke-width": 0.6, rx: 3,
+    });
+    lg.appendChild(bg);
+    entries.forEach(([cat, col], i) => {
+      const y = startY + i * lineH;
+      lg.appendChild(el("rect", {
+        x: rightX - 84, y: y - 6, width: 8, height: 8,
+        fill: col, stroke: "#1e293b", "stroke-width": 0.4,
+      }));
+      const t = el("text", {
+        x: rightX - 73, y: y, "font-size": 9, fill: "#1e293b",
+      });
+      const label = cat === "__other__" ? "その他" : String(cat);
+      t.textContent = label.length > 11 ? label.slice(0, 10) + "…" : label;
+      lg.appendChild(t);
+    });
+    svgEl.appendChild(lg);
   }
 
   return { r, n: pairs.length, slope, intercept, r2: Number.isFinite(r) ? r*r : null };
