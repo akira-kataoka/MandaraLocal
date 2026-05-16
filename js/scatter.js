@@ -73,6 +73,11 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   const px = vRaw => pxAt(sx(vRaw));
   const py = vRaw => pyAt(sy(vRaw));
 
+  // Cycle 287: axis label / tick font size is user-configurable.
+  // "S" / "M" / "L" → tick 7 / 9 / 11 px, axis label +1px on top.
+  const fsKey = opts.axisFontSize === "S" || opts.axisFontSize === "L" ? opts.axisFontSize : "M";
+  const tickFs = fsKey === "S" ? 7 : fsKey === "L" ? 11 : 9;
+  const labelFs = tickFs + 1;
   // axes
   const axis = el("g", { class: "axis" });
   axis.appendChild(line(PAD.left, H - PAD.bottom, W - PAD.right, H - PAD.bottom));
@@ -83,16 +88,16 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     const tx = pxAt(t);
     const raw = logX ? Math.pow(10, t) : t;
     axis.appendChild(line(tx, H - PAD.bottom, tx, H - PAD.bottom + 3));
-    axis.appendChild(text(tx, H - PAD.bottom + 12, formatShort(raw), "middle"));
+    axis.appendChild(text(tx, H - PAD.bottom + 12, formatShort(raw), "middle", { "font-size": tickFs }));
   }
   for (const t of ticks(yMin, yMax, 4)) {
     const ty = pyAt(t);
     const raw = logY ? Math.pow(10, t) : t;
     axis.appendChild(line(PAD.left - 3, ty, PAD.left, ty));
-    axis.appendChild(text(PAD.left - 5, ty + 3, formatShort(raw), "end"));
+    axis.appendChild(text(PAD.left - 5, ty + 3, formatShort(raw), "end", { "font-size": tickFs }));
   }
-  axis.appendChild(text(W / 2, H - 4, xLabel, "middle"));
-  axis.appendChild(text(8, PAD.top + innerH / 2, yLabel, "middle", { transform: `rotate(-90, 8, ${PAD.top + innerH / 2})` }));
+  axis.appendChild(text(W / 2, H - 4, xLabel, "middle", { "font-size": labelFs, "font-weight": 600 }));
+  axis.appendChild(text(8, PAD.top + innerH / 2, yLabel, "middle", { transform: `rotate(-90, 8, ${PAD.top + innerH / 2})`, "font-size": labelFs, "font-weight": 600 }));
   svgEl.appendChild(axis);
 
   // points (sizeFor from opts gives variable radius for bubble-chart mode)

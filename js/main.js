@@ -230,6 +230,7 @@ const els = {
   btnScatterPinBrush: $("btn-scatter-pin-brush"),
   scatterPinColor: $("scatter-pin-color"),
   scatterDegree:   $("scatter-degree"),
+  scatterAxisFs:   $("scatter-axis-fs"),
   scatterCsv:      $("scatter-csv"),
   scatterDataCsv:  $("scatter-data-csv"),
   panelSplom:      $("panel-splom"),
@@ -2084,6 +2085,7 @@ els.scatterLabelN?.addEventListener("change", drawScatter);
 els.scatterLabelN?.addEventListener("input", drawScatter);
 els.scatterLabelPlace?.addEventListener("change", drawScatter);
 els.scatterDegree?.addEventListener("change", drawScatter);
+els.scatterAxisFs?.addEventListener("change", drawScatter);
 els.chkScatterLogX.addEventListener("change", drawScatter);
 els.chkScatterLogY.addEventListener("change", drawScatter);
 els.scatterSwap?.addEventListener("click", () => {
@@ -4445,7 +4447,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "286"; // bumped each polish cycle
+const APP_VERSION = "287"; // bumped each polish cycle
 // Cycle 285: 600ms green pulse on clipboard / save success to give the user
 // immediate visual feedback in addition to setSummary().
 function flashBtn(el) {
@@ -7292,6 +7294,7 @@ function drawScatter() {
     shapeLegend,
     regressionByGroup: !!els.chkScatterRegGroup?.checked,
     titleStats: !!els.chkScatterStatsTitle?.checked,
+    axisFontSize: els.scatterAxisFs?.value || "M",
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
     onBrush: (ids) => {
       mapper.markOutliers(ids);

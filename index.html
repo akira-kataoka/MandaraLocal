@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=286" />
+  <link rel="stylesheet" href="css/style.css?v=287" />
 </head>
 <body>
   <header class="app-header">
@@ -658,6 +658,14 @@
           </select>
         </div>
         <div class="form-row">
+          <label for="scatter-axis-fs">軸ラベルサイズ</label>
+          <select id="scatter-axis-fs">
+            <option value="S">小</option>
+            <option value="M" selected>標準</option>
+            <option value="L">大（プレゼン向き）</option>
+          </select>
+        </div>
+        <div class="form-row">
           <label for="scatter-degree">回帰次数</label>
           <select id="scatter-degree">
             <option value="1" selected>1次（線形）</option>
@@ -903,7 +911,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=286"></script>
+  <script type="module" src="js/main.js?v=287"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
