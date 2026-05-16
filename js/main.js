@@ -1803,7 +1803,8 @@ function runCrossTab() {
     // Cycle 255: Shift+click on a crosstab cell bulk-pins its members.
     td.addEventListener("click", (ev) => handleCtCellShiftClick(ev, ri, ci, cellIds));
   });
-  // Cycle 258: equivalent wiring for the bar-chart view (Cycle 213).
+  // Cycle 258/259: equivalent wiring for the bar-chart view (Cycle 213).
+  // Cycle 259 adds hover → map highlight to match the heat-table behaviour.
   els.ctResult.querySelectorAll(".ct-bar-cell").forEach((rect) => {
     const ri = parseInt(rect.getAttribute("data-row"), 10);
     const ci = parseInt(rect.getAttribute("data-col"), 10);
@@ -1818,6 +1819,8 @@ function runCrossTab() {
       }
       return out;
     };
+    rect.addEventListener("mouseenter", () => mapper.markOutliers(new Set(cellIds())));
+    rect.addEventListener("mouseleave", () => mapper.clearOutlierMarks());
     rect.addEventListener("click", (ev) => handleCtCellShiftClick(ev, ri, ci, cellIds));
   });
 }
@@ -4374,7 +4377,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "258"; // bumped each polish cycle
+const APP_VERSION = "259"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
