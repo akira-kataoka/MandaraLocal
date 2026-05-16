@@ -10,7 +10,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
 
-  <link rel="stylesheet" href="css/style.css?v=44" />
+  <link rel="stylesheet" href="css/style.css?v=45" />
 </head>
 <body>
   <header class="app-header">
@@ -157,6 +157,7 @@
             <option value="label">ラベル表示（値を地図上に）</option>
             <option value="pie">円グラフ（複数列を比較）</option>
             <option value="bar">棒グラフ（複数列を棒で）</option>
+            <option value="contour">等値線図（IDW 内挿）</option>
           </select>
         </div>
         <div class="form-row" id="row-symbol-size" hidden>
@@ -345,10 +346,11 @@
   <script src="https://unpkg.com/html-to-image@1.11.11/dist/html-to-image.js"></script>
   <script src="https://unpkg.com/wanakana@5.3.1/wanakana.min.js"></script>
   <script src="https://unpkg.com/d3-delaunay@6.0.4/dist/d3-delaunay.min.js"></script>
+  <script src="https://unpkg.com/d3-contour@4.0.2/dist/d3-contour.min.js"></script>
   <script src="https://unpkg.com/polygon-clipping@0.15.7/dist/polygon-clipping.umd.js"></script>
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=44"></script>
+  <script type="module" src="js/main.js?v=45"></script>
 </body>
 </html>

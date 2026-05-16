@@ -1084,6 +1084,28 @@ function refresh() {
     mapper.applyDotDensity(state.geojson, state.valueMap, unit);
   } else if (state.mode === "label") {
     mapper.applyLabels(state.valueMap, state.field);
+  } else if (state.mode === "contour") {
+    // Build sample point set: (centroid + value) for every polygon, or town points for chocho
+    const samples = [];
+    if (state.level === "chocho") {
+      for (const t of state.chochoTowns || []) {
+        const v = state.valueMap?.get(t.id);
+        if (Number.isFinite(t.lat) && Number.isFinite(t.lng) && Number.isFinite(v)) {
+          samples.push({ lat: t.lat, lng: t.lng, v });
+        }
+      }
+    } else if (mapper.layer) {
+      mapper.layer.eachLayer((lyr) => {
+        const id = lyr.feature.properties.id;
+        const v = state.valueMap?.get(id);
+        if (!Number.isFinite(v)) return;
+        try {
+          const c = lyr.getBounds().getCenter();
+          samples.push({ lat: c.lat, lng: c.lng, v });
+        } catch {}
+      });
+    }
+    mapper.applyContours(samples, state.colors, { gridSize: 90 });
   } else if (state.mode === "pie" || state.mode === "bar") {
     const selected = [...els.selectPieFields.selectedOptions].map(o => o.value);
     const seriesColors = getPalette(state.palette, Math.max(2, selected.length), state.reverse);

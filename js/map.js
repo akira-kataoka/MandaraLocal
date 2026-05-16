@@ -1030,6 +1030,93 @@ export class MandaraMap {
     if (this._meshLayer) this._meshLayer.clearLayers();
   }
 
+  /**
+   * Render filled contours (isolines / 塗り分け式 contour map) by:
+   *   1) interpolating values onto a regular grid via IDW
+   *   2) using d3.contours to extract iso-bands
+   *   3) drawing each band as a Leaflet polygon, classified by colour
+   * MANDARA 「等値線モード（塗り分け式）」相当。
+   *
+   * @param samples [{ lat, lng, v }]  -- point cloud with values
+   * @param colors  string[]            -- one colour per contour band
+   * @param opts.gridSize  default 80   -- grid cells per side
+   * @param opts.power     default 2    -- IDW power
+   */
+  applyContours(samples, colors, opts = {}) {
+    this.symbolLayer.clearLayers();
+    if (!this.layer && !samples?.length) return;
+    if (typeof d3 === "undefined" || !d3.contours) return;
+    const pts = samples.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng) && Number.isFinite(s.v));
+    if (pts.length < 3) return;
+    const gridSize = opts.gridSize ?? 80;
+    const power = opts.power ?? 2;
+
+    // bbox + padding
+    const lats = pts.map(p => p.lat), lngs = pts.map(p => p.lng);
+    const padL = (Math.max(...lats) - Math.min(...lats)) * 0.05;
+    const padG = (Math.max(...lngs) - Math.min(...lngs)) * 0.05;
+    const minLat = Math.min(...lats) - padL, maxLat = Math.max(...lats) + padL;
+    const minLng = Math.min(...lngs) - padG, maxLng = Math.max(...lngs) + padG;
+
+    // IDW grid
+    const grid = new Float64Array(gridSize * gridSize);
+    let minV = Infinity, maxV = -Infinity;
+    for (let j = 0; j < gridSize; j++) {
+      const lat = minLat + ((maxLat - minLat) * (gridSize - 1 - j)) / (gridSize - 1); // flip y so grid[0] is top
+      for (let i = 0; i < gridSize; i++) {
+        const lng = minLng + ((maxLng - minLng) * i) / (gridSize - 1);
+        let num = 0, den = 0, hit = null;
+        for (const s of pts) {
+          const d2 = (lng - s.lng) ** 2 + (lat - s.lat) ** 2;
+          if (d2 < 1e-12) { hit = s.v; break; }
+          const w = 1 / Math.pow(d2, power / 2);
+          num += s.v * w; den += w;
+        }
+        const v = hit != null ? hit : num / den;
+        grid[j * gridSize + i] = v;
+        if (v < minV) minV = v;
+        if (v > maxV) maxV = v;
+      }
+    }
+    if (minV === maxV) return;
+
+    // Choose contour thresholds (one per palette colour)
+    const k = colors.length;
+    const thresholds = [];
+    for (let i = 0; i <= k; i++) thresholds.push(minV + (maxV - minV) * (i / k));
+
+    const contourGen = d3.contours().size([gridSize, gridSize]).thresholds(thresholds);
+    const polys = contourGen(grid);
+
+    // Each polygon's geometry is in grid coordinates [0..gridSize-1].
+    // Map back to lat/lng.
+    const gridX = (x) => minLng + ((maxLng - minLng) * x) / (gridSize - 1);
+    const gridY = (y) => maxLat - ((maxLat - minLat) * y) / (gridSize - 1);
+
+    polys.forEach((mp, i) => {
+      if (i >= k) return;
+      const col = colors[i] || "#94a3b8";
+      // d3.contours returns MultiPolygon: coordinates = [[ring,...], [ring,...]]
+      for (const poly of mp.coordinates) {
+        // Convert each ring of [x,y] grid → [lat,lng]
+        const rings = poly.map(ring => ring.map(([x, y]) => [gridY(y), gridX(x)]));
+        const lyr = L.polygon(rings, {
+          color: "#1e293b", weight: 0.3, opacity: 0.5,
+          fillColor: col, fillOpacity: 0.55,
+          interactive: false,
+        });
+        lyr.addTo(this.symbolLayer);
+      }
+    });
+    // Also overlay original points as small dots for reference
+    for (const s of pts) {
+      L.circleMarker([s.lat, s.lng], {
+        radius: 1.5, color: "#1e293b", fillColor: "#fff", fillOpacity: 0.9, weight: 0.4,
+        interactive: false,
+      }).addTo(this.symbolLayer);
+    }
+  }
+
   getMapElement() { return this._mapEl; }
 }
 
