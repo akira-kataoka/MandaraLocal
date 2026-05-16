@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=173" />
+  <link rel="stylesheet" href="css/style.css?v=174" />
 </head>
 <body>
   <header class="app-header">
@@ -581,7 +581,8 @@
         <div class="form-row">
           <button id="scatter-png" class="btn">💾 PNGで保存</button>
           <button id="scatter-svg-btn" class="btn">SVGで保存</button>
-          <button id="scatter-csv" class="btn" disabled style="margin-left:auto">統計CSV出力</button>
+          <button id="scatter-data-csv" class="btn" disabled style="margin-left:auto">データCSV</button>
+          <button id="scatter-csv" class="btn" disabled>統計CSV</button>
         </div>
       </section>
 
@@ -806,7 +807,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=173"></script>
+  <script type="module" src="js/main.js?v=174"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

@@ -199,6 +199,7 @@ const els = {
   scatterLabels:   $("scatter-labels"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
+  scatterDataCsv:  $("scatter-data-csv"),
   panelSplom:      $("panel-splom"),
   spXList:         $("sp-x-list"),
   spRun:           $("sp-run"),
@@ -3103,6 +3104,29 @@ els.corrCsv?.addEventListener("click", () => {
   setSummary(`相関行列を ${a.download} として保存しました（${cm.fields.length}×${cm.fields.length}）`, "success");
 });
 
+els.scatterDataCsv?.addEventListener("click", () => {
+  if (!state.dataset) { setSummary("先にデータを読み込んでください", "warn"); return; }
+  const xf = els.scatterX.value, yf = els.scatterY.value;
+  if (!xf || !yf) { setSummary("散布図の X, Y 軸を選択してください", "warn"); return; }
+  const fmt = (v) => (v == null || !Number.isFinite(v)) ? "" : String(v);
+  const lines = [["id", "地域", xf, yf].map(csvEscape).join(",")];
+  for (const r of state.dataset.rows) {
+    const xv = r.values[xf], yv = r.values[yf];
+    if (!Number.isFinite(xv) || !Number.isFinite(yv)) continue;
+    lines.push([String(r.key), r.name || `#${r.key}`, fmt(xv), fmt(yv)].map(csvEscape).join(","));
+  }
+  const csv = "﻿" + lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const safe = (v) => String(v).replace(/[\s\\/:*?"<>|]+/g, "_");
+  a.href = url;
+  a.download = `scatter_data_${safe(xf)}_vs_${safe(yf)}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`散布図データを ${a.download} として保存しました（${lines.length - 1}行）`, "success");
+});
+
 els.scatterCsv?.addEventListener("click", () => {
   const s = state.scatterStats;
   if (!s || s.r == null) { setSummary("先に散布図を描画してください", "warn"); return; }
@@ -5449,6 +5473,7 @@ function drawScatter() {
     logX: !!els.chkScatterLogX?.checked, logY: !!els.chkScatterLogY?.checked,
   };
   if (els.scatterCsv) els.scatterCsv.disabled = (r == null);
+  if (els.scatterDataCsv) els.scatterDataCsv.disabled = !state.dataset;
   if (r == null) {
     els.scatterCorr.textContent = `n=${n} — 相関係数を計算できません`;
     return;
