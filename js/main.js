@@ -786,7 +786,8 @@ function runCrossTab() {
       const cnt = mat[i][j];
       const intensity = cnt > 0 ? Math.min(1, cnt / Math.max(1, ...mat.flat())) : 0;
       const bg = `rgba(37, 99, 235, ${(intensity * 0.55).toFixed(2)})`;
-      html += `<td style="background:${bg}">${cnt}</td>`;
+      const cls = cnt > 0 ? "ct-cell" : "ct-cell ct-empty";
+      html += `<td class="${cls}" style="background:${bg};cursor:${cnt > 0 ? "pointer" : "default"}" data-row="${i}" data-col="${j}">${cnt}</td>`;
     }
     html += `<td class="total">${rowTot[i]}</td></tr>`;
   }
@@ -794,6 +795,24 @@ function runCrossTab() {
   for (let j = 0; j < bins; j++) html += `<td class="total">${colTot[j]}</td>`;
   html += `<td class="total">${total}</td></tr></tbody></table>`;
   els.ctResult.innerHTML = html;
+
+  // Wire cell hover for map cross-highlight
+  els.ctResult.querySelectorAll(".ct-cell").forEach((td) => {
+    const ri = parseInt(td.dataset.row, 10);
+    const ci = parseInt(td.dataset.col, 10);
+    td.addEventListener("mouseenter", () => {
+      const hits = new Set();
+      for (let k = 0; k < state.dataset.rows.length; k++) {
+        const rv = rowVals[k], cv = colVals[k];
+        if (!Number.isFinite(rv) || !Number.isFinite(cv)) continue;
+        const r2 = clamp(classifyValue(rv, rowBreaks), 0, bins - 1);
+        const c2 = clamp(classifyValue(cv, colBreaks), 0, bins - 1);
+        if (r2 === ri && c2 === ci) hits.add(state.dataset.rows[k].key);
+      }
+      mapper.markOutliers(hits);
+    });
+    td.addEventListener("mouseleave", () => mapper.clearOutlierMarks());
+  });
 }
 
 function escapeHtmlText(s) {

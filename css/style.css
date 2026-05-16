@@ -292,6 +292,8 @@ details.derived .form-row input[type="text"] {
 .ct-result th { background: #e0e7ff; color: #1e293b; font-weight: 600; }
 .ct-result td.corner { background: #f1f5f9; }
 .ct-result td.total { background: #fef3c7; font-weight: 600; }
+.ct-result td.ct-cell:hover { outline: 2px solid #dc2626; outline-offset: -2px; }
+.ct-result td.ct-empty:hover { outline: none; }
 body.dark .ct-result th { background: #1e3a8a; color: #f1f5f9; }
 body.dark .ct-result td.corner { background: #0f172a; }
 body.dark .ct-result td.total { background: #78350f; }
