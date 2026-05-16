@@ -301,6 +301,7 @@ const els = {
   btnInstall:   $("btn-install"),
   inputGeocode: $("input-geocode"),
   btnTheme:     $("btn-theme"),
+  btnViewReset: $("btn-view-reset"),
   btnZen:       $("btn-zen"),
   btnCopyResults: $("btn-copy-results"),
   selectScene:  $("select-scene"),
@@ -4280,6 +4281,36 @@ function markdownToPlainText(md) {
 }
 
 els.btnCopyResultsTxt = document.getElementById("btn-copy-results-txt");
+
+// Cycle 248: clean-slate view reset — wipes pins / filter / hidden columns /
+// column order / starred fields / current-palette custom colors, then
+// refreshes. Dataset, scenes, theme and persistent legend settings stay.
+els.btnViewReset?.addEventListener("click", () => {
+  if (!confirm("ピン・属性フィルタ・列ピッカー・お気に入り・カスタム色をクリアします。よろしいですか？\n（データセットとシーン保存は維持されます）")) return;
+  // Pin state
+  state.pinnedScatterIds = new Set();
+  state.lastBrushIds = null;
+  if (typeof syncScatterPinBtn === "function") syncScatterPinBtn();
+  if (typeof syncBrushPinBtn === "function") syncBrushPinBtn();
+  mapper.clearPinned?.();
+  // Attribute filter
+  if (Array.isArray(filterStack)) filterStack.length = 0;
+  state.filteredKeys = null;
+  if (els.filterResult) { els.filterResult.textContent = ""; els.filterResult.className = "data-summary"; }
+  if (typeof renderFilterStack === "function") renderFilterStack();
+  mapper.clearOutlierMarks?.();
+  // Table view state
+  state.hiddenColumns = new Set();
+  state.columnOrder = null;
+  state.starredFields = new Set();
+  if (els.tableColPicker) els.tableColPicker.hidden = true;
+  // Custom palette colors for the active palette
+  if (state.customColors?.[state.palette]) delete state.customColors[state.palette];
+  if (typeof syncResetColorBtn === "function") syncResetColorBtn();
+  // Refresh whatever consumers need
+  if (state.dataset) refresh();
+  setSummary("ビュー状態をクリーンリセットしました", "success");
+});
 
 // Cycle 247: keyboard shortcuts for the result copy buttons. Skips when
 // focus is on an editable input so users can still type "M"/"T" in fields.
