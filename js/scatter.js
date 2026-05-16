@@ -688,7 +688,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       m.setAttribute("stroke-width", "0.6");
       lg.appendChild(m);
       const t = el("text", {
-        x: x0 + 20, y: cy + 3, "font-size": 9, fill: "#1e293b",
+        x: x0 + 20, y: cy + 3, "font-size": tickFs, fill: "#1e293b",
       });
       const label = String(it.name || "");
       t.textContent = label.length > 13 ? label.slice(0, 12) + "…" : label;
@@ -717,7 +717,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
         fill: col, stroke: "#1e293b", "stroke-width": 0.4,
       }));
       const t = el("text", {
-        x: rightX - 73, y: y, "font-size": 9, fill: "#1e293b",
+        x: rightX - 73, y: y, "font-size": tickFs, fill: "#1e293b",
       });
       const label = cat === "__other__" ? "その他" : String(cat);
       t.textContent = label.length > 11 ? label.slice(0, 10) + "…" : label;
@@ -753,7 +753,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     });
     lg.appendChild(bg);
     const title = el("text", {
-      x: x0 + padX, y: y0 - boxH + 10, "font-size": 9, "font-weight": 700, fill: "#1e293b",
+      x: x0 + padX, y: y0 - boxH + 10, "font-size": tickFs, "font-weight": 700, fill: "#1e293b",
     });
     title.textContent = sl.fieldName.length > 11 ? sl.fieldName.slice(0, 10) + "…" : sl.fieldName;
     lg.appendChild(title);
@@ -766,7 +766,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
         fill: "rgba(37,99,235,0.4)", stroke: "#1e3a8a", "stroke-width": 0.5,
       }));
       const t = el("text", {
-        x: cx + 14, y: cy + 3, "font-size": 8, fill: "#1e293b",
+        x: cx + 14, y: cy + 3, "font-size": Math.max(7, tickFs - 1), fill: "#1e293b",
       });
       t.textContent = fmt(vals[i]);
       lg.appendChild(t);
