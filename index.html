@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=84" />
+  <link rel="stylesheet" href="css/style.css?v=85" />
 </head>
 <body>
   <header class="app-header">
@@ -135,6 +135,10 @@
         <div class="form-row">
           <label for="select-field">対象列</label>
           <select id="select-field"></select>
+        </div>
+        <div class="form-row" id="row-field-filter" hidden>
+          <label for="input-field-filter">絞込</label>
+          <input id="input-field-filter" type="search" placeholder="列名で絞り込み" />
         </div>
         <div class="form-row inline">
           <label><input type="checkbox" id="chk-compare" /> 比較表示（2列を並べる）</label>
@@ -505,7 +509,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=84"></script>
+  <script type="module" src="js/main.js?v=85"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

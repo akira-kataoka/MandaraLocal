@@ -68,6 +68,8 @@ const els = {
   dataSummary:  $("data-summary"),
   panelField:   $("panel-field"),
   selectField:  $("select-field"),
+  rowFieldFilter: $("row-field-filter"),
+  inputFieldFilter: $("input-field-filter"),
   chkCompare:   $("chk-compare"),
   rowFieldB:    $("row-field-b"),
   selectFieldB: $("select-field-b"),
@@ -717,6 +719,12 @@ els.csvMerge.addEventListener("change", async (e) => {
 els.selectField.addEventListener("change", () => {
   state.field = els.selectField.value;
   refresh();
+});
+els.inputFieldFilter?.addEventListener("input", () => {
+  const q = els.inputFieldFilter.value.toLowerCase();
+  for (const o of els.selectField.options) {
+    o.hidden = q && !o.value.toLowerCase().includes(q);
+  }
 });
 els.selectFieldB.addEventListener("change", () => {
   state.fieldB = els.selectFieldB.value;
@@ -1735,6 +1743,7 @@ function onDatasetReady(ds, label) {
 
   // Reveal panels
   els.panelField.hidden = false;
+  els.rowFieldFilter.hidden = ds.fields.length < 6;   // show filter only when there are many cols
   els.panelClass.hidden = false;
   els.panelStats.hidden = false;
   els.panelLegend.hidden = false;
