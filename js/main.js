@@ -6897,7 +6897,8 @@ function renderGroupRegressionTable(xf, yf, xs, ys, ids, categoryFor, enabled, o
     const o = olsLocal(g.xs, g.ys);
     const pr = pearsonLocal(g.xs, g.ys);
     if (!o) { rows.push({ cat, n: g.xs.length, skip: true }); continue; }
-    rows.push({ cat, n: g.xs.length, slope: o.slope, intercept: o.intercept, r: pr });
+    // Cycle 233: keep raw arrays for the optional slope-difference test below.
+    rows.push({ cat, n: g.xs.length, slope: o.slope, intercept: o.intercept, r: pr, xs: g.xs.slice(), ys: g.ys.slice() });
     if (Number.isFinite(overallSlope) && Number.isFinite(o.slope) && Math.sign(overallSlope) !== Math.sign(o.slope)) {
       signFlip = true;
     }
@@ -6936,9 +6937,60 @@ function renderGroupRegressionTable(xf, yf, xs, ys, ids, categoryFor, enabled, o
   if (signFlip) {
     html += `<div style="color:#b45309;margin-top:3px">⚠ 全体回帰と符号が逆転するグループあり（Simpson's paradox の可能性）</div>`;
   }
+  // Cycle 233: when exactly 2 groups have valid OLS fits, run a Welch-style
+  // t-test of slope difference. Stat formula:
+  //   SE_slope_i² = MSE_i / Sxx_i  where MSE_i = RSS_i / (n_i - 2)
+  //   t = (a1 - a2) / sqrt(SE1² + SE2²),  df = n1 + n2 - 4
+  const valid = rows.filter(r => !r.skip && r.xs && r.ys);
+  let slopeTest = null;
+  if (valid.length === 2) {
+    const [g1, g2] = valid;
+    const seSlope = (g) => {
+      const n = g.xs.length;
+      const mx = g.xs.reduce((a, b) => a + b, 0) / n;
+      let sxx = 0, rss = 0;
+      for (let i = 0; i < n; i++) {
+        sxx += (g.xs[i] - mx) ** 2;
+        const yhat = g.slope * g.xs[i] + g.intercept;
+        rss += (g.ys[i] - yhat) ** 2;
+      }
+      if (sxx === 0 || n < 3) return null;
+      const mse = rss / (n - 2);
+      return Math.sqrt(mse / sxx);
+    };
+    const se1 = seSlope(g1), se2 = seSlope(g2);
+    if (Number.isFinite(se1) && Number.isFinite(se2)) {
+      const dSlope = g1.slope - g2.slope;
+      const seDiff = Math.sqrt(se1 * se1 + se2 * se2);
+      if (seDiff > 0) {
+        const t = dSlope / seDiff;
+        const df = g1.xs.length + g2.xs.length - 4;
+        const p = (df > 0 && typeof studentTCdfAbs === "function")
+          ? 2 * (1 - studentTCdfAbs(Math.abs(t), df))
+          : null;
+        slopeTest = { cat1: g1.cat, cat2: g2.cat, dSlope, seDiff, t, df, p };
+      }
+    }
+  }
+  if (slopeTest) {
+    const s = slopeTest;
+    const sig = s.p == null ? ""
+      : s.p < 0.001 ? " ***"
+      : s.p < 0.01 ? " **"
+      : s.p < 0.05 ? " *" : "";
+    const pFmt = s.p == null ? "—"
+      : s.p < 0.001 ? "&lt; 0.001"
+      : s.p.toFixed(3);
+    html += `<div style="margin-top:4px;color:#1e3a8a">2群の傾き差検定: ` +
+      `Δa(${escapeHtmlText(s.cat1)} − ${escapeHtmlText(s.cat2)}) = ${s.dSlope.toFixed(3)} ` +
+      `(SE=${s.seDiff.toFixed(3)}), t(${s.df})=${s.t.toFixed(2)}, p=${pFmt}${sig}` +
+      `</div>`;
+  }
   host.innerHTML = html;
   host.hidden = false;
   setCsvVis(true);
+  // Stash for CSV/Markdown consumers (Cycle 230 onward).
+  state.scatterGroupReg.slopeTest = slopeTest;
 }
 
 // Cycle 223: CSV export of the per-group regression table from state.scatterGroupReg.
