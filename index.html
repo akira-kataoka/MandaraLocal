@@ -10,7 +10,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
 
-  <link rel="stylesheet" href="css/style.css?v=57" />
+  <link rel="stylesheet" href="css/style.css?v=58" />
 </head>
 <body>
   <header class="app-header">
@@ -267,9 +267,11 @@
             <input id="filter-value2" type="text" placeholder="例: 5000000" />
           </div>
           <div class="form-row">
+            <button id="btn-filter-add" class="btn">＋ 条件追加 (AND)</button>
             <button id="btn-filter-apply" class="btn btn-primary">適用</button>
             <button id="btn-filter-clear" class="btn">クリア</button>
           </div>
+          <div id="filter-conditions" class="filter-conditions"></div>
           <div id="filter-result" class="data-summary"></div>
         </details>
       </section>
@@ -402,6 +404,6 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=57"></script>
+  <script type="module" src="js/main.js?v=58"></script>
 </body>
 </html>

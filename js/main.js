@@ -108,6 +108,8 @@ const els = {
   filterValue2: $("filter-value2"),
   btnFilterApply: $("btn-filter-apply"),
   btnFilterClear: $("btn-filter-clear"),
+  btnFilterAdd:   $("btn-filter-add"),
+  filterConditions: $("filter-conditions"),
   filterResult: $("filter-result"),
   panelLegend:  $("panel-legend"),
   legendBox:    $("legend-container"),
@@ -752,6 +754,46 @@ els.filterOp.addEventListener("change", () => {
 });
 els.btnFilterApply.addEventListener("click", applyAttributeFilter);
 els.btnFilterClear.addEventListener("click", clearAttributeFilter);
+els.btnFilterAdd.addEventListener("click", addCurrentFilterCondition);
+
+const filterStack = [];   // array of {field, op, v1, v2}
+
+function readCurrentFilter() {
+  const field = els.filterField.value;
+  const op = els.filterOp.value;
+  const v1 = parseFloat(els.filterValue.value);
+  const v2 = parseFloat(els.filterValue2.value);
+  if (!field || !Number.isFinite(v1)) return null;
+  return { field, op, v1, v2: Number.isFinite(v2) ? v2 : null };
+}
+
+function addCurrentFilterCondition() {
+  const c = readCurrentFilter();
+  if (!c) { setSummary("値を入力してから追加してください", "warn"); return; }
+  filterStack.push(c);
+  renderFilterStack();
+  applyAttributeFilter();
+}
+
+function renderFilterStack() {
+  els.filterConditions.innerHTML = "";
+  filterStack.forEach((c, i) => {
+    const div = document.createElement("div");
+    div.className = "fc-item";
+    const op = { ">":"&gt;", ">=":"≥", "<":"&lt;", "<=":"≤", "==":"=", "!=":"≠", "between":"〜" }[c.op] || c.op;
+    const valStr = c.op === "between" ? `${c.v1}〜${c.v2}` : `${c.v1}`;
+    div.innerHTML = `<span>${i > 0 ? "AND " : ""}<strong>${escapeHtmlText(c.field)}</strong> ${op} ${valStr}</span>`;
+    const btn = document.createElement("button");
+    btn.textContent = "削除";
+    btn.addEventListener("click", () => {
+      filterStack.splice(i, 1);
+      renderFilterStack();
+      applyAttributeFilter();
+    });
+    div.appendChild(btn);
+    els.filterConditions.appendChild(div);
+  });
+}
 els.ctRun.addEventListener("click", runCrossTab);
 els.histBins.addEventListener("change", () => { refresh(); });
 
@@ -819,41 +861,45 @@ function escapeHtmlText(s) {
   return String(s ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 }
 
+function evalCondition(c, x) {
+  if (!Number.isFinite(x)) return false;
+  switch (c.op) {
+    case ">":  return x >  c.v1;
+    case ">=": return x >= c.v1;
+    case "<":  return x <  c.v1;
+    case "<=": return x <= c.v1;
+    case "==": return x === c.v1;
+    case "!=": return x !== c.v1;
+    case "between":
+      return Number.isFinite(c.v2) && x >= Math.min(c.v1, c.v2) && x <= Math.max(c.v1, c.v2);
+    default: return false;
+  }
+}
+
 function applyAttributeFilter() {
   if (!state.dataset) return;
-  const field = els.filterField.value;
-  const op = els.filterOp.value;
-  const v1 = parseFloat(els.filterValue.value);
-  const v2 = parseFloat(els.filterValue2.value);
-  if (!Number.isFinite(v1)) {
-    els.filterResult.textContent = "値を入力してください";
+  // Combine the stack (committed conditions) with the current row, AND together
+  const current = readCurrentFilter();
+  const conds = [...filterStack];
+  if (current) conds.push(current);
+  if (!conds.length) {
+    els.filterResult.textContent = "条件を入力または追加してください";
     els.filterResult.className = "data-summary warn";
     return;
   }
-  const test = (x) => {
-    if (!Number.isFinite(x)) return false;
-    switch (op) {
-      case ">":  return x >  v1;
-      case ">=": return x >= v1;
-      case "<":  return x <  v1;
-      case "<=": return x <= v1;
-      case "==": return x === v1;
-      case "!=": return x !== v1;
-      case "between": return Number.isFinite(v2) && x >= Math.min(v1,v2) && x <= Math.max(v1,v2);
-      default: return false;
-    }
-  };
   const matched = new Set();
   for (const r of state.dataset.rows) {
-    if (test(r.values[field])) matched.add(r.key);
+    if (conds.every(c => evalCondition(c, r.values[c.field]))) matched.add(r.key);
   }
-  mapper.markOutliers(matched);   // reuse the outlier-marking style for emphasis
-  els.filterResult.textContent = `条件に一致: ${matched.size}件 / 全${state.dataset.rows.length}件`;
+  mapper.markOutliers(matched);
+  els.filterResult.textContent = `${conds.length}条件AND結合 → 一致: ${matched.size}件 / 全${state.dataset.rows.length}件`;
   els.filterResult.className = "data-summary success";
 }
 
 function clearAttributeFilter() {
   mapper.clearOutlierMarks();
+  filterStack.length = 0;
+  renderFilterStack();
   els.filterResult.textContent = "";
 }
 
