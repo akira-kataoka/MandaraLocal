@@ -224,6 +224,7 @@ const els = {
   btnScatterClearPins: $("btn-scatter-clear-pins"),
   btnScatterPinsCsv: $("btn-scatter-pins-csv"),
   btnScatterPinOutliers: $("btn-scatter-pin-outliers"),
+  btnScatterPinBrush: $("btn-scatter-pin-brush"),
   scatterPinColor: $("scatter-pin-color"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
@@ -1937,6 +1938,32 @@ els.chkScatterZero?.addEventListener("change", drawScatter);
 els.chkScatterJitter?.addEventListener("change", drawScatter);
 els.chkScatterLowess?.addEventListener("change", drawScatter);
 // Cycle 195: clear every scatter overlay toggle in one click.
+// Cycle 238: pin the most recent brush selection. lastBrushIds is captured
+// by the renderScatter onBrush callback; this button bridges that ephemeral
+// state into the permanent pinnedScatterIds set.
+function syncBrushPinBtn() {
+  if (!els.btnScatterPinBrush) return;
+  const c = state.lastBrushIds?.size || 0;
+  els.btnScatterPinBrush.hidden = c === 0;
+  els.btnScatterPinBrush.textContent = `🪧 brush→ピン (${c})`;
+}
+els.btnScatterPinBrush?.addEventListener("click", () => {
+  const sel = state.lastBrushIds;
+  if (!(sel instanceof Set) || !sel.size) {
+    setSummary("brush 選択がありません", "warn"); return;
+  }
+  if (!(state.pinnedScatterIds instanceof Set)) state.pinnedScatterIds = new Set();
+  let added = 0;
+  for (const id of sel) {
+    if (!state.pinnedScatterIds.has(id)) { state.pinnedScatterIds.add(id); added++; }
+  }
+  syncScatterPinBtn();
+  drawScatter();
+  if (typeof refreshTable === "function") refreshTable();
+  mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
+  setSummary(`brush 選択 ${sel.size} 件中 ${added} 件を新規ピン留め（計 ${state.pinnedScatterIds.size} 件）`, "success");
+});
+
 // Cycle 237: bulk-pin every point whose X or Y is outside the Tukey 1.5×IQR
 // fence. Adds to the existing pin set rather than replacing, so users can
 // stack manual pins + outlier pins.
@@ -5209,7 +5236,9 @@ function onDatasetReady(ds, label) {
   state.columnOrder = null;
   // Cycle 212: discard any scatter pins from the previous dataset.
   state.pinnedScatterIds = new Set();
+  state.lastBrushIds = null;
   syncScatterPinBtn();
+  if (typeof syncBrushPinBtn === "function") syncBrushPinBtn();
   mapper.clearPinned?.();
   if (els.tableColPicker) els.tableColPicker.hidden = true;
   // pick first numeric field as default
@@ -6799,6 +6828,10 @@ function drawScatter() {
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
     onBrush: (ids) => {
       mapper.markOutliers(ids);
+      // Cycle 238: remember the brush selection so the user can promote it
+      // into permanent pins via the dedicated button.
+      state.lastBrushIds = new Set(ids);
+      syncBrushPinBtn();
       setSummary(`${ids.size} 件を地図でハイライト中（散布図 brush 選択）`, "success");
     },
     sizeFor,
