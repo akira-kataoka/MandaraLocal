@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=196" />
+  <link rel="stylesheet" href="css/style.css?v=197" />
 </head>
 <body>
   <header class="app-header">
@@ -575,6 +575,8 @@
           <label for="scatter-labels">ラベル</label>
           <select id="scatter-labels">
             <option value="outliers" selected>外れ値のみ</option>
+            <option value="top-y">Y上位10件</option>
+            <option value="top-x">X上位10件</option>
             <option value="all">全表示</option>
             <option value="none">非表示</option>
           </select>
@@ -820,7 +822,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=196"></script>
+  <script type="module" src="js/main.js?v=197"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

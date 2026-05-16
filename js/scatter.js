@@ -218,8 +218,24 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
 
   // Outlier labels: tag points whose value is outside Tukey 1.5×IQR fences
   // on either axis. Helps reading dense plots without hovering.
-  // Label mode: "outliers" (default, Tukey IQR), "all", or "none".
-  const labelMode = opts.labels === "all" || opts.labels === "none" ? opts.labels : "outliers";
+  // Label mode: "outliers" (default, Tukey IQR), "all", "none",
+  // or "top-y" / "top-x" (Cycle 197) — label only the 10 highest by Y or X.
+  const labelMode = ["all", "none", "top-y", "top-x"].includes(opts.labels)
+    ? opts.labels
+    : "outliers";
+  // Pre-compute top-N index set when in top-y / top-x mode so the candidate
+  // filter below is O(1) per pair.
+  let topNSet = null;
+  if (labelMode === "top-y" || labelMode === "top-x") {
+    const N = 10;
+    const useY = labelMode === "top-y";
+    const idxs = pairs.map((_, i) => i)
+      .filter(i => Number.isFinite(pairs[i][useY ? 1 : 0]));
+    idxs.sort((a, b) =>
+      useY ? pairs[b][1] - pairs[a][1] : pairs[b][0] - pairs[a][0]
+    );
+    topNSet = new Set(idxs.slice(0, N));
+  }
   if (names && labelMode !== "none") {
     let xLo, xHi, yLo, yHi;
     if (labelMode === "outliers") {
@@ -254,11 +270,14 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     const overlaps = (a, b) => !(a.x2 < b.x1 || b.x2 < a.x1 || a.y2 < b.y1 || b.y2 < a.y1);
     // Pre-filter candidates so the "outliers" path can keep its original order.
     const candidates = [];
-    for (const [vx, vy, fid, nm] of pairs) {
+    for (let i = 0; i < pairs.length; i++) {
+      const [vx, vy, fid, nm] = pairs[i];
       if (!nm) continue;
       if (labelMode === "outliers") {
         const isOutlier = vx < xLo || vx > xHi || vy < yLo || vy > yHi;
         if (!isOutlier) continue;
+      } else if (topNSet && !topNSet.has(i)) {
+        continue;
       }
       candidates.push([pxAt(sx(vx)), pyAt(sy(vy)), nm]);
     }
