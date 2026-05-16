@@ -215,6 +215,7 @@ const els = {
   scatterLabels:   $("scatter-labels"),
   scatterLabelN:   $("scatter-label-n"),
   btnScatterClearPins: $("btn-scatter-clear-pins"),
+  btnScatterPinsCsv: $("btn-scatter-pins-csv"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
   scatterDataCsv:  $("scatter-data-csv"),
@@ -6550,11 +6551,40 @@ function onScatterClick(id, ev) {
   return;
 }
 function syncScatterPinBtn() {
-  if (!els.btnScatterClearPins) return;
   const count = state.pinnedScatterIds?.size || 0;
-  els.btnScatterClearPins.hidden = count === 0;
-  els.btnScatterClearPins.textContent = `📌 ピン解除 (${count})`;
+  if (els.btnScatterClearPins) {
+    els.btnScatterClearPins.hidden = count === 0;
+    els.btnScatterClearPins.textContent = `📌 ピン解除 (${count})`;
+  }
+  if (els.btnScatterPinsCsv) {
+    els.btnScatterPinsCsv.hidden = count === 0;
+  }
 }
+// Cycle 214: dump the pinned points (region + every field) to CSV. Mirrors
+// the BOM/quoting convention used by the other CSV exports.
+els.btnScatterPinsCsv?.addEventListener("click", () => {
+  const pinned = state.pinnedScatterIds;
+  if (!(pinned instanceof Set) || !pinned.size || !state.dataset) {
+    setSummary("ピン留めされた点がありません", "warn"); return;
+  }
+  const fields = state.dataset.fields;
+  const rows = state.dataset.rows.filter(r => pinned.has(r.key));
+  const esc = (c) => {
+    const s = String(c ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const header = ["id", "name", ...fields];
+  const body = rows.map(r => [r.key, r.name ?? "", ...fields.map(f => r.values[f] ?? "")]);
+  const csv = [header, ...body].map(line => line.map(esc).join(",")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `pinned_points_${rows.length}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`ピン点 ${rows.length} 件をCSVで保存しました`, "success");
+});
 
 function onMapHover(id, isHot) {
   const sel = els.scatterSvg.querySelector(`circle[data-id="${id}"]`);
