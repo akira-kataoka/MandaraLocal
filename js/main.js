@@ -662,7 +662,7 @@ els.chkCompare.addEventListener("change", () => {
 });
 els.selectMode.addEventListener("change", () => {
   state.mode = els.selectMode.value;
-  els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both");
+  els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both" || state.mode === "graduated");
   els.rowDotUnit.hidden = state.mode !== "dot";
   // Pie + Bar share the same multi-field selector UI
   const multiOn = state.mode === "pie" || state.mode === "bar";
@@ -1159,6 +1159,10 @@ function refresh() {
   } else if (state.mode === "dot") {
     const unit = Math.max(1, parseFloat(els.inputDotUnit.value || "10000"));
     mapper.applyDotDensity(state.geojson, state.valueMap, unit);
+  } else if (state.mode === "graduated") {
+    mapper.applyGraduatedSymbols(state.valueMap, state.breaks, state.colors, {
+      maxRadiusPx: state.maxR,
+    });
   } else if (state.mode === "label") {
     mapper.applyLabels(state.valueMap, state.field);
   } else if (state.mode === "contour") {

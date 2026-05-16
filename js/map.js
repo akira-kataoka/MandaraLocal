@@ -232,6 +232,44 @@ export class MandaraMap {
   }
 
   /**
+   * Graduated-symbol map: instead of continuous radius proportional to
+   * sqrt(value/max), each value is mapped to a **class index** and the
+   * radius takes one of K discrete sizes. Clear visual ranking of
+   * classes (MANDARA 「階級記号モード」相当).
+   *
+   * @param valueMap Map<id, number|null>
+   * @param breaks   classification breaks (length k+1)
+   * @param colors   palette (length k)
+   * @param opts.maxRadiusPx default 28
+   * @param opts.minRadiusPx default 4
+   */
+  applyGraduatedSymbols(valueMap, breaks, colors, opts = {}) {
+    this.symbolLayer.clearLayers();
+    if (!valueMap || !breaks?.length || !colors?.length) return;
+    const k = colors.length;
+    const maxR = opts.maxRadiusPx ?? 28;
+    const minR = opts.minRadiusPx ?? 4;
+    const step = k > 1 ? (maxR - minR) / (k - 1) : 0;
+
+    for (const [code, v] of valueMap.entries()) {
+      if (!Number.isFinite(v) || v <= 0) continue;
+      const c = this._centroidCache.get(code);
+      if (!c) continue;
+      const idx = classifyValue(v, breaks);
+      if (idx < 0) continue;
+      const r = minR + idx * step;
+      L.circleMarker(c, {
+        radius: r,
+        color: "#1e3a8a",
+        weight: 0.8,
+        fillColor: colors[idx],
+        fillOpacity: 0.7,
+        interactive: false,
+      }).addTo(this.symbolLayer);
+    }
+  }
+
+  /**
    * Render a small pie chart at each feature centroid.
    * MANDARA 「円グラフモード」相当。
    *
