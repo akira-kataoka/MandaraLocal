@@ -1467,6 +1467,53 @@ document.addEventListener("keydown", (e) => {
     case "p": case "P": els.btnPng?.click(); break;
     case "k": case "K": els.btnKml?.click(); break;
     case "g": case "G": els.btnGeoJson?.click(); break;
+    case "e": case "E": els.btnCsv?.click(); break;
+    case "f": case "F": els.csvFile?.click(); e.preventDefault(); break;
+    case "l": case "L": {
+      // Toggle legend overlay show/hide via the position selector
+      const sel = els.selectLegendPos;
+      if (sel) {
+        sel.value = sel.value === "hide" ? "br" : "hide";
+        sel.dispatchEvent(new Event("change"));
+      }
+      break;
+    }
+    case "c": case "C":
+      if (els.chkCompare) {
+        els.chkCompare.checked = !els.chkCompare.checked;
+        els.chkCompare.dispatchEvent(new Event("change"));
+      }
+      break;
+    case "n": case "N":
+      if (els.chkShowNorth) {
+        els.chkShowNorth.checked = !els.chkShowNorth.checked;
+        els.chkShowNorth.dispatchEvent(new Event("change"));
+      }
+      break;
+    case "o": case "O":
+      if (els.chkShowMinimap) {
+        els.chkShowMinimap.checked = !els.chkShowMinimap.checked;
+        els.chkShowMinimap.dispatchEvent(new Event("change"));
+      }
+      break;
+    case "h": case "H":
+      // Reset to "all-Japan" view
+      mapper.map.setView([37.5, 137.5], 5);
+      if (mapperB) mapperB.map.setView([37.5, 137.5], 5);
+      break;
+    case "t": case "T":
+      els.inputMapTitle?.focus();
+      els.inputMapTitle?.select();
+      e.preventDefault();
+      break;
+    case "+": case "=":
+      mapper.map.zoomIn();
+      e.preventDefault();
+      break;
+    case "-": case "_":
+      mapper.map.zoomOut();
+      e.preventDefault();
+      break;
     case " ":
       if (!els.panelTs.hidden) {
         if (tsState.timer) tsStop(); else tsPlay();

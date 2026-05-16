@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=101" />
+  <link rel="stylesheet" href="css/style.css?v=102" />
 </head>
 <body>
   <header class="app-header">
@@ -497,9 +497,18 @@
           <tr><td><kbd>P</kbd></td><td>PNG 出力</td></tr>
           <tr><td><kbd>K</kbd></td><td>KML 出力</td></tr>
           <tr><td><kbd>G</kbd></td><td>GeoJSON 出力</td></tr>
+          <tr><td><kbd>E</kbd></td><td>CSV 出力（フィルタ/ソート連動）</td></tr>
+          <tr><td><kbd>F</kbd></td><td>CSV ファイル選択ダイアログ</td></tr>
+          <tr><td><kbd>L</kbd></td><td>凡例 表示/非表示</td></tr>
+          <tr><td><kbd>C</kbd></td><td>2画面比較モード 切替</td></tr>
+          <tr><td><kbd>N</kbd></td><td>方位記号 切替</td></tr>
+          <tr><td><kbd>O</kbd></td><td>ミニマップ (Overview) 切替</td></tr>
+          <tr><td><kbd>H</kbd></td><td>ホーム（日本全体表示）</td></tr>
+          <tr><td><kbd>T</kbd></td><td>地図タイトル入力にフォーカス</td></tr>
+          <tr><td><kbd>+</kbd> / <kbd>-</kbd></td><td>ズーム イン/アウト</td></tr>
           <tr><td><kbd>Space</kbd></td><td>時系列 再生/停止 (時系列パネル表示時)</td></tr>
           <tr><td><kbd>←</kbd> / <kbd>→</kbd></td><td>時系列 1ステップ進む/戻る</td></tr>
-          <tr><td><kbd>Esc</kbd></td><td>各種ツール OFF</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>各種ツール OFF / ヘルプを閉じる</td></tr>
         </table>
         <p style="font-size:11px;color:var(--muted)">入力欄にフォーカスがあるときは無効化されます。</p>
         <button id="btn-close-help" class="btn btn-primary">閉じる</button>
@@ -566,7 +575,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=101"></script>
+  <script type="module" src="js/main.js?v=102"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
