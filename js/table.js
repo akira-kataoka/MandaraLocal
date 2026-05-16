@@ -32,6 +32,8 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
   const pinnedRows = opts.pinnedIds instanceof Set ? opts.pinnedIds : null;
   const pinColor = (typeof opts.pinColor === "string" && /^#[0-9a-f]{6}$/i.test(opts.pinColor))
     ? opts.pinColor : "#dc2626";
+  // Cycle 275: 1-indexed pin number lookup for the row badge.
+  const pinnedArr = pinnedRows ? Array.from(pinnedRows) : null;
 
   const table = document.createElement("table");
   // header
@@ -78,6 +80,19 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
     }
     const nameTd = document.createElement("td");
     nameTd.textContent = r.name || "#" + r.key;
+    // Cycle 275: prepend a "#N" badge for pinned rows so the table number
+    // matches the scatter rings / map rings / Markdown / CSV.
+    if (pinnedArr && pinnedRows?.has(r.key)) {
+      const n = pinnedArr.indexOf(r.key) + 1;
+      if (n > 0) {
+        const badge = document.createElement("span");
+        badge.textContent = `#${n}`;
+        badge.style.cssText =
+          "display:inline-block;background:" + pinColor + ";color:#fff;" +
+          "font-size:9px;font-weight:700;padding:0 5px;border-radius:8px;margin-right:5px;vertical-align:middle";
+        nameTd.insertBefore(badge, nameTd.firstChild);
+      }
+    }
     tr.appendChild(nameTd);
     for (const f of fields) {
       const td = document.createElement("td");

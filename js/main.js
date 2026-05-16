@@ -4428,7 +4428,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "274"; // bumped each polish cycle
+const APP_VERSION = "275"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
