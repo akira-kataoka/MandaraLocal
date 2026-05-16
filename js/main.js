@@ -175,6 +175,7 @@ const els = {
   tsPlay:       $("ts-play"),
   tsStop:       $("ts-stop"),
   tsSpeed:      $("ts-speed"),
+  chkTsShared:  $("chk-ts-shared-scale"),
   tsGif:        $("ts-gif"),
   tsFrom:       $("ts-from"),
   tsTo:         $("ts-to"),
@@ -2171,9 +2172,15 @@ els.tsBase.addEventListener("change", () => {
   if (els.tsTo)   els.tsTo.innerHTML   = opts;
   if (els.tsFrom) els.tsFrom.value = "0";
   if (els.tsTo)   els.tsTo.value   = String(pts.length - 1);
+  if (els.chkTsShared?.checked) computeTsLockedBreaks();
   setTsField();
 });
 els.tsSlider.addEventListener("input", setTsField);
+els.chkTsShared?.addEventListener("change", () => {
+  if (els.chkTsShared.checked) computeTsLockedBreaks();
+  else state.lockedBreaks = null;
+  refresh();
+});
 els.tsPlay.addEventListener("click", tsPlay);
 els.tsStop.addEventListener("click", tsStop);
 els.tsSpeed.addEventListener("change", () => {
@@ -2532,7 +2539,14 @@ function refresh() {
   const manualBreaks = state.method === "manual"
     ? els.inputManualBreaks.value.split(/[,、\s]+/).map(s => parseFloat(s.replace(/,/g, ""))).filter(v => Number.isFinite(v))
     : null;
-  const { breaks } = computeBreaks(values, state.classes, state.method, { manualBreaks });
+  // Time-series shared scale (Cycle 136): when active, use cached breaks
+  // computed once from all years so colors stay comparable across frames.
+  let breaks;
+  if (state.lockedBreaks && state.lockedBreaks.length) {
+    breaks = state.lockedBreaks;
+  } else {
+    ({ breaks } = computeBreaks(values, state.classes, state.method, { manualBreaks }));
+  }
   state.breaks = breaks;
   state.colors = getPalette(state.palette, Math.max(1, breaks.length - 1), state.reverse);
   // Apply per-class user overrides for the current palette
@@ -2969,6 +2983,26 @@ function setTsField() {
   els.selectField.value = p.field;
   updateTsLabel();
   refresh();
+}
+
+// Build a single break set from all values across the active series, so every
+// frame uses the same color thresholds. Honors the current method/classes UI.
+function computeTsLockedBreaks() {
+  const s = tsState.series[tsState.baseIdx];
+  if (!s || !state.dataset) { state.lockedBreaks = null; return; }
+  const allVals = [];
+  for (const p of s.points) {
+    for (const r of state.dataset.rows) {
+      const v = r.values[p.field];
+      if (Number.isFinite(v)) allVals.push(v);
+    }
+  }
+  if (allVals.length < 2) { state.lockedBreaks = null; return; }
+  const manualBreaks = state.method === "manual"
+    ? els.inputManualBreaks.value.split(/[,、\s]+/).map(t => parseFloat(t.replace(/,/g, ""))).filter(v => Number.isFinite(v))
+    : null;
+  const { breaks } = computeBreaks(allVals, state.classes, state.method, { manualBreaks });
+  state.lockedBreaks = breaks;
 }
 
 function tsPlay() {

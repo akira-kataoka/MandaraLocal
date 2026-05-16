@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=135" />
+  <link rel="stylesheet" href="css/style.css?v=136" />
 </head>
 <body>
   <header class="app-header">
@@ -435,6 +435,9 @@
             </select>
           </label>
         </div>
+        <div class="form-row inline">
+          <label><input type="checkbox" id="chk-ts-shared-scale" /> 全フレーム共通スケール（色 = 絶対値）</label>
+        </div>
         <div class="hint" style="margin-top:6px">2時点を選んで派生列を生成:</div>
         <div class="form-row">
           <label for="ts-from">起点</label>
@@ -657,7 +660,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=135"></script>
+  <script type="module" src="js/main.js?v=136"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
