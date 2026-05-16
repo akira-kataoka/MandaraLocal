@@ -4447,7 +4447,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "288"; // bumped each polish cycle
+const APP_VERSION = "289"; // bumped each polish cycle
 // Cycle 285: 600ms green pulse on clipboard / save success to give the user
 // immediate visual feedback in addition to setSummary().
 function flashBtn(el) {
@@ -5989,7 +5989,7 @@ function refresh() {
       // Cap to 8 groups for readability; fall back to single boxplot if too many
       // valid groups or none.
       if (groups.length >= 2 && groups.length <= 8) {
-        renderGroupedBoxplot(els.boxplotSvg, groups, `${state.field} × ${colorByField}`);
+        renderGroupedBoxplot(els.boxplotSvg, groups, `${state.field} × ${colorByField}`, { axisFontSize: els.scatterAxisFs?.value || "M" });
       } else {
         renderBoxplot(els.boxplotSvg, values, state.field, { axisFontSize: els.scatterAxisFs?.value || "M" });
       }

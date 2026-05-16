@@ -119,7 +119,7 @@ const GROUP_PALETTE = [
   "#2563eb", "#dc2626", "#16a34a", "#d97706",
   "#9333ea", "#0891b2", "#db2777", "#65a30d",
 ];
-export function renderGroupedBoxplot(svgEl, groups, label) {
+export function renderGroupedBoxplot(svgEl, groups, label, opts = {}) {
   svgEl.innerHTML = "";
   if (!groups || groups.length === 0) return { n: 0 };
   const G = groups.length;
@@ -165,11 +165,15 @@ export function renderGroupedBoxplot(svgEl, groups, label) {
     for (const [k, val] of Object.entries(attrs)) n.setAttribute(k, val);
     return n;
   };
+  // Cycle 289: shared axisFontSize with scatter (Cycle 287) / boxplot single (288).
+  const fsKey = opts.axisFontSize === "S" || opts.axisFontSize === "L" ? opts.axisFontSize : "M";
+  const tickFs = fsKey === "S" ? 7 : fsKey === "L" ? 11 : 9;
+  const labelFs = tickFs + 1;
   // Top label
   if (label) {
     const t = make("text", {
       x: W2 / 2, y: PAD2.top - 2, "text-anchor": "middle",
-      "font-size": 10, fill: "#1e293b", "font-weight": 600,
+      "font-size": labelFs, fill: "#1e293b", "font-weight": 600,
     });
     t.textContent = label;
     svgEl.appendChild(t);
@@ -204,7 +208,7 @@ export function renderGroupedBoxplot(svgEl, groups, label) {
     // Group name (left margin)
     const lab = make("text", {
       x: PAD2.left - 4, y: cy + 3, "text-anchor": "end",
-      "font-size": 10, fill: "#1e293b", "font-weight": 500,
+      "font-size": tickFs + 1, fill: "#1e293b", "font-weight": 500,
     });
     const shortName = g.name.length > 10 ? g.name.slice(0, 9) + "…" : g.name;
     lab.textContent = `${shortName} (n=${g.n})`;
@@ -216,7 +220,7 @@ export function renderGroupedBoxplot(svgEl, groups, label) {
     svgEl.appendChild(make("line", { x1: x, y1: totalH - PAD2.bottom, x2: x, y2: totalH - PAD2.bottom + 3, stroke: "#475569" }));
     const t = make("text", {
       x, y: totalH - PAD2.bottom + 14, "text-anchor": "middle",
-      "font-size": 9, fill: "#475569",
+      "font-size": tickFs, fill: "#475569",
     });
     t.textContent = formatNum(gMin + f * xRange);
     svgEl.appendChild(t);
