@@ -155,6 +155,8 @@ const els = {
   panelTable:   $("panel-table"),
   tableSearch:  $("table-search"),
   tableSearchInfo: $("table-search-info"),
+  btnTableCols: $("btn-table-cols"),
+  tableColPicker: $("table-col-picker"),
   panelHist:    $("panel-histogram"),
   histBins:     $("hist-bins"),
   chkHistOverlay: $("chk-hist-overlay"),
@@ -4591,6 +4593,10 @@ function onDatasetReady(ds, label) {
   state.dataset = ds;
   state.filteredKeys = null;
   state.starredFields = new Set();
+  // Cycle 200: reset column visibility for a fresh dataset so previously-hidden
+  // field names from a different CSV don't carry over.
+  state.hiddenColumns = new Set();
+  if (els.tableColPicker) els.tableColPicker.hidden = true;
   // pick first numeric field as default
   state.field = ds.fields[0];
 
@@ -4707,7 +4713,7 @@ function refresh() {
     els.overlayTitle.textContent = state.field;
     els.overlayFooter.textContent = `MandaraNext ·${state.chochoPref}${state.chochoMuni} · ${new Date().toLocaleDateString("ja-JP")}`;
     renderStats(values);
-    renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, () => {});
+    renderTable(els.tableWrap, state.dataset.rows, getVisibleFields(), () => {});
     saveSettings(state);
     return;
   }
@@ -4732,7 +4738,7 @@ function refresh() {
       parts.push(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`);
       els.overlayFooter.textContent = parts.join(" · ");
       renderStats(values);
-      renderTable(els.tableWrap, getTableRows(), state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+      renderTable(els.tableWrap, getTableRows(), getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
       saveSettings(state);
       return;
     }
@@ -4761,7 +4767,7 @@ function refresh() {
       parts.push(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`);
       els.overlayFooter.textContent = parts.join(" · ");
       renderStats(values);
-      renderTable(els.tableWrap, getTableRows(), state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+      renderTable(els.tableWrap, getTableRows(), getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
       saveSettings(state);
       return;
     }
@@ -4905,7 +4911,7 @@ function refresh() {
   }
 
   // Data table — with inline editing
-  renderTable(els.tableWrap, getTableRows(), state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+  renderTable(els.tableWrap, getTableRows(), getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
 
   // Box plot
   if (els.boxplotSvg) {
@@ -5093,6 +5099,70 @@ function getTableRows() {
   );
 }
 
+// Cycle 200: per-column visibility — users can hide noisy/irrelevant fields
+// from the data table. Hidden columns remain in the dataset (and CSV export);
+// only the on-screen rendering is filtered.
+state.hiddenColumns = state.hiddenColumns instanceof Set ? state.hiddenColumns : new Set();
+function getVisibleFields() {
+  const all = state.dataset?.fields || [];
+  const vis = all.filter(f => !state.hiddenColumns.has(f));
+  // Safety: never end up with 0 visible columns — keep at least the first.
+  return vis.length ? vis : (all.length ? [all[0]] : []);
+}
+function buildTableColPicker() {
+  if (!els.tableColPicker || !state.dataset?.fields?.length) return;
+  els.tableColPicker.innerHTML = "";
+  const head = document.createElement("div");
+  head.style.cssText = "display:flex;gap:6px;margin-bottom:4px";
+  const all = document.createElement("button");
+  all.type = "button"; all.className = "btn"; all.style.fontSize = "10px"; all.style.padding = "1px 6px";
+  all.textContent = "全て表示";
+  all.addEventListener("click", () => {
+    state.hiddenColumns.clear();
+    buildTableColPicker();
+    refreshTable();
+  });
+  const none = document.createElement("button");
+  none.type = "button"; none.className = "btn"; none.style.fontSize = "10px"; none.style.padding = "1px 6px";
+  none.textContent = "全て非表示";
+  none.addEventListener("click", () => {
+    const fs = state.dataset.fields;
+    // Keep the first column visible to avoid an empty table.
+    state.hiddenColumns = new Set(fs.slice(1));
+    buildTableColPicker();
+    refreshTable();
+  });
+  head.appendChild(all); head.appendChild(none);
+  els.tableColPicker.appendChild(head);
+  for (const f of state.dataset.fields) {
+    const lab = document.createElement("label");
+    lab.style.cssText = "display:block;line-height:1.6;cursor:pointer";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !state.hiddenColumns.has(f);
+    cb.style.marginRight = "4px";
+    cb.addEventListener("change", () => {
+      if (cb.checked) state.hiddenColumns.delete(f);
+      else state.hiddenColumns.add(f);
+      refreshTable();
+    });
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(f));
+    els.tableColPicker.appendChild(lab);
+  }
+}
+function refreshTable() {
+  if (!state.dataset) return;
+  const filtered = (typeof getTableRows === "function") ? getTableRows() : state.dataset.rows;
+  renderTable(els.tableWrap, filtered, getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+}
+els.btnTableCols?.addEventListener("click", () => {
+  if (!state.dataset?.fields?.length) return;
+  const hide = !els.tableColPicker.hidden;
+  if (!hide) buildTableColPicker();
+  els.tableColPicker.hidden = hide;
+});
+
 // Debounce table search input (Cycle 191): big datasets (1800+ rows) would
 // re-render on every keystroke; 150 ms gives smooth typing while feeling
 // instantaneous when the user pauses.
@@ -5102,7 +5172,7 @@ els.tableSearch?.addEventListener("input", () => {
   _tableSearchTimer = setTimeout(() => {
     if (state.dataset) {
       const filtered = getTableRows();
-      renderTable(els.tableWrap, filtered, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+      renderTable(els.tableWrap, filtered, getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
       updateTableSearchInfo(filtered.length);
     }
     _tableSearchTimer = null;

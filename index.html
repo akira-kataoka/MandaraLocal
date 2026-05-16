@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=199" />
+  <link rel="stylesheet" href="css/style.css?v=200" />
 </head>
 <body>
   <header class="app-header">
@@ -508,8 +508,10 @@
         <div class="hint">列名クリックでソート / 行ホバーで地図ハイライト / 行クリックで地図ズーム</div>
         <div class="form-row">
           <input id="table-search" type="search" placeholder="地域名で絞り込み…" style="flex:1;font-size:12px;padding:4px 8px;" />
+          <button id="btn-table-cols" class="btn" type="button" style="padding:2px 8px;font-size:11px" title="表示する列を選択">📋 列</button>
         </div>
         <div id="table-search-info" style="font-size:11px;color:var(--muted);margin-bottom:4px" hidden></div>
+        <div id="table-col-picker" hidden style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:6px 8px;margin-bottom:6px;max-height:160px;overflow:auto;font-size:11px"></div>
         <div id="table-wrap" class="table-wrap"></div>
       </section>
 
@@ -834,7 +836,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=199"></script>
+  <script type="module" src="js/main.js?v=200"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
