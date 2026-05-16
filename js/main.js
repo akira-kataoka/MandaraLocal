@@ -66,6 +66,8 @@ const els = {
   btnTemplate:  $("btn-download-template"),
   btnPaste:     $("btn-paste"),
   btnDataReset: $("btn-data-reset"),
+  overlayFile:  $("overlay-file"),
+  btnOverlayClear: $("btn-overlay-clear"),
   inputDataSource: $("input-data-source"),
   inputMapTitle: $("input-map-title"),
   mapTitle:      $("map-title"),
@@ -3243,6 +3245,34 @@ els.btnPaste?.addEventListener("click", async () => {
   } catch (e) {
     setSummary("ペースト失敗: " + e.message, "error");
   }
+});
+
+// Custom GeoJSON overlay layer (Cycle 168). User can add multiple overlays
+// (e.g., national parks, railways, POIs) on top of the choropleth.
+const OVERLAY_PALETTE = ["#1d4ed8", "#16a34a", "#9333ea", "#d97706", "#dc2626", "#0891b2"];
+els.overlayFile?.addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const gj = JSON.parse(text);
+    if (!gj || !gj.type) throw new Error("有効な GeoJSON ではありません");
+    const colorIdx = (mapper._overlayLayers?.length || 0) % OVERLAY_PALETTE.length;
+    const count = mapper.addOverlay(gj, { color: OVERLAY_PALETTE[colorIdx] });
+    setSummary(`オーバーレイ「${file.name}」を追加しました（計 ${count} 個）`, "success");
+  } catch (err) {
+    setSummary("オーバーレイ読込失敗: " + err.message, "error");
+  } finally {
+    e.target.value = "";
+  }
+});
+els.btnOverlayClear?.addEventListener("click", () => {
+  if (!mapper._overlayLayers || mapper._overlayLayers.length === 0) {
+    setSummary("オーバーレイはありません", "warn"); return;
+  }
+  const before = mapper._overlayLayers.length;
+  mapper.clearOverlays();
+  setSummary(`${before} 個のオーバーレイを削除しました`, "success");
 });
 
 els.btnDataReset?.addEventListener("click", () => {

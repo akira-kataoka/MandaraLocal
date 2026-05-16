@@ -97,6 +97,7 @@ export class MandaraMap {
 
     this.tooltipEl = tooltipEl;
     this.layer = null;
+    this._overlayLayers = [];
     this._lookupFn = null;     // (code) -> {value, classIndex, color}
     this._fieldName = "";
     this._mapEl = document.getElementById(elId);
@@ -319,6 +320,33 @@ export class MandaraMap {
   // Expose the centroid cache for spatial-analysis features.
   getCentroids() {
     return this._centroidCache;
+  }
+
+  // Custom overlay layer (Cycle 168). Stacked on top of the choropleth so the
+  // base attribute coloring stays visible underneath.
+  addOverlay(geojson, opts = {}) {
+    const layer = L.geoJSON(geojson, {
+      style: () => ({
+        color: opts.color || "#1d4ed8",
+        weight: opts.weight ?? 1.5,
+        opacity: opts.opacity ?? 0.7,
+        fill: opts.fill ?? false,
+        fillOpacity: opts.fillOpacity ?? 0.15,
+      }),
+      pointToLayer: (feat, latlng) => L.circleMarker(latlng, {
+        radius: 4,
+        color: opts.color || "#1d4ed8",
+        weight: 1.5, opacity: 0.85, fillOpacity: 0.5,
+      }),
+    });
+    layer.addTo(this.map);
+    this._overlayLayers.push(layer);
+    return this._overlayLayers.length;  // returns total overlay count
+  }
+
+  clearOverlays() {
+    for (const lyr of this._overlayLayers) this.map.removeLayer(lyr);
+    this._overlayLayers = [];
   }
 
   resetColors() {
