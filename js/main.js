@@ -3441,6 +3441,10 @@ function drawScatter() {
     regCI: !!els.chkScatterCi?.checked,
     labels: els.scatterLabels?.value || "outliers",
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
+    onBrush: (ids) => {
+      mapper.markOutliers(ids);
+      setSummary(`${ids.size} 件を地図でハイライト中（散布図 brush 選択）`, "success");
+    },
   }, colorFor, names, categoryFor);
   const { r, rho, rCI, rhoCI, n, slope, intercept, r2, degree, coeffs, polyR2, sse, aic, bic } = scatterResult;
   state.scatterStats = {

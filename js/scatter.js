@@ -136,6 +136,65 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   }
   svgEl.appendChild(pts);
 
+  // Brush selection (Cycle 133): drag a rectangle to select multiple points.
+  // Falls back gracefully when no callback is provided.
+  if (opts.onBrush) {
+    let brushStart = null;
+    let brushRect = null;
+    const toVB = (e) => {
+      const r = svgEl.getBoundingClientRect();
+      return [(e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height)];
+    };
+    svgEl.style.cursor = "crosshair";
+    svgEl.addEventListener("mousedown", (e) => {
+      // Don't start a brush when the user clicks an existing data point.
+      if (e.target.tagName === "circle") return;
+      const [vx, vy] = toVB(e);
+      brushStart = [vx, vy];
+      brushRect = el("rect", {
+        x: vx, y: vy, width: 0, height: 0,
+        fill: "rgba(37,99,235,0.15)", stroke: "#2563eb", "stroke-width": 1,
+        "shape-rendering": "crispEdges",
+      });
+      svgEl.appendChild(brushRect);
+      e.preventDefault();
+    });
+    svgEl.addEventListener("mousemove", (e) => {
+      if (!brushStart || !brushRect) return;
+      const [vx, vy] = toVB(e);
+      const x = Math.min(brushStart[0], vx);
+      const y = Math.min(brushStart[1], vy);
+      brushRect.setAttribute("x", x);
+      brushRect.setAttribute("y", y);
+      brushRect.setAttribute("width", Math.abs(vx - brushStart[0]));
+      brushRect.setAttribute("height", Math.abs(vy - brushStart[1]));
+    });
+    const finishBrush = () => {
+      if (!brushStart || !brushRect) return;
+      const rx = parseFloat(brushRect.getAttribute("x"));
+      const ry = parseFloat(brushRect.getAttribute("y"));
+      const rw = parseFloat(brushRect.getAttribute("width"));
+      const rh = parseFloat(brushRect.getAttribute("height"));
+      brushStart = null;
+      // Below-threshold rectangle ⇒ treat as accidental click and skip.
+      if (rw < 3 || rh < 3) {
+        brushRect.remove(); brushRect = null;
+        return;
+      }
+      const selected = new Set();
+      for (const [vx, vy, fid] of pairs) {
+        if (fid == null) continue;
+        const cx = px(vx), cy = py(vy);
+        if (cx >= rx && cx <= rx + rw && cy >= ry && cy <= ry + rh) selected.add(fid);
+      }
+      opts.onBrush(selected);
+      // Keep the visual cue briefly so the user sees what was selected.
+      setTimeout(() => { if (brushRect) { brushRect.remove(); brushRect = null; } }, 1200);
+    };
+    svgEl.addEventListener("mouseup", finishBrush);
+    svgEl.addEventListener("mouseleave", finishBrush);
+  }
+
   // Outlier labels: tag points whose value is outside Tukey 1.5×IQR fences
   // on either axis. Helps reading dense plots without hovering.
   // Label mode: "outliers" (default, Tukey IQR), "all", or "none".
