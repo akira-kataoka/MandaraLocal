@@ -331,7 +331,10 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   }
 
   const rho = spearman(x, y);
-  return { r, rho, n: pairs.length, slope, intercept, r2: Number.isFinite(r) ? r*r : null };
+  const nValid = pairs.length;
+  const rCI   = fisherCI(r, nValid);
+  const rhoCI = fisherCI(rho, nValid);
+  return { r, rho, rCI, rhoCI, n: nValid, slope, intercept, r2: Number.isFinite(r) ? r*r : null };
 }
 
 function pearson(xs, ys) {
@@ -353,6 +356,19 @@ export function spearman(xs, ys) {
   if (xs.length !== ys.length || xs.length < 2) return null;
   return pearson(toRanks(xs), toRanks(ys));
 }
+// Fisher z-transformation gives a 95% CI for a correlation coefficient.
+// Returns [lo, hi] or null if not computable. Works for both Pearson r and
+// Spearman ρ (the variance approximation is conservative but standard).
+export function fisherCI(r, n) {
+  if (r == null || !Number.isFinite(r) || n < 4 || Math.abs(r) >= 1) return null;
+  const z = 0.5 * Math.log((1 + r) / (1 - r));
+  const se = 1 / Math.sqrt(n - 3);
+  const lo = z - 1.96 * se;
+  const hi = z + 1.96 * se;
+  const back = (zv) => (Math.exp(2 * zv) - 1) / (Math.exp(2 * zv) + 1);
+  return [back(lo), back(hi)];
+}
+
 function toRanks(arr) {
   const n = arr.length;
   const idx = arr.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0]);

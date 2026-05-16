@@ -3144,7 +3144,7 @@ function drawScatter() {
       };
     }
   }
-  const { r, rho, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick, {
+  const { r, rho, rCI, rhoCI, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick, {
     logX: els.chkScatterLogX.checked,
     logY: els.chkScatterLogY.checked,
     statsOverlay: !!els.chkScatterStats?.checked,
@@ -3158,14 +3158,17 @@ function drawScatter() {
   const strength = Math.abs(r) >= 0.7 ? "強い" : Math.abs(r) >= 0.4 ? "中程度の" : "弱い";
   const sign = r >= 0 ? "正" : "負";
   const r2 = (r * r * 100).toFixed(1);
+  const ciTxt = (ci) => ci == null
+    ? ""
+    : ` <small style="color:var(--muted)">[${ci[0].toFixed(3)}, ${ci[1].toFixed(3)}]</small>`;
   const rhoTxt = rho == null
     ? ""
-    : ` · スピアマン順位相関 <strong>ρ=${rho.toFixed(3)}</strong>`;
+    : ` · スピアマン順位相関 <strong>ρ=${rho.toFixed(3)}</strong>${ciTxt(rhoCI)}`;
   // Hint at non-linear monotonic relationship when ρ noticeably exceeds r.
   const note = (rho != null && Math.abs(rho) - Math.abs(r) > 0.15)
     ? ` <small style="color:#b45309">（ρ ≫ r：単調非線形の可能性）</small>`
     : "";
-  els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong> （${strength}${sign}の相関）${rhoTxt}${note} · 決定係数 R²=${r2}%`;
+  els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong>${ciTxt(rCI)} （${strength}${sign}の相関）${rhoTxt}${note} · 決定係数 R²=${r2}%`;
 }
 
 function onScatterHover(id, isHot) {
