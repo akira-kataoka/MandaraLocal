@@ -64,8 +64,21 @@ export function renderLegend(container, breaks, colors, options = {}) {
     ? options.onClassHover
     : null;
   const precision = typeof options.precision === "number" ? options.precision : null;
+  // Cycle 211: horizontal layout — lay class rows in a flex row, ascending
+  // left → right so reading direction matches "low → high" intuition.
+  const horizontal = options.layout === "horizontal";
+  let rowsHost = container;
+  if (horizontal) {
+    rowsHost = document.createElement("div");
+    rowsHost.className = "legend-rows-h";
+    rowsHost.style.cssText = "display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;align-items:center";
+    container.appendChild(rowsHost);
+  }
+  const iStart = horizontal ? 0 : k - 1;
+  const iEnd   = horizontal ? k : -1;
+  const iStep  = horizontal ? 1 : -1;
 
-  for (let i = k - 1; i >= 0; i--) {
+  for (let i = iStart; i !== iEnd; i += iStep) {
     const lo = breaks[i];
     const hi = breaks[i + 1];
     const row = document.createElement("div");
@@ -140,13 +153,17 @@ export function renderLegend(container, breaks, colors, options = {}) {
     }
     row.appendChild(sw);
     row.appendChild(label);
+    if (horizontal) {
+      // Compact pill: swatch + range inline. Keep dataset/handlers intact.
+      row.style.cssText = "display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap";
+    }
     if (onClassHover) {
       row.addEventListener("mouseenter", (ev) => {
         const idx = Number(ev.currentTarget.dataset.classIndex);
         onClassHover(idx, ev);
       });
     }
-    container.appendChild(row);
+    rowsHost.appendChild(row);
   }
 
   // N/A row
@@ -159,6 +176,7 @@ export function renderLegend(container, breaks, colors, options = {}) {
     label.textContent = "データなし";
     row.appendChild(sw);
     row.appendChild(label);
-    container.appendChild(row);
+    if (horizontal) row.style.cssText = "display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap";
+    rowsHost.appendChild(row);
   }
 }

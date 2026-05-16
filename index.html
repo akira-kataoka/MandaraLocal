@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=210" />
+  <link rel="stylesheet" href="css/style.css?v=211" />
 </head>
 <body>
   <header class="app-header">
@@ -423,6 +423,13 @@
             <option value="1">1</option>
             <option value="2">2</option>
             <option value="3">3</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="select-legend-layout">レイアウト</label>
+          <select id="select-legend-layout" title="凡例の階級を縦に積むか、横一列に並べるか">
+            <option value="vertical" selected>縦（標準）</option>
+            <option value="horizontal">横（紙面下部向き）</option>
           </select>
         </div>
         <div id="legend-container"></div>
@@ -851,7 +858,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=210"></script>
+  <script type="module" src="js/main.js?v=211"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
