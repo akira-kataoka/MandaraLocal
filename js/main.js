@@ -119,6 +119,7 @@ const els = {
   tsPlay:       $("ts-play"),
   tsStop:       $("ts-stop"),
   tsSpeed:      $("ts-speed"),
+  tsGif:        $("ts-gif"),
   panelScatter: $("panel-scatter"),
   scatterX:     $("scatter-x"),
   scatterY:     $("scatter-y"),
@@ -872,6 +873,45 @@ els.tsPlay.addEventListener("click", tsPlay);
 els.tsStop.addEventListener("click", tsStop);
 els.tsSpeed.addEventListener("change", () => {
   if (tsState.timer) { tsStop(); tsPlay(); }
+});
+
+els.tsGif.addEventListener("click", async () => {
+  if (typeof GIF === "undefined" || typeof htmlToImage === "undefined") {
+    setSummary("gif.js または html-to-image が未読込", "error"); return;
+  }
+  const s = tsState.series[tsState.baseIdx];
+  if (!s) return;
+  tsStop();
+  const wrap = document.querySelector(".map-wrap");
+  setSummary(`GIF を生成中… 0/${s.points.length} フレーム`, "muted");
+  const gif = new GIF({
+    workers: 2,
+    quality: 10,
+    workerScript: "https://unpkg.com/gif.js@0.2.0/dist/gif.worker.js",
+    width: wrap.offsetWidth,
+    height: wrap.offsetHeight,
+  });
+  for (let i = 0; i < s.points.length; i++) {
+    els.tsSlider.value = String(i);
+    setTsField();
+    // wait for the map / chart to update
+    await new Promise(r => setTimeout(r, 400));
+    const canvas = await htmlToImage.toCanvas(wrap, {
+      backgroundColor: "#ffffff",
+      filter: (n) => !(n.classList && (n.classList.contains("leaflet-control-zoom") || n.classList.contains("leaflet-control-layers"))),
+    });
+    gif.addFrame(canvas, { delay: 800, copy: true });
+    setSummary(`GIF を生成中… ${i+1}/${s.points.length} フレーム`, "muted");
+  }
+  gif.on("finished", (blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `mandara_timeseries_${s.base}.gif`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setSummary(`GIF を保存しました: mandara_timeseries_${s.base}.gif`, "success");
+  });
+  gif.render();
 });
 
 let measureOn = false;
