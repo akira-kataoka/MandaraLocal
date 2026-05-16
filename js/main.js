@@ -4280,6 +4280,17 @@ function markdownToPlainText(md) {
 }
 
 els.btnCopyResultsTxt = document.getElementById("btn-copy-results-txt");
+
+// Cycle 247: keyboard shortcuts for the result copy buttons. Skips when
+// focus is on an editable input so users can still type "M"/"T" in fields.
+window.addEventListener("keydown", (e) => {
+  if (!(e.shiftKey && (e.ctrlKey || e.metaKey))) return;
+  const tgt = e.target;
+  if (tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" || tgt.isContentEditable)) return;
+  const k = e.key.toLowerCase();
+  if (k === "m") { e.preventDefault(); els.btnCopyResults?.click(); }
+  else if (k === "t") { e.preventDefault(); els.btnCopyResultsTxt?.click(); }
+});
 els.btnCopyResultsTxt?.addEventListener("click", async () => {
   const md = buildAnalysisMarkdown();
   const txt = markdownToPlainText(md);
