@@ -28,7 +28,7 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
   const groups = (opts.groups && opts.groups.length >= 2 && opts.groups.length <= 4) ? opts.groups : null;
   if (groups) {
     // Cycle 262: facet (small multiples) when requested, else default overlay.
-    if (opts.facet) return renderFacetHistogram(svgEl, groups, label, bins, logX, opts);
+    if (opts.facet) return renderFacetHistogram(svgEl, groups, label, bins, logX, { ...opts, onBinHover });
     return renderGroupHistogram(svgEl, groups, label, bins, logX);
   }
   // When log axis is requested, only positive values are usable.
@@ -350,6 +350,13 @@ function renderFacetHistogram(svgEl, groups, label, bins, logX, opts = {}) {
           ev.preventDefault();
           opts.onBinClick(lo, hi, i);
         });
+      }
+      // Cycle 264: hover → map highlight via opts.onBinHover (same signature
+      // as renderHistogram), kept independent so click and hover compose.
+      if (typeof opts.onBinHover === "function") {
+        rect.style.cursor = "pointer";
+        rect.addEventListener("mouseenter", () => opts.onBinHover(lo, hi, i, true));
+        rect.addEventListener("mouseleave", () => opts.onBinHover(lo, hi, i, false));
       }
       svgEl.appendChild(rect);
     });
