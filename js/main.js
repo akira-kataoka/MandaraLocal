@@ -3110,7 +3110,8 @@ function exportAllStatsCsv() {
   const cols = [
     "フィールド", "n", "欠損", "合計", "平均", "中央値",
     "最小", "最大", "範囲", "Q1", "Q3", "IQR",
-    "標準偏差", "変動係数(%)", "歪度", "尖度(超過)", "最頻値",
+    "標準偏差", "標本SD(n-1)", "平均SE", "平均95%CI下", "平均95%CI上",
+    "変動係数(%)", "歪度", "尖度(超過)", "最頻値",
   ];
   const fmt = (v, digits) => (v == null || !Number.isFinite(v)) ? "" : (digits != null ? v.toFixed(digits) : String(v));
   const lines = [cols.map(csvEscape).join(",")];
@@ -3131,6 +3132,10 @@ function exportAllStatsCsv() {
       fmt(s.q3),
       fmt(s.iqr),
       fmt(s.std),
+      fmt(s.sampleStd),
+      fmt(s.seMean),
+      fmt(s.ciMeanLo),
+      fmt(s.ciMeanHi),
       s.cv == null ? "" : (s.cv * 100).toFixed(1),
       fmt(s.skewness, 3),
       fmt(s.kurtosis, 3),
@@ -3218,6 +3223,9 @@ function renderStats(values) {
     ["第3四分位 (Q3)", s.q3 != null ? formatNum(s.q3) : "—"],
     ["四分位範囲 (IQR)", s.iqr != null ? formatNum(s.iqr) : "—"],
     ["標準偏差", s.std != null ? formatNum(s.std) : "—"],
+    ["標本標準偏差 (n-1)", s.sampleStd != null ? formatNum(s.sampleStd) : "—"],
+    ["平均の標準誤差 (SE)", s.seMean != null ? formatNum(s.seMean) : "—"],
+    ["平均の 95% CI", (s.ciMeanLo != null && s.ciMeanHi != null) ? `[${formatNum(s.ciMeanLo)}, ${formatNum(s.ciMeanHi)}]` : "—"],
     ["変動係数 (CV)", s.cv != null ? (s.cv * 100).toFixed(1) + "%" : "—"],
     ["歪度", s.skewness != null ? s.skewness.toFixed(3) : "—"],
     ["尖度 (超過)", s.kurtosis != null ? s.kurtosis.toFixed(3) : "—"],

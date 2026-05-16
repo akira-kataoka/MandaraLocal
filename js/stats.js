@@ -19,7 +19,7 @@ export function computeStats(values) {
   const v = values.filter(x => Number.isFinite(x));
   const n = v.length;
   const missing = values.length - n;
-  if (n === 0) return { n: 0, missing, sum: null, mean: null, median: null, min: null, max: null, range: null, std: null, variance: null, q1: null, q3: null, iqr: null, cv: null, skewness: null, kurtosis: null, mode: null };
+  if (n === 0) return { n: 0, missing, sum: null, mean: null, median: null, min: null, max: null, range: null, std: null, variance: null, q1: null, q3: null, iqr: null, cv: null, skewness: null, kurtosis: null, mode: null, sampleStd: null, seMean: null, ciMeanLo: null, ciMeanHi: null };
 
   const sorted = v.slice().sort((a, b) => a - b);
   const sum = v.reduce((a, b) => a + b, 0);
@@ -76,6 +76,17 @@ export function computeStats(values) {
     }
   }
 
+  // Sample SD (n-1 denominator), SE of mean, and 95% CI of mean.
+  // 1.96 is the standard normal critical value (good for n >= 30; slightly
+  // conservative for smaller n, matching common publication practice).
+  let sampleStd = null, seMean = null, ciMeanLo = null, ciMeanHi = null;
+  if (n >= 2) {
+    sampleStd = Math.sqrt(ss2 / (n - 1));
+    seMean = sampleStd / Math.sqrt(n);
+    ciMeanLo = mean - 1.96 * seMean;
+    ciMeanHi = mean + 1.96 * seMean;
+  }
+
   return {
     n, missing,
     sum, mean, median, min, max,
@@ -84,6 +95,7 @@ export function computeStats(values) {
     q1, q3, iqr,
     cv,
     skewness, kurtosis, mode,
+    sampleStd, seMean, ciMeanLo, ciMeanHi,
   };
 }
 
