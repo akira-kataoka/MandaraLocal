@@ -16,7 +16,7 @@ const PAD = { top: 10, right: 12, bottom: 28, left: 38 };
  *              Each circle is tagged with data-id for cross-highlighting.
  * @param onHover (id, on) callback fired on circle mouseover/out
  */
-export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover = null, onSelect = null, opts = {}, colorFor = null) {
+export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover = null, onSelect = null, opts = {}, colorFor = null, names = null) {
   const logX = !!opts.logX;
   const logY = !!opts.logY;
   // Pair up & drop missing (drop non-positive when using log)
@@ -25,7 +25,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     if (Number.isFinite(xs[i]) && Number.isFinite(ys[i])) {
       if (logX && xs[i] <= 0) continue;
       if (logY && ys[i] <= 0) continue;
-      pairs.push([xs[i], ys[i], ids ? ids[i] : null]);
+      pairs.push([xs[i], ys[i], ids ? ids[i] : null, names ? names[i] : null]);
     }
   }
   svgEl.innerHTML = "";
@@ -105,6 +105,36 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     pts.appendChild(c);
   }
   svgEl.appendChild(pts);
+
+  // Outlier labels: tag points whose value is outside Tukey 1.5×IQR fences
+  // on either axis. Helps reading dense plots without hovering.
+  if (names) {
+    const quantile = (arr, p) => {
+      const a = arr.slice().sort((u,w)=>u-w);
+      const idx = (a.length - 1) * p;
+      const lo = Math.floor(idx), hi = Math.ceil(idx);
+      return lo === hi ? a[lo] : a[lo] + (a[hi]-a[lo]) * (idx - lo);
+    };
+    const xq1 = quantile(x, 0.25), xq3 = quantile(x, 0.75);
+    const yq1 = quantile(y, 0.25), yq3 = quantile(y, 0.75);
+    const xLo = xq1 - 1.5 * (xq3 - xq1), xHi = xq3 + 1.5 * (xq3 - xq1);
+    const yLo = yq1 - 1.5 * (yq3 - yq1), yHi = yq3 + 1.5 * (yq3 - yq1);
+    const labels = el("g", { class: "scatter-labels" });
+    for (const [vx, vy, fid, nm] of pairs) {
+      if (!nm) continue;
+      const isOutlier = vx < xLo || vx > xHi || vy < yLo || vy > yHi;
+      if (!isOutlier) continue;
+      const tx = pxAt(sx(vx)) + 5;
+      const ty = pyAt(sy(vy)) - 5;
+      const lbl = el("text", { x: tx, y: ty });
+      lbl.setAttribute("font-size", "9");
+      lbl.setAttribute("fill", "#1e293b");
+      lbl.setAttribute("font-weight", "600");
+      lbl.textContent = nm;
+      labels.appendChild(lbl);
+    }
+    svgEl.appendChild(labels);
+  }
 
   // OLS regression line in the *scaled* coordinate system so it stays
   // visually straight even on log axes. Pearson r is still on raw values.

@@ -2097,10 +2097,11 @@ function drawScatter() {
     const idx = classifyValue(v, state.breaks);
     return idx < 0 ? null : state.colors[idx];
   };
+  const names = state.dataset.rows.map(r => r.name || ("#" + r.key));
   const { r, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick, {
     logX: els.chkScatterLogX.checked,
     logY: els.chkScatterLogY.checked,
-  }, colorFor);
+  }, colorFor, names);
   if (r == null) {
     els.scatterCorr.textContent = `n=${n} — 相関係数を計算できません`;
   } else {
