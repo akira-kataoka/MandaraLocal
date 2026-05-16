@@ -25,8 +25,8 @@ export class MandaraMap {
       attributionControl: true,
     });
 
-    // Free tile providers — pick OSM as default.
-    // 地理院タイル (Japan) is also free; we add a base layer selector.
+    // Free tile providers — multiple options (Cycle 121). All are free for
+    // non-commercial use; attribution strings comply with each provider's TOS.
     const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -39,10 +39,34 @@ export class MandaraMap {
       maxZoom: 14,
       attribution: '出典: <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院白地図</a>',
     });
+    const gsiPhoto = L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg", {
+      maxZoom: 18,
+      attribution: '出典: <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院 全国最新写真（シームレス）</a>',
+    });
+    const esriSat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+    });
+    const cartoLight = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19, subdomains: "abcd",
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    });
+    const cartoDark = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19, subdomains: "abcd",
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    });
     gsiPale.addTo(this.map);
 
     L.control.layers(
-      { "地理院 淡色": gsiPale, "OpenStreetMap": osm, "白地図 (地理院)": gsiBlank },
+      {
+        "地理院 淡色": gsiPale,
+        "地理院 写真": gsiPhoto,
+        "白地図 (地理院)": gsiBlank,
+        "OpenStreetMap": osm,
+        "衛星 (Esri)": esriSat,
+        "CARTO Light (論文向け)": cartoLight,
+        "CARTO Dark": cartoDark,
+      },
       {},
       { position: "topleft", collapsed: true }
     ).addTo(this.map);
