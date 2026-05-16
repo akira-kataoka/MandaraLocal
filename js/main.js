@@ -186,6 +186,10 @@ const els = {
   chkScatterCi:    $("chk-scatter-ci"),
   scatterLabels:   $("scatter-labels"),
   scatterCsv:      $("scatter-csv"),
+  panelCorrMatrix: $("panel-corrmatrix"),
+  corrRun:         $("corr-run"),
+  corrCsv:         $("corr-csv"),
+  corrResult:      $("corr-result"),
   chkScatterLogX: $("chk-scatter-logx"),
   chkScatterLogY: $("chk-scatter-logy"),
   scatterCorr:  $("scatter-correlation"),
@@ -1366,6 +1370,103 @@ els.scatterSwap?.addEventListener("click", () => {
   drawScatter();
 });
 
+// Correlation matrix runner (Cycle 124): pairwise Pearson r between all fields.
+function runCorrelationMatrix() {
+  if (!state.dataset || state.dataset.fields.length < 2) return;
+  const fields = state.dataset.fields;
+  const N = fields.length;
+  // Pre-extract value arrays once
+  const cols = fields.map(f => state.dataset.rows.map(r => r.values[f]));
+  const mat = Array.from({ length: N }, () => new Array(N).fill(null));
+  for (let i = 0; i < N; i++) {
+    for (let j = i; j < N; j++) {
+      // Pairwise complete observations
+      const xs = [], ys = [];
+      for (let k = 0; k < cols[i].length; k++) {
+        const a = cols[i][k], b = cols[j][k];
+        if (Number.isFinite(a) && Number.isFinite(b)) { xs.push(a); ys.push(b); }
+      }
+      const r = (xs.length >= 3) ? pearsonR(xs, ys) : null;
+      mat[i][j] = mat[j][i] = r;
+    }
+  }
+  state.corrMatrix = { fields, matrix: mat };
+  // Render heatmap
+  const cellFor = (r) => {
+    if (r == null) return { bg: "#e2e8f0", txt: "—" };
+    const a = Math.min(1, Math.abs(r));
+    if (r >= 0) {
+      return { bg: `rgba(220, 38, 38, ${(a * 0.55).toFixed(2)})`, txt: r.toFixed(2) };
+    }
+    return { bg: `rgba(37, 99, 235, ${(a * 0.55).toFixed(2)})`, txt: r.toFixed(2) };
+  };
+  let html = `<table><thead><tr><th></th>`;
+  for (const f of fields) html += `<th title="${escapeHtmlText(f)}">${escapeHtmlText(f.length > 10 ? f.slice(0, 9) + "…" : f)}</th>`;
+  html += `</tr></thead><tbody>`;
+  for (let i = 0; i < N; i++) {
+    html += `<tr><th title="${escapeHtmlText(fields[i])}">${escapeHtmlText(fields[i].length > 10 ? fields[i].slice(0, 9) + "…" : fields[i])}</th>`;
+    for (let j = 0; j < N; j++) {
+      if (i === j) {
+        html += `<th class="diag">—</th>`;
+      } else {
+        const c = cellFor(mat[i][j]);
+        const cls = (mat[i][j] != null && Math.abs(mat[i][j]) >= 0.7) ? "corr-strong" : "";
+        html += `<td class="${cls}" style="background:${c.bg}" data-i="${i}" data-j="${j}" title="${escapeHtmlText(fields[i])} × ${escapeHtmlText(fields[j])} : r=${c.txt}">${c.txt}</td>`;
+      }
+    }
+    html += `</tr>`;
+  }
+  html += `</tbody></table>`;
+  els.corrResult.innerHTML = html;
+  // Click → load that pair into the scatter panel
+  els.corrResult.querySelectorAll("td[data-i]").forEach(td => {
+    td.addEventListener("click", () => {
+      const i = parseInt(td.dataset.i, 10), j = parseInt(td.dataset.j, 10);
+      if (els.scatterX && els.scatterY) {
+        els.scatterX.value = fields[j];
+        els.scatterY.value = fields[i];
+        drawScatter();
+        els.panelScatter?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+  if (els.corrCsv) els.corrCsv.disabled = false;
+}
+function pearsonR(xs, ys) {
+  const n = xs.length;
+  let mx = 0, my = 0;
+  for (let k = 0; k < n; k++) { mx += xs[k]; my += ys[k]; }
+  mx /= n; my /= n;
+  let num = 0, dx = 0, dy = 0;
+  for (let k = 0; k < n; k++) {
+    const ex = xs[k] - mx, ey = ys[k] - my;
+    num += ex * ey; dx += ex * ex; dy += ey * ey;
+  }
+  if (dx === 0 || dy === 0) return null;
+  return num / Math.sqrt(dx * dy);
+}
+els.corrRun?.addEventListener("click", runCorrelationMatrix);
+
+els.corrCsv?.addEventListener("click", () => {
+  const cm = state.corrMatrix;
+  if (!cm) { setSummary("先に「行列を計算」してください", "warn"); return; }
+  const lines = [];
+  lines.push(["", ...cm.fields].map(csvEscape).join(","));
+  for (let i = 0; i < cm.fields.length; i++) {
+    const row = [cm.fields[i], ...cm.matrix[i].map(v => v == null ? "" : v.toFixed(4))];
+    lines.push(row.map(csvEscape).join(","));
+  }
+  const csv = "﻿" + lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `correlation_matrix_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`相関行列を ${a.download} として保存しました（${cm.fields.length}×${cm.fields.length}）`, "success");
+});
+
 els.scatterCsv?.addEventListener("click", () => {
   const s = state.scatterStats;
   if (!s || s.r == null) { setSummary("先に散布図を描画してください", "warn"); return; }
@@ -2377,9 +2478,11 @@ function onDatasetReady(ds, label) {
   }
   if (ds.fields.length >= 2) {
     els.panelScatter.hidden = false;
+    if (els.panelCorrMatrix) els.panelCorrMatrix.hidden = false;
     populateScatterSelectors(ds.fields);
   } else {
     els.panelScatter.hidden = true;
+    if (els.panelCorrMatrix) els.panelCorrMatrix.hidden = true;
   }
   // Pre-populate pie field options for the new dataset
   populatePieFields();
