@@ -191,6 +191,12 @@ const els = {
   scatterLabels:   $("scatter-labels"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
+  panelMr:         $("panel-multireg"),
+  mrY:             $("mr-y"),
+  mrXList:         $("mr-x-list"),
+  mrRun:           $("mr-run"),
+  mrCsv:           $("mr-csv"),
+  mrResult:        $("mr-result"),
   panelCorrMatrix: $("panel-corrmatrix"),
   corrRun:         $("corr-run"),
   corrCsv:         $("corr-csv"),
@@ -1462,6 +1468,213 @@ function pearsonR(xs, ys) {
 }
 els.corrRun?.addEventListener("click", runCorrelationMatrix);
 
+// ----- Multiple regression (Cycle 140) -----
+function populateMrSelectors(fields) {
+  if (!els.mrY) return;
+  const prevY = els.mrY.value;
+  els.mrY.innerHTML = "";
+  for (const f of fields) {
+    const o = document.createElement("option");
+    o.value = f; o.textContent = f;
+    els.mrY.appendChild(o);
+  }
+  if (fields.includes(prevY)) els.mrY.value = prevY;
+  else if (fields.length) els.mrY.value = fields[0];
+  // Rebuild X checkbox list (skip the currently-chosen Y)
+  if (els.mrXList) {
+    const checkedPrev = new Set(
+      [...els.mrXList.querySelectorAll("input:checked")].map(el => el.value)
+    );
+    els.mrXList.innerHTML = "";
+    for (const f of fields) {
+      const label = document.createElement("label");
+      label.style.cssText = "display:block;padding:1px 0;";
+      const cb = document.createElement("input");
+      cb.type = "checkbox"; cb.value = f;
+      if (checkedPrev.has(f)) cb.checked = true;
+      label.appendChild(cb);
+      label.append(" " + f);
+      els.mrXList.appendChild(label);
+    }
+  }
+}
+els.mrY?.addEventListener("change", () => {
+  // re-render the X list so the same field isn't picked as both Y and X
+  if (state.dataset) populateMrSelectors(state.dataset.fields);
+});
+
+function runMultipleRegression() {
+  if (!state.dataset) return;
+  const yField = els.mrY.value;
+  const xFields = [...els.mrXList.querySelectorAll("input:checked")].map(el => el.value).filter(f => f !== yField);
+  if (xFields.length < 1) { setSummary("少なくとも 1 つの説明変数 X を選んでください", "warn"); return; }
+  // Build design matrix (with intercept column) for complete cases only.
+  const X = [];
+  const y = [];
+  for (const r of state.dataset.rows) {
+    const yv = r.values[yField];
+    if (!Number.isFinite(yv)) continue;
+    const row = [1];
+    let ok = true;
+    for (const xf of xFields) {
+      const v = r.values[xf];
+      if (!Number.isFinite(v)) { ok = false; break; }
+      row.push(v);
+    }
+    if (!ok) continue;
+    X.push(row); y.push(yv);
+  }
+  const n = y.length, p = xFields.length + 1;
+  if (n <= p) { setSummary(`サンプル不足: n=${n}, p=${p} (n>p が必要)`, "warn"); return; }
+  // Normal equations: solve (X'X) β = X'y, also need (X'X)⁻¹ for SEs.
+  const Xt = transposeMat(X);
+  const XtX = matMul(Xt, X);
+  const Xty = matVec(Xt, y);
+  const inv = invertMat(XtX);
+  if (!inv) { setSummary("特異行列 — 説明変数が多重共線かもしれません", "error"); return; }
+  const coeffs = matVec(inv, Xty);
+  const yhat = X.map(row => row.reduce((s, v, i) => s + v * coeffs[i], 0));
+  const residuals = y.map((v, i) => v - yhat[i]);
+  const sse = residuals.reduce((s, r) => s + r * r, 0);
+  const my = y.reduce((s, v) => s + v, 0) / n;
+  const sst = y.reduce((s, v) => s + (v - my) ** 2, 0);
+  const R2 = sst > 0 ? 1 - sse / sst : null;
+  const adjR2 = R2 != null && n > p ? 1 - (1 - R2) * (n - 1) / (n - p) : null;
+  const sigma2 = sse / (n - p);
+  const se = inv.map((row, i) => Math.sqrt(Math.max(0, sigma2 * row[i])));
+  const tStats = coeffs.map((c, i) => se[i] > 0 ? c / se[i] : null);
+  const pValues = tStats.map(t => t == null ? null : 2 * (1 - studentTCdfAbs(Math.abs(t), n - p)));
+  // Overall F-test
+  const dfModel = p - 1;
+  const dfResid = n - p;
+  const F = sse > 0 && sst > 0 && dfModel > 0
+    ? ((sst - sse) / dfModel) / (sse / dfResid)
+    : null;
+  const pF = F != null
+    ? regularizedBeta(dfResid / (dfResid + dfModel * F), dfResid / 2, dfModel / 2)
+    : null;
+  state.mrResult = {
+    yField, xFields, coeffs, se, tStats, pValues,
+    n, p, R2, adjR2, F, pF, dfModel, dfResid, residualSE: Math.sqrt(sigma2),
+    labels: ["(Intercept)", ...xFields],
+  };
+  renderMrResult(state.mrResult);
+  if (els.mrCsv) els.mrCsv.disabled = false;
+}
+
+function renderMrResult(r) {
+  const fmt = (v, d = 4) => (v == null || !Number.isFinite(v)) ? "—" : v.toFixed(d);
+  const sigMark = (p) => p == null ? "" : p < 0.001 ? " ***" : p < 0.01 ? " **" : p < 0.05 ? " *" : "";
+  const pFmt = (p) => p == null ? "—" : p < 0.001 ? "<0.001" : p.toFixed(3);
+  let html = "<table><thead><tr>" +
+    "<th>変数</th><th>係数</th><th>SE</th><th>t</th><th>p</th>" +
+    "</tr></thead><tbody>";
+  r.labels.forEach((lbl, i) => {
+    const sig = r.pValues[i] != null && r.pValues[i] < 0.05;
+    html += `<tr class="${sig ? "is-sig" : ""}">` +
+      `<td>${escapeHtmlText(lbl)}</td>` +
+      `<td class="num">${fmt(r.coeffs[i], 6)}</td>` +
+      `<td class="num">${fmt(r.se[i], 6)}</td>` +
+      `<td class="num">${fmt(r.tStats[i], 2)}</td>` +
+      `<td class="num">${pFmt(r.pValues[i])}${sigMark(r.pValues[i])}</td>` +
+      `</tr>`;
+  });
+  html += "</tbody></table>";
+  html += `<div class="mr-summary">` +
+    `n=${r.n}, R²=${fmt(r.R2, 3)}, 調整R²=${fmt(r.adjR2, 3)}` +
+    (r.F != null ? `, F(${r.dfModel},${r.dfResid})=${fmt(r.F, 2)}, p=${pFmt(r.pF)}` : "") +
+    `, 残差SE=${fmt(r.residualSE, 3)}` +
+    `</div>`;
+  els.mrResult.innerHTML = html;
+}
+
+els.mrRun?.addEventListener("click", runMultipleRegression);
+els.mrCsv?.addEventListener("click", () => {
+  const r = state.mrResult;
+  if (!r) { setSummary("先に「回帰を計算」してください", "warn"); return; }
+  const fmt = (v, d = 6) => (v == null || !Number.isFinite(v)) ? "" : v.toFixed(d);
+  const lines = [["変数", "係数", "SE", "t", "p"].map(csvEscape).join(",")];
+  r.labels.forEach((lbl, i) => {
+    lines.push([lbl, fmt(r.coeffs[i]), fmt(r.se[i]), fmt(r.tStats[i], 4), fmt(r.pValues[i], 6)].map(csvEscape).join(","));
+  });
+  lines.push("");
+  lines.push(["統計", "値"].map(csvEscape).join(","));
+  lines.push(["目的変数 Y", r.yField].map(csvEscape).join(","));
+  lines.push(["説明変数 X", r.xFields.join(", ")].map(csvEscape).join(","));
+  lines.push(["n", String(r.n)].map(csvEscape).join(","));
+  lines.push(["R²", fmt(r.R2, 4)].map(csvEscape).join(","));
+  lines.push(["調整R²", fmt(r.adjR2, 4)].map(csvEscape).join(","));
+  if (r.F != null) {
+    lines.push(["F", fmt(r.F, 4)].map(csvEscape).join(","));
+    lines.push(["df1", String(r.dfModel)].map(csvEscape).join(","));
+    lines.push(["df2", String(r.dfResid)].map(csvEscape).join(","));
+    lines.push(["F検定 p値", fmt(r.pF, 6)].map(csvEscape).join(","));
+  }
+  lines.push(["残差SE", fmt(r.residualSE, 4)].map(csvEscape).join(","));
+  const csv = "﻿" + lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const safe = (v) => String(v).replace(/[\s\\/:*?"<>|]+/g, "_");
+  a.href = url;
+  a.download = `multireg_${safe(r.yField)}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`重回帰結果を ${a.download} として保存しました`, "success");
+});
+
+// Matrix helpers (Cycle 140). Plain arrays-of-arrays, no external deps.
+function transposeMat(A) {
+  const r = A.length, c = A[0].length;
+  const T = Array.from({ length: c }, () => new Array(r));
+  for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) T[j][i] = A[i][j];
+  return T;
+}
+function matMul(A, B) {
+  const ar = A.length, ac = A[0].length, bc = B[0].length;
+  const out = Array.from({ length: ar }, () => new Array(bc).fill(0));
+  for (let i = 0; i < ar; i++) {
+    for (let k = 0; k < ac; k++) {
+      const aik = A[i][k];
+      for (let j = 0; j < bc; j++) out[i][j] += aik * B[k][j];
+    }
+  }
+  return out;
+}
+function matVec(A, v) {
+  const r = A.length, c = A[0].length;
+  const out = new Array(r).fill(0);
+  for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) out[i] += A[i][j] * v[j];
+  return out;
+}
+function invertMat(A) {
+  const n = A.length;
+  // Augment with identity
+  const M = A.map((row, i) => {
+    const r = row.slice();
+    for (let j = 0; j < n; j++) r.push(i === j ? 1 : 0);
+    return r;
+  });
+  for (let i = 0; i < n; i++) {
+    // Pivot
+    let pivot = i;
+    for (let r = i + 1; r < n; r++) if (Math.abs(M[r][i]) > Math.abs(M[pivot][i])) pivot = r;
+    if (Math.abs(M[pivot][i]) < 1e-12) return null;
+    if (pivot !== i) { [M[i], M[pivot]] = [M[pivot], M[i]]; }
+    // Scale row
+    const pv = M[i][i];
+    for (let c = 0; c < 2 * n; c++) M[i][c] /= pv;
+    // Eliminate
+    for (let r = 0; r < n; r++) {
+      if (r === i) continue;
+      const f = M[r][i];
+      if (f === 0) continue;
+      for (let c = 0; c < 2 * n; c++) M[r][c] -= f * M[i][c];
+    }
+  }
+  return M.map(row => row.slice(n));
+}
+
 els.corrCsv?.addEventListener("click", () => {
   const cm = state.corrMatrix;
   if (!cm) { setSummary("先に「行列を計算」してください", "warn"); return; }
@@ -2509,10 +2722,15 @@ function onDatasetReady(ds, label) {
   if (ds.fields.length >= 2) {
     els.panelScatter.hidden = false;
     if (els.panelCorrMatrix) els.panelCorrMatrix.hidden = false;
+    if (els.panelMr) {
+      els.panelMr.hidden = false;
+      populateMrSelectors(ds.fields);
+    }
     populateScatterSelectors(ds.fields);
   } else {
     els.panelScatter.hidden = true;
     if (els.panelCorrMatrix) els.panelCorrMatrix.hidden = true;
+    if (els.panelMr) els.panelMr.hidden = true;
   }
   // Pre-populate pie field options for the new dataset
   populatePieFields();

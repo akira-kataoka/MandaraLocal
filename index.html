@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=139" />
+  <link rel="stylesheet" href="css/style.css?v=140" />
 </head>
 <body>
   <header class="app-header">
@@ -557,6 +557,24 @@
         </div>
       </section>
 
+      <section class="panel" id="panel-multireg" hidden>
+        <h2>7c. 重回帰分析</h2>
+        <div class="hint">Y を複数 X で予測するモデル。OLS による係数 + 標準誤差 + t検定。</div>
+        <div class="form-row">
+          <label for="mr-y">目的変数 Y</label>
+          <select id="mr-y"></select>
+        </div>
+        <div class="form-row">
+          <label style="align-self:flex-start">説明変数 X</label>
+          <div id="mr-x-list" style="flex:1;max-height:140px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px"></div>
+        </div>
+        <div class="form-row">
+          <button id="mr-run" class="btn btn-primary">回帰を計算</button>
+          <button id="mr-csv" class="btn" disabled style="margin-left:auto">CSV出力</button>
+        </div>
+        <div id="mr-result" class="mr-result"></div>
+      </section>
+
       <section class="panel" id="panel-corrmatrix" hidden>
         <h2>7b. 相関行列（全フィールド対）</h2>
         <div class="hint">全フィールド対の Pearson r。クリック → 散布図にロード</div>
@@ -660,7 +678,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=139"></script>
+  <script type="module" src="js/main.js?v=140"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
