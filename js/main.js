@@ -4684,6 +4684,25 @@ function refresh() {
   // Histogram with bin → map highlight link
   if (els.histSvg) {
     const bins = parseInt(els.histBins.value, 10) || 10;
+    // Group overlay (Cycle 176) when scatter color-by is set and category
+    // count is in [2, 4]. Same path as the grouped boxplot (Cycle 175).
+    const colorByField = els.scatterColorBy?.value || "";
+    let groupHist = null;
+    if (colorByField && colorByField !== state.field) {
+      const gm = new Map();
+      for (const r of state.dataset.rows) {
+        const yv = r.values[state.field];
+        if (!Number.isFinite(yv)) continue;
+        const c = r.values[colorByField];
+        if (c == null || c === "") continue;
+        const key = String(c);
+        if (!gm.has(key)) gm.set(key, []);
+        gm.get(key).push(yv);
+      }
+      if (gm.size >= 2 && gm.size <= 4) {
+        groupHist = [...gm.entries()].map(([name, vals]) => ({ name, values: vals }));
+      }
+    }
     renderHistogram(els.histSvg, values, state.field, bins, (lo, hi, idx, isOn) => {
       if (!isOn) { mapper.clearOutlierMarks(); return; }
       const hits = new Set();
@@ -4699,6 +4718,7 @@ function refresh() {
       breaks:  els.chkHistBreaks?.checked !== false ? state.breaks : null,
       colors:  els.chkHistBreaks?.checked !== false ? state.colors : null,
       logX:    !!els.chkHistLogX?.checked,
+      groups:  groupHist,
     });
   }
 

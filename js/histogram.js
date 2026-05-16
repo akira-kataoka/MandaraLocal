@@ -14,9 +14,21 @@ const PAD = { top: 10, right: 12, bottom: 24, left: 36 };
  * @param bins    bin count (default 10, clamped 3..30)
  * @returns { n, binCount, max }
  */
+// Group-overlay palette (Cycle 176) — matches scatter / boxplot grouped colors.
+const GROUP_PALETTE = [
+  "#2563eb", "#dc2626", "#16a34a", "#d97706",
+  "#9333ea", "#0891b2", "#db2777", "#65a30d",
+];
+
 export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = null, opts = {}) {
   svgEl.innerHTML = "";
   const logX = !!opts.logX;
+  // Cycle 176: when group overlay is active (2-4 categories), render multiple
+  // semi-transparent histograms sharing the same bins.
+  const groups = (opts.groups && opts.groups.length >= 2 && opts.groups.length <= 4) ? opts.groups : null;
+  if (groups) {
+    return renderGroupHistogram(svgEl, groups, label, bins, logX);
+  }
   // When log axis is requested, only positive values are usable.
   let v;
   if (logX) {
@@ -217,6 +229,98 @@ function el(tag, attrs = {}) {
   const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
   return node;
+}
+
+// Cycle 176: render up to 4 histograms overlaid in the same panel for
+// visual distribution comparison (companion to grouped boxplot / ANOVA).
+function renderGroupHistogram(svgEl, groups, label, bins, logX) {
+  // Filter each group to positive values only when log axis is on.
+  const filtered = groups.map(g => ({
+    name: g.name,
+    v: g.values.filter(x => Number.isFinite(x) && (!logX || x > 0)),
+  })).filter(g => g.v.length >= 2);
+  if (filtered.length < 2) return { n: 0, binCount: 0, max: 0 };
+  const allVals = [].concat(...filtered.map(g => g.v));
+  const min = Math.min(...allVals);
+  const max = Math.max(...allVals);
+  if (min === max) return { n: allVals.length, binCount: 1, max: allVals.length };
+  const auto = Math.max(3, Math.min(30, Math.ceil(Math.log2(allVals.length) + 1)));
+  const k = Math.max(3, Math.min(30, bins || auto));
+  const sx = logX ? (x) => Math.log10(x) : (x) => x;
+  const sMin = sx(min), sMax = sx(max);
+  const step = (sMax - sMin) / k;
+  // Count per group
+  const countsByGroup = filtered.map(g => {
+    const c = new Array(k).fill(0);
+    for (const x of g.v) {
+      let i = Math.floor((sx(x) - sMin) / step);
+      if (i >= k) i = k - 1;
+      c[i]++;
+    }
+    return c;
+  });
+  const maxCount = Math.max(...countsByGroup.flat());
+  // Layout
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+  const x = (i) => PAD.left + (i / k) * innerW;
+  const y = (c) => PAD.top + innerH - (c / maxCount) * innerH;
+  // Axes
+  const axis = el("g", { class: "axis" });
+  axis.appendChild(line(PAD.left, H - PAD.bottom, W - PAD.right, H - PAD.bottom));
+  axis.appendChild(line(PAD.left, PAD.top, PAD.left, H - PAD.bottom));
+  for (const f of [0, 0.5, 1]) {
+    const tx = PAD.left + f * innerW;
+    axis.appendChild(line(tx, H - PAD.bottom, tx, H - PAD.bottom + 3));
+    const sval = sMin + f * (sMax - sMin);
+    const raw = logX ? Math.pow(10, sval) : sval;
+    axis.appendChild(text(tx, H - PAD.bottom + 12, formatShort(raw), "middle"));
+  }
+  for (const c of [0, maxCount]) {
+    const ty = y(c);
+    axis.appendChild(line(PAD.left - 3, ty, PAD.left, ty));
+    axis.appendChild(text(PAD.left - 5, ty + 3, String(c), "end"));
+  }
+  axis.appendChild(text(W / 2, H - 4, label || "", "middle"));
+  svgEl.appendChild(axis);
+  // Bars per group, overlaid translucent
+  const barW = innerW / k;
+  filtered.forEach((g, gi) => {
+    const color = GROUP_PALETTE[gi % GROUP_PALETTE.length];
+    const counts = countsByGroup[gi];
+    const gBars = el("g");
+    counts.forEach((c, i) => {
+      if (c === 0) return;
+      const bx = x(i);
+      const by = y(c);
+      const bh = (H - PAD.bottom) - by;
+      const rect = el("rect", {
+        x: bx, y: by, width: Math.max(0.5, barW - 0.4), height: bh,
+        fill: color, "fill-opacity": "0.4", stroke: color, "stroke-width": 0.4,
+      });
+      gBars.appendChild(rect);
+    });
+    svgEl.appendChild(gBars);
+  });
+  // Legend at top-right of the SVG
+  const lg = el("g");
+  const lgY = PAD.top + 2;
+  filtered.forEach((g, gi) => {
+    const color = GROUP_PALETTE[gi % GROUP_PALETTE.length];
+    const ly = lgY + gi * 12;
+    lg.appendChild(el("rect", {
+      x: W - PAD.right - 60, y: ly, width: 8, height: 8,
+      fill: color, "fill-opacity": "0.5", stroke: color, "stroke-width": 0.6,
+    }));
+    const t = el("text", {
+      x: W - PAD.right - 50, y: ly + 7, "font-size": 8, fill: "#1e293b",
+    });
+    const nm = g.name.length > 8 ? g.name.slice(0, 7) + "…" : g.name;
+    t.textContent = `${nm} (n=${g.v.length})`;
+    lg.appendChild(t);
+  });
+  svgEl.appendChild(lg);
+  return { n: allVals.length, binCount: k, max: maxCount, groups: filtered.length };
 }
 function line(x1, y1, x2, y2) {
   return el("line", { x1, y1, x2, y2 });
