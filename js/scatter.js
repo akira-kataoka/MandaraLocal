@@ -330,7 +330,8 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     svgEl.appendChild(lg);
   }
 
-  return { r, n: pairs.length, slope, intercept, r2: Number.isFinite(r) ? r*r : null };
+  const rho = spearman(x, y);
+  return { r, rho, n: pairs.length, slope, intercept, r2: Number.isFinite(r) ? r*r : null };
 }
 
 function pearson(xs, ys) {
@@ -344,6 +345,27 @@ function pearson(xs, ys) {
   }
   if (dx === 0 || dy === 0) return null;
   return num / Math.sqrt(dx * dy);
+}
+
+// Spearman rank correlation. Handles ties via fractional (average) ranking,
+// then applies the Pearson formula on the ranks.
+export function spearman(xs, ys) {
+  if (xs.length !== ys.length || xs.length < 2) return null;
+  return pearson(toRanks(xs), toRanks(ys));
+}
+function toRanks(arr) {
+  const n = arr.length;
+  const idx = arr.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0]);
+  const ranks = new Array(n);
+  let i = 0;
+  while (i < n) {
+    let j = i;
+    while (j + 1 < n && idx[j + 1][0] === idx[i][0]) j++;
+    const avg = (i + j) / 2 + 1;
+    for (let k = i; k <= j; k++) ranks[idx[k][1]] = avg;
+    i = j + 1;
+  }
+  return ranks;
 }
 
 function ols(xs, ys) {
