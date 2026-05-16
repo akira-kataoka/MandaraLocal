@@ -167,7 +167,10 @@ export class MandaraMap {
     lyr.on("click", (e) => {
       const shift = e.originalEvent && (e.originalEvent.shiftKey || e.originalEvent.metaKey);
       if (shift) {
-        this.togglePin(feature.properties.id);
+        // Cycle 254: prefer the unified Shift+click handler (state.pinnedScatterIds)
+        // so the map participates in the same pin set as scatter/table/legend.
+        if (this._shiftClickHandler) this._shiftClickHandler(feature.properties.id);
+        else this.togglePin(feature.properties.id);
       } else if (this._clickHandler) {
         this._clickHandler(feature.properties.id, feature.properties);
       }
@@ -1149,6 +1152,11 @@ export class MandaraMap {
   }
   onFeatureClick(handler) {
     this._clickHandler = handler;
+  }
+  // Cycle 254: Shift+click on a polygon feature. If wired, this overrides
+  // the built-in togglePin so callers can sync their own pin state.
+  onFeatureShiftClick(handler) {
+    this._shiftClickHandler = handler;
   }
 
   // ----- Pin set (Shift+Click) -----

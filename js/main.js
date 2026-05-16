@@ -4365,6 +4365,7 @@ function showHelpModal() {
       <strong>散布図</strong><span></span>
       <span>Shift+クリック</span><span>ポイントをピン留め（リング・テーブル・地図と連動）</span>
       <span>ドラッグ</span><span>矩形 brush 選択 → 地図ハイライト＆ brush→ピン可</span>
+      <span>地図 Shift+クリック</span><span>地物（市区町村など）を直接ピン留め</span>
       <span>📍 外れ値をピン</span><span>IQR fence を超える点を一括ピン</span>
       <span>🔍 ピンへズーム</span><span>ピン地物を全部含む範囲で地図を fit</span>
 
@@ -7558,6 +7559,18 @@ function onMapHover(id, isHot) {
 }
 
 mapper.onFeatureHover(onMapHover);
+
+// Cycle 254: route map Shift+click into the unified pin set so the map
+// joins scatter / table / legend / histogram in toggling state.pinnedScatterIds.
+mapper.onFeatureShiftClick?.((id) => {
+  if (!(state.pinnedScatterIds instanceof Set)) state.pinnedScatterIds = new Set();
+  if (state.pinnedScatterIds.has(id)) state.pinnedScatterIds.delete(id);
+  else state.pinnedScatterIds.add(id);
+  syncScatterPinBtn();
+  drawScatter();
+  if (typeof refreshTable === "function") refreshTable();
+  mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
+});
 
 mapper.onPinChange((ids) => {
   els.btnClearPins.hidden = ids.length === 0;
