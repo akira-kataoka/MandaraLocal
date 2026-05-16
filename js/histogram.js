@@ -166,6 +166,16 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
       rect.addEventListener("mouseenter", () => onBinHover(lo, hi, i, true));
       rect.addEventListener("mouseleave", () => onBinHover(lo, hi, i, false));
     }
+    // Cycle 253: Shift+click on a bar bulk-pins every region whose value
+    // falls in [lo, hi]. Plain click stays inert so users can still hover.
+    if (typeof opts.onBinClick === "function") {
+      rect.style.cursor = "pointer";
+      rect.addEventListener("click", (ev) => {
+        if (!ev.shiftKey) return;
+        ev.preventDefault();
+        opts.onBinClick(lo, hi, i);
+      });
+    }
     bars.appendChild(rect);
   });
   svgEl.appendChild(bars);

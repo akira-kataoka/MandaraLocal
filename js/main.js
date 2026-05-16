@@ -4373,6 +4373,7 @@ function showHelpModal() {
       <span>境界値ダブルクリック</span><span>クラス上限値を手入力（manual mode に切替）</span>
       <span>件数クリック</span><span>該当クラス地域名をクリップボードへ</span>
       <span>swatch Shift+クリック</span><span>クラスメンバー全件を一括ピン留め</span>
+      <span>ヒスト bar Shift+クリック</span><span>bin 内の地域を一括ピン留め</span>
 
       <strong>テーブル</strong><span></span>
       <span>📋 列</span><span>列の表示/非表示 + 並び替え（↑/↓）</span>
@@ -5869,6 +5870,7 @@ function refresh() {
       logX:    !!els.chkHistLogX?.checked,
       cumulative: !!els.chkHistCumulative?.checked,
       groups:  groupHist,
+      onBinClick: (lo, hi) => pinBinMembers(lo, hi),
     });
   }
 
@@ -6541,6 +6543,29 @@ els.btnStatsExport?.addEventListener("click", exportAllStatsCsv);
 
 // Copy region list from a single class to clipboard (Cycle 188). Lets the
 // user drill into "which 5 prefectures fall into the top class".
+// Cycle 253: bulk-pin every region whose current field value falls in the
+// histogram bin [lo, hi]. Mirrors pinClassMembers but uses raw value bounds.
+function pinBinMembers(lo, hi) {
+  if (!state.dataset || !state.field) return;
+  if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi < lo) return;
+  const ids = [];
+  for (const r of state.dataset.rows) {
+    const v = r.values[state.field];
+    if (!Number.isFinite(v)) continue;
+    if (v >= lo && v <= hi) ids.push(r.key);
+  }
+  if (!ids.length) { setSummary("該当 bin に地域がありません", "warn"); return; }
+  if (!(state.pinnedScatterIds instanceof Set)) state.pinnedScatterIds = new Set();
+  let added = 0;
+  for (const id of ids) if (!state.pinnedScatterIds.has(id)) { state.pinnedScatterIds.add(id); added++; }
+  if (!added) { setSummary("該当 bin は全件ピン済みでした", "muted"); return; }
+  syncScatterPinBtn();
+  drawScatter();
+  if (typeof refreshTable === "function") refreshTable();
+  mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
+  setSummary(`bin [${formatNum(lo)} 〜 ${formatNum(hi)}] から ${added} 件を新規ピン留め（計 ${state.pinnedScatterIds.size} 件）`, "success");
+}
+
 // Cycle 252: bulk-pin every region whose classified value falls in the given
 // legend class index. Adds to the existing pin set (union, not replace).
 function pinClassMembers(classIdx) {
