@@ -266,6 +266,7 @@ const els = {
   chkScatterLogY: $("chk-scatter-logy"),
   scatterCorr:  $("scatter-correlation"),
   scatterSvg:   $("scatter-svg"),
+  scatterGroupReg: $("scatter-group-reg"),
   tooltip:      $("tooltip"),
   mapSearch:      $("map-search"),
   searchInput:    $("search-input"),
@@ -6668,6 +6669,91 @@ function drawScatter() {
     }
   }
   els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong>${ciTxt(rCI)} （${strength}${sign}の相関）${rhoTxt}${note} · 決定係数 R²=${r2}%${polyInfo}${welchInfo}`;
+
+  // Cycle 222: group regression comparison table (Simpson's paradox check).
+  // Computes per-category slope/intercept/r/n from the same xs/ys arrays the
+  // chart uses, then renders below the scatter buttons.
+  renderGroupRegressionTable(xf, yf, xs, ys, ids, categoryFor, !!els.chkScatterRegGroup?.checked, slope);
+}
+function renderGroupRegressionTable(xf, yf, xs, ys, ids, categoryFor, enabled, overallSlope) {
+  const host = els.scatterGroupReg;
+  if (!host) return;
+  if (!enabled || !categoryFor) { host.hidden = true; host.innerHTML = ""; return; }
+  // Bucket valid (x,y) pairs by category.
+  const groups = new Map();
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
+    const xv = xs[i], yv = ys[i];
+    if (!Number.isFinite(xv) || !Number.isFinite(yv)) continue;
+    const cat = categoryFor(id);
+    if (cat == null || cat === "") continue;
+    const key = String(cat);
+    if (!groups.has(key)) groups.set(key, { xs: [], ys: [] });
+    groups.get(key).xs.push(xv);
+    groups.get(key).ys.push(yv);
+  }
+  if (!groups.size) { host.hidden = true; host.innerHTML = ""; return; }
+  // OLS per group + Pearson r for each.
+  const olsLocal = (xa, ya) => {
+    const n = xa.length;
+    const mx = xa.reduce((a, b) => a + b, 0) / n;
+    const my = ya.reduce((a, b) => a + b, 0) / n;
+    let num = 0, den = 0;
+    for (let i = 0; i < n; i++) { num += (xa[i] - mx) * (ya[i] - my); den += (xa[i] - mx) ** 2; }
+    if (den === 0) return null;
+    const slope = num / den;
+    return { slope, intercept: my - slope * mx };
+  };
+  const pearsonLocal = (xa, ya) => {
+    const n = xa.length;
+    const mx = xa.reduce((a, b) => a + b, 0) / n;
+    const my = ya.reduce((a, b) => a + b, 0) / n;
+    let num = 0, dx = 0, dy = 0;
+    for (let i = 0; i < n; i++) { num += (xa[i] - mx) * (ya[i] - my); dx += (xa[i] - mx) ** 2; dy += (ya[i] - my) ** 2; }
+    if (dx === 0 || dy === 0) return null;
+    return num / Math.sqrt(dx * dy);
+  };
+  const rows = [];
+  let signFlip = false;
+  for (const [cat, g] of groups) {
+    if (g.xs.length < 3) { rows.push({ cat, n: g.xs.length, skip: true }); continue; }
+    const o = olsLocal(g.xs, g.ys);
+    const pr = pearsonLocal(g.xs, g.ys);
+    if (!o) { rows.push({ cat, n: g.xs.length, skip: true }); continue; }
+    rows.push({ cat, n: g.xs.length, slope: o.slope, intercept: o.intercept, r: pr });
+    if (Number.isFinite(overallSlope) && Number.isFinite(o.slope) && Math.sign(overallSlope) !== Math.sign(o.slope)) {
+      signFlip = true;
+    }
+  }
+  if (!rows.length) { host.hidden = true; host.innerHTML = ""; return; }
+  let html = `<div style="margin-bottom:3px;font-weight:600">系列別回帰 (${escapeHtmlText(yf)} = a·${escapeHtmlText(xf)} + b)</div>`;
+  html += `<table style="border-collapse:collapse;width:100%"><thead><tr style="background:#e2e8f0">` +
+    `<th style="text-align:left;padding:2px 4px">カテゴリ</th>` +
+    `<th style="text-align:right;padding:2px 4px">n</th>` +
+    `<th style="text-align:right;padding:2px 4px">a (傾き)</th>` +
+    `<th style="text-align:right;padding:2px 4px">b (切片)</th>` +
+    `<th style="text-align:right;padding:2px 4px">r</th></tr></thead><tbody>`;
+  for (const row of rows) {
+    if (row.skip) {
+      html += `<tr><td style="padding:2px 4px">${escapeHtmlText(row.cat)}</td><td style="text-align:right;padding:2px 4px">${row.n}</td><td colspan="3" style="text-align:right;padding:2px 4px;color:#94a3b8">n&lt;3 → 計算スキップ</td></tr>`;
+      continue;
+    }
+    const flip = Number.isFinite(overallSlope) && Math.sign(overallSlope) !== Math.sign(row.slope);
+    const bg = flip ? "background:#fef3c7" : "";
+    html += `<tr style="${bg}">` +
+      `<td style="padding:2px 4px">${escapeHtmlText(row.cat)}</td>` +
+      `<td style="text-align:right;padding:2px 4px">${row.n}</td>` +
+      `<td style="text-align:right;padding:2px 4px">${row.slope.toFixed(3)}</td>` +
+      `<td style="text-align:right;padding:2px 4px">${row.intercept.toFixed(3)}</td>` +
+      `<td style="text-align:right;padding:2px 4px">${row.r == null ? "—" : row.r.toFixed(3)}</td>` +
+      `</tr>`;
+  }
+  html += `</tbody></table>`;
+  if (signFlip) {
+    html += `<div style="color:#b45309;margin-top:3px">⚠ 全体回帰と符号が逆転するグループあり（Simpson's paradox の可能性）</div>`;
+  }
+  host.innerHTML = html;
+  host.hidden = false;
 }
 
 function onScatterHover(id, isHot) {
