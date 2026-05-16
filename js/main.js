@@ -890,7 +890,12 @@ els.inputMapAuthor?.addEventListener("input", () => {
 
 els.selectLegendPos?.addEventListener("change", () => {
   const pos = els.selectLegendPos.value;
-  els.overlay.classList.remove("pos-br", "pos-bl", "pos-tr", "pos-tl");
+  els.overlay.classList.remove("pos-br", "pos-bl", "pos-tr", "pos-tl", "pos-free");
+  // Selecting a preset wipes any saved free-position inline styles.
+  if (pos !== "free") {
+    els.overlay.style.left = "";
+    els.overlay.style.top = "";
+  }
   if (pos === "hide") {
     els.overlay.hidden = true;
   } else {
@@ -898,6 +903,55 @@ els.selectLegendPos?.addEventListener("change", () => {
     els.overlay.hidden = false;
   }
 });
+
+// Drag-to-position the legend overlay. Title bar (.map-overlay-title) is the handle.
+(function setupLegendDrag() {
+  const ov = els.overlay;
+  if (!ov) return;
+  const handle = ov.querySelector(".map-overlay-title");
+  if (!handle) return;
+  let dragging = false;
+  let startX = 0, startY = 0, startLeft = 0, startTop = 0, paneRect = null;
+  handle.addEventListener("pointerdown", (e) => {
+    // Switch to free-position mode on first drag from any preset
+    if (els.selectLegendPos && els.selectLegendPos.value !== "free") {
+      els.selectLegendPos.value = "free";
+    }
+    ov.classList.remove("pos-br", "pos-bl", "pos-tr", "pos-tl");
+    ov.classList.add("pos-free", "is-dragging");
+    const pane = ov.parentElement;
+    paneRect = pane.getBoundingClientRect();
+    const ovRect = ov.getBoundingClientRect();
+    startX = e.clientX; startY = e.clientY;
+    startLeft = ovRect.left - paneRect.left;
+    startTop  = ovRect.top  - paneRect.top;
+    dragging = true;
+    handle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  handle.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    let nx = startLeft + (e.clientX - startX);
+    let ny = startTop  + (e.clientY - startY);
+    // Clamp within parent pane bounds, keeping at least 24px of overlay visible.
+    const ovRect = ov.getBoundingClientRect();
+    const maxX = paneRect.width  - 24;
+    const maxY = paneRect.height - 24;
+    nx = Math.max(-(ovRect.width - 24),  Math.min(maxX, nx));
+    ny = Math.max(0, Math.min(maxY, ny));
+    // Store as percentages so the position scales with pane size.
+    ov.style.left = `${(nx / paneRect.width)  * 100}%`;
+    ov.style.top  = `${(ny / paneRect.height) * 100}%`;
+  });
+  handle.addEventListener("pointerup", () => {
+    dragging = false;
+    ov.classList.remove("is-dragging");
+  });
+  handle.addEventListener("pointercancel", () => {
+    dragging = false;
+    ov.classList.remove("is-dragging");
+  });
+})();
 els.chkSde.addEventListener("change", () => refresh());
 els.filterOp.addEventListener("change", () => {
   els.rowFilterValue2.hidden = els.filterOp.value !== "between";
@@ -1385,6 +1439,9 @@ function snapshotCurrent() {
     scatterColorBy: els.scatterColorBy?.value || "",
     showScale: !!els.chkShowScale?.checked,
     showNorth: !!els.chkShowNorth?.checked,
+    legendPos: els.selectLegendPos?.value || "br",
+    legendFreeLeft: els.overlay?.style.left || "",
+    legendFreeTop:  els.overlay?.style.top  || "",
   };
 }
 let demoScenes = {}; // name → snapshot, loaded from data/scenes/index.json
@@ -1482,6 +1539,14 @@ els.selectScene.addEventListener("change", async () => {
   if (snap.showNorth !== undefined && els.chkShowNorth) {
     els.chkShowNorth.checked = !!snap.showNorth;
     els.chkShowNorth.dispatchEvent(new Event("change"));
+  }
+  if (snap.legendPos !== undefined && els.selectLegendPos) {
+    els.selectLegendPos.value = snap.legendPos;
+    els.selectLegendPos.dispatchEvent(new Event("change"));
+    if (snap.legendPos === "free" && els.overlay) {
+      if (snap.legendFreeLeft) els.overlay.style.left = snap.legendFreeLeft;
+      if (snap.legendFreeTop)  els.overlay.style.top  = snap.legendFreeTop;
+    }
   }
   // Apply visibility toggles
   els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both" || state.mode === "graduated");

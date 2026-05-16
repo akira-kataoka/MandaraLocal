@@ -660,7 +660,19 @@ body.dark .feature-detail td { border-bottom-color: #334155; }
   font-size: 13px;
   margin-bottom: 6px;
   color: #1e293b;
+  cursor: move;
+  user-select: none;
 }
+.map-overlay-title::before {
+  content: "⋮⋮ ";
+  color: #94a3b8;
+  font-size: 11px;
+  letter-spacing: -2px;
+  margin-right: 2px;
+}
+.map-overlay.is-dragging { opacity: 0.85; box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
+/* Free-position mode disables all pos-* anchors; overlay is positioned via inline left/top%. */
+.map-overlay.pos-free { top: auto; bottom: auto; left: auto; right: auto; }
 .map-overlay-legend .legend-row { padding: 1px 0; }
 .map-overlay-footer {
   margin-top: 6px;
