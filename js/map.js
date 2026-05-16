@@ -1330,6 +1330,60 @@ export class MandaraMap {
     }
   }
 
+  /**
+   * Enable / disable Leaflet.draw toolbar.  When enabled, the user can
+   * sketch polygons / polylines / rectangles / circles / markers, which
+   * are stored in `this._drawnItems` (a FeatureGroup). Use
+   * exportDrawn() to retrieve the GeoJSON.
+   * MANDARA 「ラインの編集」相当。
+   */
+  enableDrawTool() {
+    if (this._drawControl) return;
+    if (!L.Control || !L.Control.Draw) {
+      console.warn("Leaflet.draw not loaded"); return;
+    }
+    this._drawnItems = this._drawnItems || new L.FeatureGroup().addTo(this.map);
+    this._drawControl = new L.Control.Draw({
+      position: "topright",
+      edit: { featureGroup: this._drawnItems },
+      draw: {
+        polygon: { allowIntersection: false, showArea: true,
+          shapeOptions: { color: "#dc2626", weight: 2 } },
+        polyline: { shapeOptions: { color: "#dc2626", weight: 3 } },
+        rectangle: { shapeOptions: { color: "#dc2626" } },
+        circle: { shapeOptions: { color: "#dc2626" } },
+        marker: true,
+        circlemarker: false,
+      },
+    });
+    this.map.addControl(this._drawControl);
+    this._drawHandlers = {
+      created: (e) => this._drawnItems.addLayer(e.layer),
+    };
+    this.map.on(L.Draw.Event.CREATED, this._drawHandlers.created);
+  }
+
+  disableDrawTool() {
+    if (this._drawControl) {
+      this.map.removeControl(this._drawControl);
+      this._drawControl = null;
+    }
+    if (this._drawHandlers?.created) {
+      this.map.off(L.Draw.Event.CREATED, this._drawHandlers.created);
+    }
+  }
+
+  /** Return all drawn shapes as a GeoJSON FeatureCollection. */
+  exportDrawn() {
+    if (!this._drawnItems) return null;
+    const gj = this._drawnItems.toGeoJSON();
+    return gj.features?.length ? gj : null;
+  }
+
+  clearDrawn() {
+    if (this._drawnItems) this._drawnItems.clearLayers();
+  }
+
   getMapElement() { return this._mapEl; }
 }
 

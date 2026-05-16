@@ -163,6 +163,7 @@ const els = {
   inputBufferKm:$("input-buffer-km"),
   btnMesh:      $("btn-mesh"),
   selectMeshLevel: $("select-mesh-level"),
+  btnDraw:      $("btn-draw"),
   inputGeocode: $("input-geocode"),
   btnTheme:     $("btn-theme"),
   selectScene:  $("select-scene"),
@@ -969,6 +970,14 @@ els.btnGeoJson.addEventListener("click", () => {
       return { type: "Feature", properties: merged, geometry: f.geometry };
     }),
   };
+  // Append any user-drawn shapes (Cycle 62)
+  const drawn = mapper.exportDrawn?.();
+  if (drawn?.features?.length) {
+    for (const f of drawn.features) {
+      f.properties = { ...(f.properties || {}), _drawn: true };
+      out.features.push(f);
+    }
+  }
   const fname = `mandara_${(state.field || "map").replace(/\s+/g, "_")}.geojson`;
   const blob = new Blob([JSON.stringify(out)], { type: "application/geo+json" });
   const url = URL.createObjectURL(blob);
@@ -1348,6 +1357,19 @@ els.btnMesh.addEventListener("click", () => {
   }
 });
 els.selectMeshLevel.addEventListener("change", () => meshOn && refreshMesh());
+
+let drawOn = false;
+els.btnDraw.addEventListener("click", () => {
+  drawOn = !drawOn;
+  if (drawOn) {
+    mapper.enableDrawTool();
+    els.btnDraw.classList.add("btn-primary");
+    setSummary("地図上で自由描画できます。 GeoJSON出力時に描画も含まれます。", "muted");
+  } else {
+    mapper.disableDrawTool();
+    els.btnDraw.classList.remove("btn-primary");
+  }
+});
 
 // ----- Geocoding via GSI AddressSearch -----
 let geocodeMarker = null;
