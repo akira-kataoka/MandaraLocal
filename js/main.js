@@ -161,6 +161,9 @@ const els = {
   selectMeshLevel: $("select-mesh-level"),
   inputGeocode: $("input-geocode"),
   btnTheme:     $("btn-theme"),
+  selectScene:  $("select-scene"),
+  btnSceneSave: $("btn-scene-save"),
+  btnSceneDelete: $("btn-scene-delete"),
 };
 
 // ----- Restore prior session settings -----
@@ -983,6 +986,100 @@ els.btnKml.addEventListener("click", () => {
   setSummary(`KMLを ${fname} として書き出しました (Google Earthで開けます)`, "success");
 });
 els.btnTheme.addEventListener("click", toggleTheme);
+
+// ----- Scenes (MANDARA「マップファイル」相当) -----
+const SCENES_KEY = "mandara_scenes_v1";
+function loadScenes() {
+  try { return JSON.parse(localStorage.getItem(SCENES_KEY) || "{}"); } catch { return {}; }
+}
+function saveScenes(s) {
+  try { localStorage.setItem(SCENES_KEY, JSON.stringify(s)); } catch {}
+}
+function snapshotCurrent() {
+  return {
+    level: state.level,
+    field: state.field,
+    fieldB: state.fieldB,
+    compare: state.compare,
+    classes: state.classes,
+    method: state.method,
+    palette: state.palette,
+    reverse: state.reverse,
+    mode: state.mode,
+    maxR: state.maxR,
+    chochoPref: state.chochoPref,
+    chochoMuni: state.chochoMuni,
+    prefFilter: els.selectPrefFilter?.value || "",
+    manualBreaks: els.inputManualBreaks?.value || "",
+    pieFields: [...(els.selectPieFields?.selectedOptions || [])].map(o => o.value),
+  };
+}
+function refreshSceneList() {
+  const all = loadScenes();
+  els.selectScene.innerHTML = '<option value="">— シーン —</option>' +
+    Object.keys(all).sort().map(n => `<option value="${escapeHtmlText(n)}">${escapeHtmlText(n)}</option>`).join("");
+}
+els.btnSceneSave.addEventListener("click", () => {
+  const name = prompt("シーン名を入力 (上書きする場合は同名を指定)", "シーン1");
+  if (!name) return;
+  const all = loadScenes();
+  all[name] = snapshotCurrent();
+  saveScenes(all);
+  refreshSceneList();
+  els.selectScene.value = name;
+  setSummary(`シーン「${name}」を保存しました`, "success");
+});
+els.selectScene.addEventListener("change", async () => {
+  const name = els.selectScene.value;
+  els.btnSceneDelete.hidden = !name;
+  if (!name) return;
+  const all = loadScenes();
+  const snap = all[name];
+  if (!snap) return;
+  // Apply level first (may need to fetch GeoJSON)
+  if (snap.level && snap.level !== state.level) {
+    if (snap.chochoPref) state.chochoPref = snap.chochoPref;
+    if (snap.chochoMuni) state.chochoMuni = snap.chochoMuni;
+    await applyLevel(snap.level);
+  }
+  // restore inputs
+  for (const k of ["classes","method","palette","reverse","mode","maxR","compare","field","fieldB"]) {
+    if (snap[k] !== undefined) state[k] = snap[k];
+  }
+  if (snap.method)  els.selectMethod.value = snap.method;
+  if (snap.palette) els.selectPalette.value = snap.palette;
+  if (snap.classes) els.inputClasses.value = snap.classes;
+  if (snap.mode)    els.selectMode.value = snap.mode;
+  if (snap.maxR)    els.inputMaxR.value = snap.maxR;
+  if (snap.reverse !== undefined) els.chkReverse.checked = !!snap.reverse;
+  if (snap.compare !== undefined) els.chkCompare.checked = !!snap.compare;
+  if (snap.manualBreaks !== undefined) els.inputManualBreaks.value = snap.manualBreaks;
+  if (snap.prefFilter !== undefined && els.selectPrefFilter) els.selectPrefFilter.value = snap.prefFilter;
+  // Apply visibility toggles
+  els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both" || state.mode === "graduated");
+  els.rowDotUnit.hidden = state.mode !== "dot";
+  els.rowManualBreaks.hidden = state.method !== "manual";
+  // Pie fields
+  if (snap.pieFields?.length && els.selectPieFields) {
+    populatePieFields();
+    [...els.selectPieFields.options].forEach(o => o.selected = snap.pieFields.includes(o.value));
+  }
+  if (state.field && els.selectField) els.selectField.value = state.field;
+  if (state.dataset) refresh();
+  setSummary(`シーン「${name}」を復元しました`, "success");
+});
+els.btnSceneDelete.addEventListener("click", () => {
+  const name = els.selectScene.value;
+  if (!name) return;
+  if (!confirm(`シーン「${name}」を削除しますか？`)) return;
+  const all = loadScenes();
+  delete all[name];
+  saveScenes(all);
+  refreshSceneList();
+  els.btnSceneDelete.hidden = true;
+  setSummary(`シーン「${name}」を削除しました`, "muted");
+});
+refreshSceneList();
 
 els.tsBase.addEventListener("change", () => {
   tsState.baseIdx = parseInt(els.tsBase.value, 10) || 0;

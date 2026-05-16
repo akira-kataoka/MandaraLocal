@@ -10,7 +10,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
 
-  <link rel="stylesheet" href="css/style.css?v=58" />
+  <link rel="stylesheet" href="css/style.css?v=59" />
 </head>
 <body>
   <header class="app-header">
@@ -36,6 +36,11 @@
         <option value="2" selected>2次 (10km)</option>
         <option value="3">3次 (1km)</option>
       </select>
+      <select id="select-scene" title="保存済シーン" style="font-size:12px;padding:4px 6px;max-width:120px">
+        <option value="">— シーン —</option>
+      </select>
+      <button id="btn-scene-save" class="btn" title="現在の設定をシーンとして保存">💾 保存</button>
+      <button id="btn-scene-delete" class="btn" title="選択中のシーンを削除" hidden>🗑</button>
       <button id="btn-theme" class="btn" title="ダークモード切替">🌗</button>
       <a href="docs/USAGE.html" class="btn-link" target="_blank">使い方</a>
     </div>
@@ -404,6 +409,6 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=58"></script>
+  <script type="module" src="js/main.js?v=59"></script>
 </body>
 </html>
