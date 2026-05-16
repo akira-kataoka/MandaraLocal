@@ -1387,17 +1387,49 @@ els.btnPdf.addEventListener("click", async () => {
     const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const w = pdf.internal.pageSize.getWidth();
     const h = pdf.internal.pageSize.getHeight();
+    // Gather metadata
+    const titleText    = (els.inputMapTitle?.value || "").trim() || state.field || "MandaraNext";
+    const subtitleText = (els.inputMapSubtitle?.value || "").trim();
+    const authorText   = (els.inputMapAuthor?.value || "").trim();
+    const sourceText   = (els.inputDataSource?.value || "").trim();
+    const todayJp = new Date().toLocaleDateString("ja-JP");
+    // PDF document properties (visible in Adobe Reader / Preview "Properties" dialog).
+    pdf.setProperties({
+      title: titleText,
+      subject: [subtitleText, sourceText ? `出典: ${sourceText}` : ""].filter(Boolean).join(" · "),
+      author: authorText || "",
+      creator: "MandaraNext",
+      keywords: [state.field, state.level, "thematic-map", "MandaraNext"].filter(Boolean).join(","),
+    });
     // Title bar
     pdf.setFontSize(14);
-    pdf.text(state.field || "MandaraNext", 10, 12);
+    pdf.setTextColor(20);
+    pdf.text(titleText, 10, 12);
+    // Subtitle (just below title, if present)
+    let mapTop = 18;
+    if (subtitleText) {
+      pdf.setFontSize(10);
+      pdf.setTextColor(80);
+      pdf.text(subtitleText, 10, 18);
+      mapTop = 22;
+    }
     pdf.setFontSize(9);
     pdf.setTextColor(120);
-    pdf.text(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`, w - 60, 12);
+    pdf.text(`MandaraNext · ${todayJp}`, w - 60, 12);
     // Map image
-    pdf.addImage(dataUrl, "PNG", 10, 18, w - 20, h - 28);
+    pdf.addImage(dataUrl, "PNG", 10, mapTop, w - 20, h - mapTop - 10);
+    // Footer: author + source
+    const footParts = [];
+    if (sourceText) footParts.push(`出典: ${sourceText}`);
+    if (authorText) footParts.push(`作成: ${authorText}`);
+    if (footParts.length) {
+      pdf.setFontSize(8);
+      pdf.setTextColor(120);
+      pdf.text(footParts.join("  ·  "), 10, h - 4);
+    }
     const fname = `mandara_${(state.field || "map").replace(/\s+/g, "_")}.pdf`;
     pdf.save(fname);
-    setSummary(`PDFを ${fname} として保存しました`, "success");
+    setSummary(`PDFを ${fname} として保存しました（メタデータ埋め込み済）`, "success");
   } catch (e) {
     setSummary("PDF生成失敗: " + e.message, "error");
   }
