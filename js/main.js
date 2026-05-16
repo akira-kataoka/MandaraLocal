@@ -6564,6 +6564,7 @@ function drawScatter() {
   // shape-by column. First 4 distinct categories get circle/square/
   // triangle/diamond; further categories collapse to "cross".
   let shapeFor = null;
+  let shapeLegend = null;
   const shapeByField = els.scatterShapeBy?.value || "";
   if (shapeByField) {
     const rowsByKey = new Map(state.dataset.rows.map(r => [r.key, r]));
@@ -6583,6 +6584,10 @@ function drawScatter() {
       if (v == null || v === "") return "circle";
       return map.get(String(v)) || "circle";
     };
+    // Cycle 220: emit a small legend (max 5 entries; further cats collapse).
+    const entries = [...map.entries()];
+    shapeLegend = entries.slice(0, 4).map(([name, shape]) => ({ name, shape }));
+    if (entries.length > 4) shapeLegend.push({ name: "他", shape: "cross" });
   }
   const scatterResult = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick, {
     logX: els.chkScatterLogX.checked,
@@ -6598,6 +6603,7 @@ function drawScatter() {
     labelTopN: parseInt(els.scatterLabelN?.value || "10", 10) || 10,
     pinnedIds: state.pinnedScatterIds instanceof Set ? state.pinnedScatterIds : null,
     shapeFor,
+    shapeLegend,
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
     onBrush: (ids) => {
       mapper.markOutliers(ids);

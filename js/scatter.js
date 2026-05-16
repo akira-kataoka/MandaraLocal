@@ -598,6 +598,38 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     svgEl.appendChild(overlay);
   }
 
+  // Cycle 220: shape legend (top-left), shown only when shape-by is active.
+  // Positioned away from the series color legend (top-right) and size legend
+  // (bottom-left) so all three can coexist.
+  if (Array.isArray(opts.shapeLegend) && opts.shapeLegend.length) {
+    const items = opts.shapeLegend.slice(0, 5);
+    const lg = el("g", { class: "scatter-shape-legend" });
+    const lineH = 12;
+    const x0 = PAD.left + 4;
+    const y0 = PAD.top + 4;
+    const boxW = 92, boxH = items.length * lineH + 8;
+    lg.appendChild(el("rect", {
+      x: x0, y: y0, width: boxW, height: boxH,
+      fill: "rgba(255,255,255,0.85)", stroke: "#cbd5e1", "stroke-width": 0.6, rx: 3,
+    }));
+    items.forEach((it, i) => {
+      const cy = y0 + 6 + i * lineH + 4;
+      const m = makeMarker(it.shape, x0 + 10, cy, 4);
+      m.setAttribute("fill", "#475569");
+      m.setAttribute("fill-opacity", "0.85");
+      m.setAttribute("stroke", "#1e293b");
+      m.setAttribute("stroke-width", "0.6");
+      lg.appendChild(m);
+      const t = el("text", {
+        x: x0 + 20, y: cy + 3, "font-size": 9, fill: "#1e293b",
+      });
+      const label = String(it.name || "");
+      t.textContent = label.length > 13 ? label.slice(0, 12) + "…" : label;
+      lg.appendChild(t);
+    });
+    svgEl.appendChild(lg);
+  }
+
   // Series legend (bottom-right, drawn inside the SVG so PNG export captures it).
   if (catMap && catMap.size > 0) {
     const entries = [...catMap.entries()];
