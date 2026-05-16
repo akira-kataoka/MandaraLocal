@@ -4907,6 +4907,34 @@ function renderRanking() {
   });
 }
 
+// Tiny inline sparkline histogram for the data-quality table (Cycle 173).
+// Returns an SVG string; empty when the column is constant.
+function buildSparkline(values, width = 80, height = 12) {
+  const v = values.filter(Number.isFinite);
+  if (v.length < 2) return "";
+  const min = Math.min(...v), max = Math.max(...v);
+  if (min === max) return "";
+  const bins = 15;
+  const counts = new Array(bins).fill(0);
+  const step = (max - min) / bins;
+  for (const x of v) {
+    let idx = Math.floor((x - min) / step);
+    if (idx >= bins) idx = bins - 1;
+    counts[idx]++;
+  }
+  const maxCount = Math.max(...counts);
+  const barW = (width / bins) - 0.4;
+  let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="vertical-align:middle">`;
+  counts.forEach((c, i) => {
+    if (c === 0) return;
+    const bx = (i / bins) * width;
+    const bh = (c / maxCount) * height;
+    svg += `<rect x="${bx.toFixed(1)}" y="${(height - bh).toFixed(1)}" width="${Math.max(1, barW).toFixed(1)}" height="${bh.toFixed(1)}" fill="#2563eb"/>`;
+  });
+  svg += `</svg>`;
+  return svg;
+}
+
 function renderDataQuality() {
   if (!els.dataQuality || !state.dataset) return;
   const total = state.dataset.rows.length;
@@ -4955,6 +4983,7 @@ function renderDataQuality() {
     const range = (mn === Infinity)
       ? "—"
       : `${formatNum(mn)} 〜 ${formatNum(mx)}`;
+    const spark = buildSparkline(vals);
     return `<tr>` +
       `<td>${flag}</td>` +
       `<td>${escapeHtmlText(f)} ${zeroFlag}</td>` +
@@ -4962,6 +4991,7 @@ function renderDataQuality() {
       `<td style="text-align:right">${missing}<small style="color:var(--muted)"> (${missingPct.toFixed(0)}%)</small></td>` +
       `<td style="font-family:ui-monospace,monospace;font-size:10px;white-space:nowrap">${range}</td>` +
       `<td style="text-align:right">${outliers}${outlierFlag}</td>` +
+      `<td style="text-align:center;padding:0 4px">${spark}</td>` +
       `</tr>`;
   });
   let banner = "";
@@ -4972,7 +5002,7 @@ function renderDataQuality() {
   els.dataQuality.innerHTML =
     banner +
     `<table style="font-size:11px;border-collapse:collapse;width:100%">` +
-    `<thead><tr><th></th><th style="text-align:left">列</th><th>有効</th><th>欠損</th><th>値域</th><th>外れ値</th></tr></thead>` +
+    `<thead><tr><th></th><th style="text-align:left">列</th><th>有効</th><th>欠損</th><th>値域</th><th>外れ値</th><th>分布</th></tr></thead>` +
     `<tbody>${lines.join("")}</tbody></table>` +
     `<div style="margin-top:4px;color:var(--muted);font-size:10px">🟩 0% / 🟨 〜20% / 🟧 20-50% / 🟥 50%以上欠損  ·  外れ値 = IQR 1.5×外（Tukey）  ·  ÷0 = 値に 0 含む</div>`;
 }
