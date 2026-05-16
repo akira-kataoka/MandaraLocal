@@ -2735,11 +2735,44 @@ function renderFieldList() {
   }
   els.fieldList.innerHTML = state.dataset.fields.map((f) =>
     `<div class="fl-item"><span class="fl-name">${escapeHtmlText(f)}</span>` +
+    `<button data-rename="${escapeHtmlText(f)}" title="列名を変更">✎</button>` +
     `<button data-f="${escapeHtmlText(f)}" title="この列を削除">×</button></div>`
   ).join("");
-  els.fieldList.querySelectorAll("button").forEach(btn => {
+  els.fieldList.querySelectorAll("button[data-f]").forEach(btn => {
     btn.addEventListener("click", () => deleteField(btn.dataset.f));
   });
+  els.fieldList.querySelectorAll("button[data-rename]").forEach(btn => {
+    btn.addEventListener("click", () => renameField(btn.dataset.rename));
+  });
+}
+
+function renameField(oldName) {
+  if (!state.dataset) return;
+  const newName = (prompt(`列「${oldName}」の新しい名前を入力してください`, oldName) || "").trim();
+  if (!newName || newName === oldName) return;
+  if (state.dataset.fields.includes(newName)) {
+    setSummary(`「${newName}」という列はすでに存在します`, "warn");
+    return;
+  }
+  // Replace in fields[]
+  const idx = state.dataset.fields.indexOf(oldName);
+  if (idx < 0) return;
+  state.dataset.fields[idx] = newName;
+  // Migrate value keys on every row
+  for (const r of state.dataset.rows) {
+    if (oldName in r.values) {
+      r.values[newName] = r.values[oldName];
+      delete r.values[oldName];
+    }
+  }
+  // Update state.field / state.fieldB if they referenced the old name
+  if (state.field === oldName)  state.field  = newName;
+  if (state.fieldB === oldName) state.fieldB = newName;
+  populateFieldSelects();
+  if (state.field) els.selectField.value = state.field;
+  if (state.fieldB) els.selectFieldB.value = state.fieldB;
+  refresh();
+  setSummary(`列「${oldName}」を「${newName}」にリネームしました`, "success");
 }
 
 function deleteField(field) {

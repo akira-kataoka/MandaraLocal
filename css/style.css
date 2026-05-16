@@ -259,6 +259,8 @@ body.dark .field-list .fl-item:hover { background: #1e3a8a; }
   color: #b91c1c; font-size: 14px; line-height: 1; padding: 0 6px;
 }
 .field-list button:hover { color: #fee; background: #dc2626; border-radius: 3px; }
+.field-list button[data-rename] { color: #2563eb; font-size: 12px; }
+.field-list button[data-rename]:hover { color: #fff; background: #2563eb; }
 
 details.derived .form-row input[type="text"] {
   flex: 1;
