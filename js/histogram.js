@@ -63,6 +63,37 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
   axis.appendChild(text(W / 2, H - 4, label || "", "middle"));
   svgEl.appendChild(axis);
 
+  // Class breaks overlay: shaded bands behind the bars showing how the choropleth
+  // classification partitions the value range. Draw before bars so bars remain dominant.
+  if (opts.breaks && opts.colors && opts.breaks.length === opts.colors.length + 1) {
+    const breaks = opts.breaks;
+    const cls = el("g", { class: "hist-class-bands" });
+    for (let i = 0; i < opts.colors.length; i++) {
+      const lo = Math.max(min, breaks[i]);
+      const hi = Math.min(max, breaks[i + 1]);
+      if (hi <= lo) continue;
+      const bx = PAD.left + ((lo - min) / (max - min)) * innerW;
+      const bw = ((hi - lo) / (max - min)) * innerW;
+      const band = el("rect", {
+        x: bx, y: PAD.top, width: bw, height: innerH,
+        fill: opts.colors[i], "fill-opacity": "0.18", "shape-rendering": "crispEdges",
+      });
+      cls.appendChild(band);
+    }
+    // Boundary lines at each interior break
+    for (let i = 1; i < breaks.length - 1; i++) {
+      const bv = breaks[i];
+      if (bv < min || bv > max) continue;
+      const bx = PAD.left + ((bv - min) / (max - min)) * innerW;
+      const ln = el("line", {
+        x1: bx, y1: PAD.top, x2: bx, y2: H - PAD.bottom,
+        stroke: "#475569", "stroke-width": "0.6", "stroke-dasharray": "2,2",
+      });
+      cls.appendChild(ln);
+    }
+    svgEl.appendChild(cls);
+  }
+
   // Bars
   const bars = el("g");
   const barGap = 0.5;

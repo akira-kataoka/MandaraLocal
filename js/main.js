@@ -146,6 +146,7 @@ const els = {
   panelHist:    $("panel-histogram"),
   histBins:     $("hist-bins"),
   chkHistOverlay: $("chk-hist-overlay"),
+  chkHistBreaks:  $("chk-hist-breaks"),
   panelBox:     $("panel-boxplot"),
   boxplotSvg:   $("boxplot-svg"),
   histSvg:      $("histogram-svg"),
@@ -1101,6 +1102,7 @@ function renderFilterStack() {
 els.ctRun.addEventListener("click", runCrossTab);
 els.histBins.addEventListener("change", () => { refresh(); });
 els.chkHistOverlay?.addEventListener("change", () => { refresh(); });
+els.chkHistBreaks?.addEventListener("change", () => { refresh(); });
 
 async function svgToPng(svg, filename) {
   try {
@@ -2429,7 +2431,11 @@ function refresh() {
         if (x >= lo && (isLastBin ? x <= hi : x < hi)) hits.add(r.key);
       }
       mapper.markOutliers(hits);
-    }, { overlay: els.chkHistOverlay?.checked !== false });
+    }, {
+      overlay: els.chkHistOverlay?.checked !== false,
+      breaks:  els.chkHistBreaks?.checked !== false ? state.breaks : null,
+      colors:  els.chkHistBreaks?.checked !== false ? state.colors : null,
+    });
   }
 
   // Outlier highlight
