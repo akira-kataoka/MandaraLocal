@@ -90,6 +90,14 @@ const els = {
   statsTable:   $("stats-table"),
   chkOutliers:  $("chk-outliers"),
   outlierList:  $("outlier-list"),
+  filterField:  $("filter-field"),
+  filterOp:     $("filter-op"),
+  filterValue:  $("filter-value"),
+  rowFilterValue2: $("row-filter-value2"),
+  filterValue2: $("filter-value2"),
+  btnFilterApply: $("btn-filter-apply"),
+  btnFilterClear: $("btn-filter-clear"),
+  filterResult: $("filter-result"),
   panelLegend:  $("panel-legend"),
   legendBox:    $("legend-container"),
   panelTable:   $("panel-table"),
@@ -669,6 +677,49 @@ function updatePalettePreview() {
   }
 }
 els.chkOutliers.addEventListener("change", () => refresh());
+els.filterOp.addEventListener("change", () => {
+  els.rowFilterValue2.hidden = els.filterOp.value !== "between";
+});
+els.btnFilterApply.addEventListener("click", applyAttributeFilter);
+els.btnFilterClear.addEventListener("click", clearAttributeFilter);
+
+function applyAttributeFilter() {
+  if (!state.dataset) return;
+  const field = els.filterField.value;
+  const op = els.filterOp.value;
+  const v1 = parseFloat(els.filterValue.value);
+  const v2 = parseFloat(els.filterValue2.value);
+  if (!Number.isFinite(v1)) {
+    els.filterResult.textContent = "値を入力してください";
+    els.filterResult.className = "data-summary warn";
+    return;
+  }
+  const test = (x) => {
+    if (!Number.isFinite(x)) return false;
+    switch (op) {
+      case ">":  return x >  v1;
+      case ">=": return x >= v1;
+      case "<":  return x <  v1;
+      case "<=": return x <= v1;
+      case "==": return x === v1;
+      case "!=": return x !== v1;
+      case "between": return Number.isFinite(v2) && x >= Math.min(v1,v2) && x <= Math.max(v1,v2);
+      default: return false;
+    }
+  };
+  const matched = new Set();
+  for (const r of state.dataset.rows) {
+    if (test(r.values[field])) matched.add(r.key);
+  }
+  mapper.markOutliers(matched);   // reuse the outlier-marking style for emphasis
+  els.filterResult.textContent = `条件に一致: ${matched.size}件 / 全${state.dataset.rows.length}件`;
+  els.filterResult.className = "data-summary success";
+}
+
+function clearAttributeFilter() {
+  mapper.clearOutlierMarks();
+  els.filterResult.textContent = "";
+}
 
 els.scatterX.addEventListener("change", drawScatter);
 els.scatterY.addEventListener("change", drawScatter);
@@ -977,7 +1028,7 @@ function renderStats(values) {
 
 function populateFieldSelects() {
   const fields = state.dataset?.fields || [];
-  for (const sel of [els.selectField, els.selectFieldB, els.derivedA, els.derivedB]) {
+  for (const sel of [els.selectField, els.selectFieldB, els.derivedA, els.derivedB, els.filterField]) {
     const prev = sel.value;
     sel.innerHTML = "";
     for (const f of fields) {
