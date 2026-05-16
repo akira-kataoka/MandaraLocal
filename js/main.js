@@ -303,6 +303,7 @@ const els = {
   inputGeocode: $("input-geocode"),
   btnTheme:     $("btn-theme"),
   btnViewReset: $("btn-view-reset"),
+  btnHelp:      $("btn-help"),
   btnZen:       $("btn-zen"),
   btnCopyResults: $("btn-copy-results"),
   selectScene:  $("select-scene"),
@@ -4316,13 +4317,88 @@ els.btnViewReset?.addEventListener("click", () => {
 // Cycle 247: keyboard shortcuts for the result copy buttons. Skips when
 // focus is on an editable input so users can still type "M"/"T" in fields.
 window.addEventListener("keydown", (e) => {
-  if (!(e.shiftKey && (e.ctrlKey || e.metaKey))) return;
   const tgt = e.target;
-  if (tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" || tgt.isContentEditable)) return;
-  const k = e.key.toLowerCase();
-  if (k === "m") { e.preventDefault(); els.btnCopyResults?.click(); }
-  else if (k === "t") { e.preventDefault(); els.btnCopyResultsTxt?.click(); }
+  const inField = tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" || tgt.isContentEditable);
+  if (e.shiftKey && (e.ctrlKey || e.metaKey)) {
+    if (inField) return;
+    const k = e.key.toLowerCase();
+    if (k === "m") { e.preventDefault(); els.btnCopyResults?.click(); }
+    else if (k === "t") { e.preventDefault(); els.btnCopyResultsTxt?.click(); }
+  }
+  // Cycle 250: "?" / Shift+/ opens the help modal.
+  if (!inField && (e.key === "?" || (e.shiftKey && e.key === "/"))) {
+    e.preventDefault();
+    showHelpModal();
+  } else if (e.key === "Escape") {
+    document.getElementById("help-modal")?.remove();
+    document.getElementById("qr-modal")?.remove();
+  }
 });
+
+// Cycle 250: master cheat-sheet covering the shortcuts and conventions that
+// have accumulated over 250 cycles. Static markup; sectioned for scannability.
+function showHelpModal() {
+  document.getElementById("help-modal")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "help-modal";
+  overlay.style.cssText =
+    "position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:99999;" +
+    "display:flex;align-items:center;justify-content:center";
+  const card = document.createElement("div");
+  card.style.cssText =
+    "background:#fff;border-radius:8px;padding:18px 22px;max-width:540px;width:90vw;" +
+    "max-height:80vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,0.3);" +
+    "font-family:inherit;font-size:12.5px;line-height:1.55;color:#1e293b";
+  card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <div style="font-weight:700;font-size:14px">MandaraNext ショートカット</div>
+      <button id="help-close" class="btn" type="button" style="font-size:11px">閉じる</button>
+    </div>
+    <div style="display:grid;grid-template-columns:140px 1fr;gap:4px 10px">
+      <strong>キーボード</strong><span></span>
+      <code>Ctrl/⌘+Shift+M</code><span>分析結果を Markdown でクリップボードへ</span>
+      <code>Ctrl/⌘+Shift+T</code><span>同結果を平文（Word/メール向け）で</span>
+      <code>?</code><span>このヘルプを表示</span>
+      <code>Esc</code><span>ヘルプ / QR モーダルを閉じる</span>
+      <code>Z</code><span>Zen モード切替（サイドバー隠して地図全画面）</span>
+
+      <strong>散布図</strong><span></span>
+      <span>Shift+クリック</span><span>ポイントをピン留め（リング・テーブル・地図と連動）</span>
+      <span>ドラッグ</span><span>矩形 brush 選択 → 地図ハイライト＆ brush→ピン可</span>
+      <span>📍 外れ値をピン</span><span>IQR fence を超える点を一括ピン</span>
+      <span>🔍 ピンへズーム</span><span>ピン地物を全部含む範囲で地図を fit</span>
+
+      <strong>凡例</strong><span></span>
+      <span>swatch ダブルクリック</span><span>そのクラスの色をカラーピッカーで変更</span>
+      <span>境界値ダブルクリック</span><span>クラス上限値を手入力（manual mode に切替）</span>
+      <span>件数クリック</span><span>該当クラス地域名をクリップボードへ</span>
+
+      <strong>テーブル</strong><span></span>
+      <span>📋 列</span><span>列の表示/非表示 + 並び替え（↑/↓）</span>
+      <span>🌡 ヒート</span><span>列ごとの min/max で背景色を青→白→赤</span>
+      <span>列ヘッダクリック</span><span>ソート切替</span>
+      <span>セル ダブルクリック</span><span>値をその場で編集</span>
+      <span>行ホバー</span><span>地図ハイライト</span>
+
+      <strong>共有</strong><span></span>
+      <span>🔗</span><span>現在の設定を URL にしてコピー（ピン・お気に入りも含む）</span>
+      <span>📱</span><span>同 URL を QR コードで表示</span>
+      <span>💾 シーン保存</span><span>名前を付けて localStorage に保存</span>
+
+      <strong>リセット</strong><span></span>
+      <span>🧹</span><span>ピン・フィルタ・列ピッカー・お気に入り・カスタム色をクリア</span>
+      <span>🎨 カラーをリセット</span><span>現在のパレットだけ既定色に戻す</span>
+    </div>
+    <div style="margin-top:10px;color:#475569;font-size:11px">
+      フル機能リスト: <a href="https://github.com/akira-kataoka/MandaraNext/blob/main/ROADMAP.md" target="_blank" rel="noopener">ROADMAP.md</a>
+    </div>
+  `;
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+  card.querySelector("#help-close")?.addEventListener("click", () => overlay.remove());
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+}
+els.btnHelp?.addEventListener("click", showHelpModal);
 els.btnCopyResultsTxt?.addEventListener("click", async () => {
   const md = buildAnalysisMarkdown();
   const txt = markdownToPlainText(md);
