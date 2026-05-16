@@ -39,6 +39,7 @@ const state = {
   valueMap: null,
   mode: "choropleth",
   maxR: 32,
+  customColors: {},   // { paletteName: { classIdx: hexColor } } — user overrides
 };
 
 // ----- DOM cache -----
@@ -799,6 +800,9 @@ els.inputClasses.addEventListener("change", () => {
 });
 els.selectPalette.addEventListener("change", () => {
   state.palette = els.selectPalette.value;
+  // Clear custom overrides for the newly-selected palette so user sees the
+  // canonical palette first. (They can re-customise after.)
+  delete state.customColors[state.palette];
   updatePalettePreview();
   refresh();
 });
@@ -1780,6 +1784,9 @@ function refresh() {
   const { breaks } = computeBreaks(values, state.classes, state.method, { manualBreaks });
   state.breaks = breaks;
   state.colors = getPalette(state.palette, Math.max(1, breaks.length - 1), state.reverse);
+  // Apply per-class user overrides for the current palette
+  const overrides = state.customColors[state.palette] || {};
+  state.colors = state.colors.map((c, i) => overrides[i] || c);
   state.valueMap = buildValueLookup(state.dataset, state.field);
 
   // chocho mode: just paint town circles by value
@@ -1869,6 +1876,11 @@ function refresh() {
     title: state.field, showNA: naFlag,
     onClassHover: (idx, ev) => {
       if (ev.type === "mouseenter") mapper.highlightByClass(idx);
+    },
+    onColorPick: (idx, hex) => {
+      if (!state.customColors[state.palette]) state.customColors[state.palette] = {};
+      state.customColors[state.palette][idx] = hex;
+      refresh();
     },
   });
   els.legendBox.addEventListener("mouseleave", () => mapper.clearHighlight(), { once: true });

@@ -60,6 +60,23 @@ export function renderLegend(container, breaks, colors, options = {}) {
     const sw = document.createElement("span");
     sw.className = "legend-swatch";
     sw.style.background = colors[i];
+    sw.title = "ダブルクリックで色を変更";
+    sw.style.cursor = "pointer";
+    if (typeof options.onColorPick === "function") {
+      sw.addEventListener("dblclick", () => {
+        const inp = document.createElement("input");
+        inp.type = "color";
+        inp.value = colors[i].length === 7 ? colors[i] : "#888888";
+        inp.style.position = "fixed";
+        inp.style.left = "-100px";
+        document.body.appendChild(inp);
+        inp.addEventListener("change", () => {
+          options.onColorPick(i, inp.value);
+          inp.remove();
+        }, { once: true });
+        inp.click();
+      });
+    }
     const label = document.createElement("span");
     const range = `${formatBreak(lo)} 〜 ${formatBreak(hi)}`;
     label.textContent = unit ? `${range} ${unit}` : range;
