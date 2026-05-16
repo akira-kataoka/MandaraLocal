@@ -195,6 +195,10 @@ const els = {
   scatterLabels:   $("scatter-labels"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
+  panelSplom:      $("panel-splom"),
+  spXList:         $("sp-x-list"),
+  spRun:           $("sp-run"),
+  spResult:        $("sp-result"),
   panelHc:         $("panel-hclust"),
   hcXList:         $("hc-x-list"),
   hcLinkage:       $("hc-linkage"),
@@ -2761,6 +2765,89 @@ function buildDendrogram(r) {
 
 els.hcRun?.addEventListener("click", runHierarchical);
 
+// ----- Scatter plot matrix / SPLOM (Cycle 165) -----
+function populateSplomSelectors(fields) {
+  if (!els.spXList) return;
+  const prevChecked = new Set([...els.spXList.querySelectorAll("input:checked")].map(el => el.value));
+  els.spXList.innerHTML = "";
+  for (const f of fields) {
+    const label = document.createElement("label");
+    label.style.cssText = "display:block;padding:1px 0;";
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.value = f;
+    if (prevChecked.has(f)) cb.checked = true;
+    label.appendChild(cb);
+    label.append(" " + f);
+    els.spXList.appendChild(label);
+  }
+}
+
+function runSplom() {
+  if (!state.dataset) return;
+  const xFields = [...els.spXList.querySelectorAll("input:checked")].map(el => el.value);
+  if (xFields.length < 2) { setSummary("少なくとも 2 つの変数を選んでください", "warn"); return; }
+  if (xFields.length > 5) { setSummary("最大 5 変数までです（パフォーマンス確保）", "warn"); return; }
+  const N = xFields.length;
+  const cell = 90;  // each cell is 90×90 px
+  const W = cell * N + 16;
+  const H = cell * N + 16;
+  // Pre-extract value arrays
+  const cols = xFields.map(f => state.dataset.rows.map(r => r.values[f]));
+  // Compute min/max per column for axis scaling
+  const ranges = cols.map(arr => {
+    const v = arr.filter(x => Number.isFinite(x));
+    return { min: Math.min(...v), max: Math.max(...v) };
+  });
+  let html = `<div style="margin-top:6px;font-size:11px;font-weight:600">散布図行列 (${N}×${N})</div>`;
+  html += `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="background:#fff;border:1px solid #e2e8f0">`;
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const x0 = 8 + j * cell;
+      const y0 = 8 + i * cell;
+      html += `<rect x="${x0}" y="${y0}" width="${cell}" height="${cell}" fill="none" stroke="#cbd5e1"/>`;
+      if (i === j) {
+        // Diagonal: variable name (centered)
+        const nm = xFields[i].length > 12 ? xFields[i].slice(0, 11) + "…" : xFields[i];
+        html += `<text x="${x0 + cell / 2}" y="${y0 + cell / 2 + 3}" font-size="10" font-weight="700" text-anchor="middle" fill="#1e3a8a">${escapeHtmlText(nm)}</text>`;
+      } else {
+        // Off-diagonal: scatter with x=cols[j], y=cols[i]
+        const rx = ranges[j], ry = ranges[i];
+        const xRange = rx.max - rx.min || 1;
+        const yRange = ry.max - ry.min || 1;
+        const pad = 4;
+        const innerW = cell - 2 * pad;
+        const innerH = cell - 2 * pad;
+        const px = (v) => x0 + pad + ((v - rx.min) / xRange) * innerW;
+        const py = (v) => y0 + pad + innerH - ((v - ry.min) / yRange) * innerH;
+        for (let k = 0; k < cols[0].length; k++) {
+          const xv = cols[j][k], yv = cols[i][k];
+          if (!Number.isFinite(xv) || !Number.isFinite(yv)) continue;
+          html += `<circle cx="${px(xv).toFixed(1)}" cy="${py(yv).toFixed(1)}" r="1.4" fill="rgba(15,23,42,0.5)"/>`;
+        }
+        // Cell is clickable to load this pair into the main scatter panel
+        html += `<rect x="${x0}" y="${y0}" width="${cell}" height="${cell}" fill="transparent" data-xi="${j}" data-yi="${i}" style="cursor:pointer"><title>${escapeHtmlText(xFields[j])} × ${escapeHtmlText(xFields[i])}</title></rect>`;
+      }
+    }
+  }
+  html += `</svg>`;
+  els.spResult.innerHTML = html;
+  // Wire click-to-load handlers
+  els.spResult.querySelectorAll("rect[data-xi]").forEach(r => {
+    r.addEventListener("click", () => {
+      const xi = parseInt(r.dataset.xi, 10);
+      const yi = parseInt(r.dataset.yi, 10);
+      if (els.scatterX && els.scatterY) {
+        els.scatterX.value = xFields[xi];
+        els.scatterY.value = xFields[yi];
+        drawScatter();
+        els.panelScatter?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+}
+
+els.spRun?.addEventListener("click", runSplom);
+
 els.hcCsv?.addEventListener("click", () => {
   const r = state.hcResult;
   if (!r) { setSummary("先に階層クラスタを実行してください", "warn"); return; }
@@ -4052,6 +4139,10 @@ function onDatasetReady(ds, label) {
       els.panelHc.hidden = false;
       populateHcSelectors(ds.fields);
     }
+    if (els.panelSplom) {
+      els.panelSplom.hidden = false;
+      populateSplomSelectors(ds.fields);
+    }
     populateScatterSelectors(ds.fields);
   } else {
     els.panelScatter.hidden = true;
@@ -4060,6 +4151,7 @@ function onDatasetReady(ds, label) {
     if (els.panelKm) els.panelKm.hidden = true;
     if (els.panelPca) els.panelPca.hidden = true;
     if (els.panelHc) els.panelHc.hidden = true;
+    if (els.panelSplom) els.panelSplom.hidden = true;
   }
   // Pre-populate pie field options for the new dataset
   populatePieFields();

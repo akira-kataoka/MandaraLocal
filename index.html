@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=164" />
+  <link rel="stylesheet" href="css/style.css?v=165" />
 </head>
 <body>
   <header class="app-header">
@@ -592,6 +592,19 @@
         <div id="mr-result" class="mr-result"></div>
       </section>
 
+      <section class="panel" id="panel-splom" hidden>
+        <h2>7g. 散布図行列 (SPLOM)</h2>
+        <div class="hint">最大 5 変数のすべてのペアを格子状の散布図で。クリック → 該当ペアを散布図にロード。</div>
+        <div class="form-row">
+          <label style="align-self:flex-start">変数 X</label>
+          <div id="sp-x-list" style="flex:1;max-height:120px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px"></div>
+        </div>
+        <div class="form-row">
+          <button id="sp-run" class="btn btn-primary">行列を計算</button>
+        </div>
+        <div id="sp-result" class="mr-result"></div>
+      </section>
+
       <section class="panel" id="panel-hclust" hidden>
         <h2>7f. 階層クラスタリング</h2>
         <div class="hint">Ward 法による凝集型クラスタリング。デンドログラムから K を視覚判定。</div>
@@ -781,7 +794,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=164"></script>
+  <script type="module" src="js/main.js?v=165"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
