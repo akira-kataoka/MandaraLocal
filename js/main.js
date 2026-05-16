@@ -119,6 +119,7 @@ const els = {
   rowManualBreaks: $("row-manual-breaks"),
   inputManualBreaks: $("input-manual-breaks"),
   hintManual:     $("hint-manual"),
+  suggestMethod:  $("suggest-method"),
   selectPalette:$("select-palette"),
   chkReverse:   $("chk-reverse"),
   palettePreview: $("palette-preview"),
@@ -3076,8 +3077,61 @@ function exportAllStatsCsv() {
 }
 els.btnStatsExport?.addEventListener("click", exportAllStatsCsv);
 
+function suggestClassMethod(values) {
+  if (!els.suggestMethod) return;
+  const s = computeStats(values);
+  if (s.skewness == null || s.kurtosis == null) {
+    els.suggestMethod.hidden = true;
+    return;
+  }
+  const skew = s.skewness;
+  const kurt = s.kurtosis; // excess kurtosis (0 = normal)
+  let recommend, label, reason;
+  if (Math.abs(skew) < 0.5 && Math.abs(kurt) < 1) {
+    recommend = "equal";
+    label = "等値（等間隔）";
+    reason = `歪度 ${skew.toFixed(2)} / 尖度 ${kurt.toFixed(2)} — 正規分布に近い`;
+  } else if (Math.abs(skew) > 0.5 && Math.abs(kurt) > 1) {
+    recommend = "jenks";
+    label = "自然区分（Jenks）";
+    reason = `歪度 ${skew.toFixed(2)} / 尖度 ${kurt.toFixed(2)} — 複峰性や重い裾の可能性`;
+  } else if (skew > 1) {
+    recommend = "quantile";
+    label = "等量（分位数）";
+    reason = `歪度 +${skew.toFixed(2)} — 右に強く裾を引く分布`;
+  } else if (skew < -1) {
+    recommend = "quantile";
+    label = "等量（分位数）";
+    reason = `歪度 ${skew.toFixed(2)} — 左に強く裾を引く分布`;
+  } else {
+    recommend = "quantile";
+    label = "等量（分位数）";
+    reason = `歪度 ${skew.toFixed(2)} / 尖度 ${kurt.toFixed(2)} — 汎用的に推奨`;
+  }
+  const isMatch = state.method === recommend;
+  const cls = isMatch ? "suggest-method is-match" : "suggest-method";
+  const icon = isMatch ? "✓" : "💡";
+  const action = isMatch
+    ? "現在の選択と一致"
+    : `<button type="button" data-method="${recommend}">${label}に適用</button>`;
+  els.suggestMethod.className = cls;
+  els.suggestMethod.innerHTML = `<span>${icon} 推奨: <strong>${label}</strong> — ${reason}</span> ${action}`;
+  els.suggestMethod.hidden = false;
+  const btn = els.suggestMethod.querySelector("button[data-method]");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      els.selectMethod.value = recommend;
+      state.method = recommend;
+      els.rowManualBreaks.hidden = recommend !== "manual";
+      els.hintManual.hidden = recommend !== "manual";
+      refresh();
+    });
+  }
+}
+
 function renderStats(values) {
   const s = computeStats(values);
+  suggestClassMethod(values);
   const rows = [
     ["件数 (n)", s.n],
     ["欠損", s.missing],

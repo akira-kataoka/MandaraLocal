@@ -316,6 +316,26 @@ details.derived .form-row input[type="text"] {
 #ranking-box .rk-val { font-variant-numeric: tabular-nums; color: var(--text); }
 body.dark #ranking-box .rk-row:hover { background: #1e3a8a; }
 
+.suggest-method {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  margin-top: 4px;
+  display: flex; align-items: center; gap: 6px;
+}
+.suggest-method.is-match { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+.suggest-method button {
+  background: #d97706; color: #fff;
+  border: 0; border-radius: 3px; padding: 2px 8px;
+  font-size: 11px; cursor: pointer; font-weight: 600;
+}
+.suggest-method.is-match button { display: none; }
+body.dark .suggest-method { background: #422006; border-color: #92400e; color: #fcd34d; }
+body.dark .suggest-method.is-match { background: #064e3b; border-color: #065f46; color: #6ee7b7; }
+
 .corr-result {
   margin-top: 8px;
   overflow-x: auto;

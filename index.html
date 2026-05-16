@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=124" />
+  <link rel="stylesheet" href="css/style.css?v=125" />
 </head>
 <body>
   <header class="app-header">
@@ -265,6 +265,7 @@
         <div class="form-row hint" id="hint-manual" hidden>
           昇順カンマ区切り。境界値が k-1 個あれば k 階級になる
         </div>
+        <div id="suggest-method" class="suggest-method" hidden></div>
         <div class="form-row">
           <label for="select-palette">色パレット</label>
           <select id="select-palette">
@@ -632,7 +633,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=124"></script>
+  <script type="module" src="js/main.js?v=125"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
