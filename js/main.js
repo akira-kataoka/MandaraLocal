@@ -5394,7 +5394,19 @@ function renderFieldList() {
   els.fieldList.innerHTML = state.dataset.fields.map((f) => {
     const star = state.starredFields.has(f) ? "★" : "☆";
     const starClass = state.starredFields.has(f) ? "is-starred" : "";
-    return `<div class="fl-item"><span class="fl-name">${escapeHtmlText(f)}</span>` +
+    // Hover tooltip with quick stats (Cycle 185).
+    const colVals = state.dataset.rows.map(r => r.values[f]);
+    const s = computeStats(colVals);
+    let tip = `${f}`;
+    if (s.n > 0) {
+      tip += `  ·  n=${s.n}`;
+      if (s.missing > 0) tip += ` (欠損 ${s.missing})`;
+      if (s.mean != null) tip += `\n平均 ${formatNum(s.mean)} / 中央値 ${formatNum(s.median)}`;
+      if (s.min != null) tip += `\n範囲 [${formatNum(s.min)}, ${formatNum(s.max)}]`;
+    } else {
+      tip += "  ·  数値データなし";
+    }
+    return `<div class="fl-item" title="${escapeHtmlText(tip)}"><span class="fl-name">${escapeHtmlText(f)}</span>` +
       `<button class="${starClass}" data-star="${escapeHtmlText(f)}" title="お気に入り（選択肢の上部に表示）">${star}</button>` +
       `<button data-rename="${escapeHtmlText(f)}" title="列名を変更">✎</button>` +
       `<button data-f="${escapeHtmlText(f)}" title="この列を削除">×</button></div>`;
