@@ -4428,7 +4428,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "275"; // bumped each polish cycle
+const APP_VERSION = "276"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -4936,7 +4936,15 @@ function refreshSceneList() {
   } catch {}
 })();
 els.btnSceneSave.addEventListener("click", () => {
-  const name = prompt("シーン名を入力 (上書きする場合は同名を指定)", "シーン1");
+  // Cycle 276: surface the pin / starred count in the save dialog so users
+  // know those will be captured alongside the visualization settings.
+  const pinN = state.pinnedScatterIds?.size || 0;
+  const starN = state.starredFields?.size || 0;
+  const extras = [];
+  if (pinN) extras.push(`📌 ピン ${pinN}件`);
+  if (starN) extras.push(`★ お気に入り列 ${starN}件`);
+  const tag = extras.length ? `\n（同時保存: ${extras.join(" / ")}）` : "";
+  const name = prompt(`シーン名を入力 (上書きする場合は同名を指定)${tag}`, "シーン1");
   if (!name) return;
   const all = loadScenes();
   // Preserve previous description on overwrite unless the user enters a new one.
@@ -4948,7 +4956,7 @@ els.btnSceneSave.addEventListener("click", () => {
   saveScenes(all);
   refreshSceneList();
   els.selectScene.value = name;
-  setSummary(`シーン「${name}」を保存しました${desc ? `: ${desc}` : ""}`, "success");
+  setSummary(`シーン「${name}」を保存しました${desc ? `: ${desc}` : ""}${tag ? ` ${tag}` : ""}`, "success");
 });
 els.selectScene.addEventListener("change", async () => {
   const name = els.selectScene.value;
