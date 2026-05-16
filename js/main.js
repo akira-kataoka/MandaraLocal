@@ -4428,7 +4428,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "272"; // bumped each polish cycle
+const APP_VERSION = "273"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -7648,13 +7648,16 @@ els.btnScatterPinsCsv?.addEventListener("click", () => {
     setSummary("ピン留めされた点がありません", "warn"); return;
   }
   const fields = state.dataset.fields;
-  const rows = state.dataset.rows.filter(r => pinned.has(r.key));
+  // Cycle 273: keep pin order (Set insertion) and emit a leading "#" column
+  // so Excel/R rows align with the on-screen pin numbers.
+  const rowsByKey = new Map(state.dataset.rows.map(r => [r.key, r]));
+  const rows = Array.from(pinned).map(id => rowsByKey.get(id)).filter(Boolean);
   const esc = (c) => {
     const s = String(c ?? "");
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const header = ["id", "name", ...fields];
-  const body = rows.map(r => [r.key, r.name ?? "", ...fields.map(f => r.values[f] ?? "")]);
+  const header = ["#", "id", "name", ...fields];
+  const body = rows.map((r, i) => [i + 1, r.key, r.name ?? "", ...fields.map(f => r.values[f] ?? "")]);
   const csv = [header, ...body].map(line => line.map(esc).join(",")).join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
