@@ -6672,6 +6672,48 @@ function drawScatter() {
   }
   els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong>${ciTxt(rCI)} （${strength}${sign}の相関）${rhoTxt}${note} · 決定係数 R²=${r2}%${polyInfo}${welchInfo}`;
 
+  // Cycle 224: silent Simpson's paradox detection. Whenever a color-by
+  // category column is set, quietly compute per-group slopes and prepend an
+  // alert above the scatter when ≥1 group's slope sign disagrees with the
+  // overall slope. Skipped when the group-regression toggle is ON (the
+  // Cycle 222 table already surfaces the warning).
+  if (categoryFor && !els.chkScatterRegGroup?.checked && Number.isFinite(slope)) {
+    const flipped = [];
+    const groups = new Map();
+    for (let i = 0; i < ids.length; i++) {
+      const xv = xs[i], yv = ys[i];
+      if (!Number.isFinite(xv) || !Number.isFinite(yv)) continue;
+      const cat = categoryFor(ids[i]);
+      if (cat == null || cat === "") continue;
+      const key = String(cat);
+      if (!groups.has(key)) groups.set(key, { xs: [], ys: [] });
+      const g = groups.get(key);
+      g.xs.push(xv); g.ys.push(yv);
+    }
+    for (const [cat, g] of groups) {
+      if (g.xs.length < 3) continue;
+      const m = g.xs.reduce((a, b) => a + b, 0) / g.xs.length;
+      const my = g.ys.reduce((a, b) => a + b, 0) / g.ys.length;
+      let num = 0, den = 0;
+      for (let i = 0; i < g.xs.length; i++) {
+        num += (g.xs[i] - m) * (g.ys[i] - my);
+        den += (g.xs[i] - m) ** 2;
+      }
+      if (den === 0) continue;
+      const gs = num / den;
+      if (Number.isFinite(gs) && Math.sign(gs) !== Math.sign(slope)) flipped.push(cat);
+    }
+    if (flipped.length) {
+      const sample = flipped.slice(0, 3).map(escapeHtmlText).join(", ");
+      const more = flipped.length > 3 ? ` ほか${flipped.length - 3}件` : "";
+      els.scatterCorr.innerHTML +=
+        `<div style="margin-top:4px;color:#b45309;font-size:11px">` +
+        `⚠ 色分け列でグループ化すると ${flipped.length} カテゴリ ` +
+        `(${sample}${more}) で傾向が逆転 — 「系列別回帰線」を ON にして確認してください` +
+        `</div>`;
+    }
+  }
+
   // Cycle 222: group regression comparison table (Simpson's paradox check).
   // Computes per-category slope/intercept/r/n from the same xs/ys arrays the
   // chart uses, then renders below the scatter buttons.
