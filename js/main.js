@@ -4412,7 +4412,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "268"; // bumped each polish cycle
+const APP_VERSION = "269"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -4443,6 +4443,14 @@ function showHelpModal() {
       <code>Shift+O</code><span>散布図の外れ値を一括ピン</span>
       <code>Shift+B</code><span>直前の brush 選択をピン留めに昇格</span>
       <code>Z</code><span>Zen モード切替（サイドバー隠して地図全画面）</span>
+
+      <strong>Shift+クリックでピン</strong><span style="font-size:11px;color:#475569">6箇所どこからでも同じ統一セット</span>
+      <span>散布図の点</span><span>個別ピン (ON/OFF トグル)</span>
+      <span>テーブル行</span><span>その地域をピン (Cycle 251)</span>
+      <span>凡例 swatch</span><span>クラスメンバー全件を一括ピン (Cycle 252)</span>
+      <span>ヒスト bar</span><span>bin 内地域を一括ピン (Cycle 253)</span>
+      <span>クロス集計セル</span><span>セル該当地域を一括ピン (Cycle 255/258)</span>
+      <span>地図地物</span><span>polygon を ON/OFF トグル (Cycle 254)</span>
 
       <strong>散布図</strong><span></span>
       <span>Shift+クリック</span><span>ポイントをピン留め（リング・テーブル・地図と連動）</span>
