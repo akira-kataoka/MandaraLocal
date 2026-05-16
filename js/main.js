@@ -182,6 +182,7 @@ const els = {
   ctCol:        $("ct-col"),
   ctBins:       $("ct-bins"),
   ctRun:        $("ct-run"),
+  ctView:       $("ct-view"),
   ctExport:     $("ct-export"),
   ctResult:     $("ct-result"),
   tableWrap:    $("table-wrap"),
@@ -1386,6 +1387,10 @@ function renderFilterStack() {
   });
 }
 els.ctRun.addEventListener("click", runCrossTab);
+els.ctView?.addEventListener("change", () => {
+  // Re-render the same crosstab in the chosen view (only if previously run).
+  if (state.crosstab) runCrossTab();
+});
 els.ctExport?.addEventListener("click", exportCrossTabCsv);
 
 function exportCrossTabCsv() {
@@ -1627,24 +1632,31 @@ function runCrossTab() {
     mat[ri][ci]++;
     rowTot[ri]++; colTot[ci]++; total++;
   }
-  // Render table
-  let html = `<table><thead><tr><th class="corner">${escapeHtmlText(rowF)} ＼ ${escapeHtmlText(colF)}</th>`;
-  for (let j = 0; j < bins; j++) html += `<th>${formatNum(colBreaks[j])}〜${formatNum(colBreaks[j+1])}</th>`;
-  html += `<th class="total">合計</th></tr></thead><tbody>`;
-  for (let i = 0; i < bins; i++) {
-    html += `<tr><th>${formatNum(rowBreaks[i])}〜${formatNum(rowBreaks[i+1])}</th>`;
-    for (let j = 0; j < bins; j++) {
-      const cnt = mat[i][j];
-      const intensity = cnt > 0 ? Math.min(1, cnt / Math.max(1, ...mat.flat())) : 0;
-      const bg = `rgba(37, 99, 235, ${(intensity * 0.55).toFixed(2)})`;
-      const cls = cnt > 0 ? "ct-cell" : "ct-cell ct-empty";
-      html += `<td class="${cls}" style="background:${bg};cursor:${cnt > 0 ? "pointer" : "default"}" data-row="${i}" data-col="${j}">${cnt}</td>`;
+  // Cycle 213: render either the heat table or a 100% stacked bar chart.
+  const view = els.ctView?.value || "heat";
+  let html;
+  if (view === "bar") {
+    html = buildCrosstabBarSvg(rowF, colF, rowBreaks, colBreaks, mat, rowTot, bins);
+  } else {
+    // Render table
+    html = `<table><thead><tr><th class="corner">${escapeHtmlText(rowF)} ＼ ${escapeHtmlText(colF)}</th>`;
+    for (let j = 0; j < bins; j++) html += `<th>${formatNum(colBreaks[j])}〜${formatNum(colBreaks[j+1])}</th>`;
+    html += `<th class="total">合計</th></tr></thead><tbody>`;
+    for (let i = 0; i < bins; i++) {
+      html += `<tr><th>${formatNum(rowBreaks[i])}〜${formatNum(rowBreaks[i+1])}</th>`;
+      for (let j = 0; j < bins; j++) {
+        const cnt = mat[i][j];
+        const intensity = cnt > 0 ? Math.min(1, cnt / Math.max(1, ...mat.flat())) : 0;
+        const bg = `rgba(37, 99, 235, ${(intensity * 0.55).toFixed(2)})`;
+        const cls = cnt > 0 ? "ct-cell" : "ct-cell ct-empty";
+        html += `<td class="${cls}" style="background:${bg};cursor:${cnt > 0 ? "pointer" : "default"}" data-row="${i}" data-col="${j}">${cnt}</td>`;
+      }
+      html += `<td class="total">${rowTot[i]}</td></tr>`;
     }
-    html += `<td class="total">${rowTot[i]}</td></tr>`;
+    html += `<tr><th class="total">合計</th>`;
+    for (let j = 0; j < bins; j++) html += `<td class="total">${colTot[j]}</td>`;
+    html += `<td class="total">${total}</td></tr></tbody></table>`;
   }
-  html += `<tr><th class="total">合計</th>`;
-  for (let j = 0; j < bins; j++) html += `<td class="total">${colTot[j]}</td>`;
-  html += `<td class="total">${total}</td></tr></tbody></table>`;
 
   // Chi-square test of independence + Cramér's V (Cycle 119)
   let chi2 = 0, lowExpectedCells = 0;
@@ -1698,6 +1710,64 @@ function runCrossTab() {
 
 function escapeHtmlText(s) {
   return String(s ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+
+// Cycle 213: 100% stacked horizontal bar SVG for the crosstab. One bar per
+// row category; column-category proportions stack left-to-right inside.
+// Color ramp = blue200 → blue800 across the bin count.
+function buildCrosstabBarSvg(rowF, colF, rowBreaks, colBreaks, mat, rowTot, bins) {
+  const W = 460, rowH = 26, leftPad = 110, rightPad = 60, top = 28, legendH = 18;
+  const H = top + rowH * bins + legendH + 18;
+  const innerW = W - leftPad - rightPad;
+  // Hue ramp: lightness 80% → 35% over bins.
+  const colorAt = (j) => {
+    const t = bins === 1 ? 0 : j / (bins - 1);
+    const L = Math.round(80 - t * 45);
+    return `hsl(220, 70%, ${L}%)`;
+  };
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="background:#fff;font-family:inherit">`;
+  svg += `<text x="${W/2}" y="14" text-anchor="middle" font-size="11" font-weight="600">${escapeHtmlText(rowF)} の ${escapeHtmlText(colF)} 構成比</text>`;
+  // Top axis 0..100%
+  svg += `<line x1="${leftPad}" y1="${top - 2}" x2="${leftPad + innerW}" y2="${top - 2}" stroke="#94a3b8"/>`;
+  for (const p of [0, 25, 50, 75, 100]) {
+    const x = leftPad + innerW * p / 100;
+    svg += `<line x1="${x}" y1="${top - 2}" x2="${x}" y2="${top + rowH * bins}" stroke="#e2e8f0" stroke-dasharray="2,2"/>`;
+    svg += `<text x="${x}" y="${top - 6}" text-anchor="middle" font-size="9" fill="#64748b">${p}%</text>`;
+  }
+  // Rows
+  for (let i = 0; i < bins; i++) {
+    const y = top + i * rowH + 3;
+    const label = `${formatNum(rowBreaks[i])}〜${formatNum(rowBreaks[i+1])}`;
+    svg += `<text x="${leftPad - 4}" y="${y + 14}" text-anchor="end" font-size="10" fill="#1e293b">${escapeHtmlText(label)}</text>`;
+    if (rowTot[i] === 0) {
+      svg += `<text x="${leftPad + 4}" y="${y + 14}" font-size="10" fill="#94a3b8">(0件)</text>`;
+      continue;
+    }
+    let xCursor = leftPad;
+    for (let j = 0; j < bins; j++) {
+      const cnt = mat[i][j];
+      const w = innerW * cnt / rowTot[i];
+      if (w > 0) {
+        const pct = (cnt / rowTot[i] * 100).toFixed(1);
+        svg += `<rect x="${xCursor.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${rowH - 6}" fill="${colorAt(j)}"><title>${escapeHtmlText(label)} × ${escapeHtmlText(`${formatNum(colBreaks[j])}〜${formatNum(colBreaks[j+1])}`)}: ${cnt}件 (${pct}%)</title></rect>`;
+        if (w > 28) {
+          svg += `<text x="${(xCursor + w / 2).toFixed(1)}" y="${y + 14}" text-anchor="middle" font-size="9" fill="#0f172a">${pct}%</text>`;
+        }
+      }
+      xCursor += w;
+    }
+    svg += `<text x="${leftPad + innerW + 4}" y="${y + 14}" font-size="10" fill="#64748b">n=${rowTot[i]}</text>`;
+  }
+  // Legend below
+  const lgY = top + rowH * bins + 4;
+  const sw = Math.min(80, innerW / bins);
+  for (let j = 0; j < bins; j++) {
+    const x = leftPad + j * sw;
+    svg += `<rect x="${x}" y="${lgY}" width="10" height="10" fill="${colorAt(j)}"/>`;
+    svg += `<text x="${x + 12}" y="${lgY + 9}" font-size="9" fill="#1e293b">${escapeHtmlText(`${formatNum(colBreaks[j])}〜${formatNum(colBreaks[j+1])}`)}</text>`;
+  }
+  svg += `</svg>`;
+  return svg;
 }
 
 function evalCondition(c, x) {

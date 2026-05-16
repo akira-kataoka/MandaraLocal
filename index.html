@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=212" />
+  <link rel="stylesheet" href="css/style.css?v=213" />
 </head>
 <body>
   <header class="app-header">
@@ -548,6 +548,13 @@
           <input type="number" id="ct-bins" min="2" max="8" value="4" />
         </div>
         <div class="form-row">
+          <label for="ct-view">表示</label>
+          <select id="ct-view" title="表示形式">
+            <option value="heat" selected>ヒートマップ表</option>
+            <option value="bar">100%積み上げ棒</option>
+          </select>
+        </div>
+        <div class="form-row">
           <button id="ct-run" class="btn btn-primary">集計</button>
           <button id="ct-export" class="btn" disabled style="margin-left:auto">CSV出力</button>
         </div>
@@ -859,7 +866,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=212"></script>
+  <script type="module" src="js/main.js?v=213"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
