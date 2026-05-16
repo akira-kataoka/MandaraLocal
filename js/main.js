@@ -1597,6 +1597,31 @@ $("hist-csv")?.addEventListener("click", () => {
 $("scatter-svg-btn")?.addEventListener("click", () => downloadSvg(els.scatterSvg, `scatter_${safeName(els.scatterX.value)}_vs_${safeName(els.scatterY.value)}.svg`));
 $("box-svg")?.addEventListener("click", () => downloadSvg(els.boxplotSvg, `boxplot_${safeName(state.field)}.svg`));
 
+// Cycle 228: PNG export of the boxplot SVG via htmlToImage.
+$("box-png")?.addEventListener("click", async () => {
+  if (!els.boxplotSvg || !els.boxplotSvg.children.length) {
+    setSummary("ボックスプロットが空のため書き出せません", "warn"); return;
+  }
+  if (typeof htmlToImage === "undefined") {
+    setSummary("htmlToImage の読み込みに失敗しました", "error"); return;
+  }
+  setSummary("ボックスプロットPNGを生成中…", "muted");
+  try {
+    const dpi = parseInt(els.selectExportDpi?.value || "2", 10) || 2;
+    const dataUrl = await htmlToImage.toPng(els.boxplotSvg, {
+      pixelRatio: dpi, backgroundColor: "#ffffff",
+    });
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = `boxplot_${safeName(state.field)}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setSummary("ボックスプロットを PNG で保存しました", "success");
+  } catch (e) {
+    console.error(e);
+    setSummary("ボックスプロットPNG生成失敗: " + (e?.message || e), "error");
+  }
+});
+
 // Cycle 205: boxplot 5-number summary CSV. When the scatter color-by column
 // is set to a categorical field (2-N groups), emit one row per group; else
 // a single overall row. Mirrors the on-screen grouped boxplot logic.
