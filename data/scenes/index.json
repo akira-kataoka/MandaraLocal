@@ -1,0 +1,51 @@
+{
+  "format": "mandaranext-scenes-index",
+  "version": 1,
+  "scenes": [
+    {
+      "name": "📦 都道府県人口 (カートグラム)",
+      "snapshot": {
+        "level": "prefecture",
+        "classes": 5,
+        "method": "jenks",
+        "palette": "YlOrRd",
+        "reverse": false,
+        "mode": "cartogram"
+      }
+    },
+    {
+      "name": "📦 全国市町村面積 (塗り分け)",
+      "snapshot": {
+        "level": "municipality",
+        "classes": 5,
+        "method": "quantile",
+        "palette": "Viridis",
+        "reverse": false,
+        "mode": "choropleth"
+      }
+    },
+    {
+      "name": "📦 東京・千代田区 町丁目",
+      "snapshot": {
+        "level": "chocho",
+        "chochoPref": "東京都",
+        "chochoMuni": "千代田区",
+        "classes": 5,
+        "method": "quantile",
+        "palette": "Blues",
+        "mode": "choropleth"
+      }
+    },
+    {
+      "name": "📦 都道府県の人口密度ヒート",
+      "snapshot": {
+        "level": "prefecture",
+        "classes": 7,
+        "method": "jenks",
+        "palette": "Spectral",
+        "reverse": true,
+        "mode": "choropleth"
+      }
+    }
+  ]
+}

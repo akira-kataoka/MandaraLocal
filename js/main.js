@@ -1030,11 +1030,37 @@ function snapshotCurrent() {
     pieFields: [...(els.selectPieFields?.selectedOptions || [])].map(o => o.value),
   };
 }
+let demoScenes = {}; // name → snapshot, loaded from data/scenes/index.json
 function refreshSceneList() {
   const all = loadScenes();
-  els.selectScene.innerHTML = '<option value="">— シーン —</option>' +
-    Object.keys(all).sort().map(n => `<option value="${escapeHtmlText(n)}">${escapeHtmlText(n)}</option>`).join("");
+  let html = '<option value="">— シーン —</option>';
+  const demoNames = Object.keys(demoScenes);
+  if (demoNames.length) {
+    html += '<optgroup label="サンプル">';
+    for (const n of demoNames) html += `<option value="demo:${escapeHtmlText(n)}">${escapeHtmlText(n)}</option>`;
+    html += '</optgroup>';
+  }
+  const userNames = Object.keys(all).sort();
+  if (userNames.length) {
+    html += '<optgroup label="マイシーン">';
+    for (const n of userNames) html += `<option value="${escapeHtmlText(n)}">${escapeHtmlText(n)}</option>`;
+    html += '</optgroup>';
+  }
+  els.selectScene.innerHTML = html;
 }
+
+// Load demo scenes on startup
+(async function loadDemoScenes() {
+  try {
+    const res = await fetch("data/scenes/index.json");
+    if (!res.ok) return;
+    const json = await res.json();
+    for (const s of (json.scenes || [])) {
+      if (s.name && s.snapshot) demoScenes[s.name] = s.snapshot;
+    }
+    refreshSceneList();
+  } catch {}
+})();
 els.btnSceneSave.addEventListener("click", () => {
   const name = prompt("シーン名を入力 (上書きする場合は同名を指定)", "シーン1");
   if (!name) return;
@@ -1047,10 +1073,16 @@ els.btnSceneSave.addEventListener("click", () => {
 });
 els.selectScene.addEventListener("change", async () => {
   const name = els.selectScene.value;
-  els.btnSceneDelete.hidden = !name;
+  const isDemo = name.startsWith("demo:");
+  els.btnSceneDelete.hidden = !name || isDemo;
   if (!name) return;
-  const all = loadScenes();
-  const snap = all[name];
+  let snap;
+  if (isDemo) {
+    snap = demoScenes[name.slice(5)];
+  } else {
+    const all = loadScenes();
+    snap = all[name];
+  }
   if (!snap) return;
   // Apply level first (may need to fetch GeoJSON)
   if (snap.level && snap.level !== state.level) {
