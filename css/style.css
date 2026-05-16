@@ -281,6 +281,21 @@ details.derived .form-row input[type="text"] {
 .outlier-list .ol-item { padding: 1px 0; cursor: pointer; }
 .outlier-list .ol-item:hover { background: #fef3c7; }
 
+.ct-result { margin-top: 8px; overflow-x: auto; }
+.ct-result table { border-collapse: collapse; font-size: 11px; width: 100%; }
+.ct-result th, .ct-result td {
+  border: 1px solid var(--border);
+  padding: 3px 5px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ct-result th { background: #e0e7ff; color: #1e293b; font-weight: 600; }
+.ct-result td.corner { background: #f1f5f9; }
+.ct-result td.total { background: #fef3c7; font-weight: 600; }
+body.dark .ct-result th { background: #1e3a8a; color: #f1f5f9; }
+body.dark .ct-result td.corner { background: #0f172a; }
+body.dark .ct-result td.total { background: #78350f; }
+
 #legend-container {
   font-size: 12px;
 }

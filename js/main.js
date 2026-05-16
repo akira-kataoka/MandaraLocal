@@ -3,7 +3,7 @@
 // =====================================================================
 
 import { parseCsvText, loadCsvFile, loadSampleCsv, buildValueLookup, buildMuniIndex, buildTownIndex } from "./data.js";
-import { computeBreaks } from "./classification.js";
+import { computeBreaks, classifyValue } from "./classification.js";
 import { getPalette } from "./color.js";
 import { computeStats, formatNum, detectOutliers } from "./stats.js";
 import { renderLegend } from "./legend.js";
@@ -111,6 +111,12 @@ const els = {
   panelLegend:  $("panel-legend"),
   legendBox:    $("legend-container"),
   panelTable:   $("panel-table"),
+  panelCt:      $("panel-crosstab"),
+  ctRow:        $("ct-row"),
+  ctCol:        $("ct-col"),
+  ctBins:       $("ct-bins"),
+  ctRun:        $("ct-run"),
+  ctResult:     $("ct-result"),
   tableWrap:    $("table-wrap"),
   panelTs:      $("panel-timeseries"),
   tsBase:       $("ts-base"),
@@ -741,6 +747,52 @@ els.filterOp.addEventListener("change", () => {
 });
 els.btnFilterApply.addEventListener("click", applyAttributeFilter);
 els.btnFilterClear.addEventListener("click", clearAttributeFilter);
+els.ctRun.addEventListener("click", runCrossTab);
+
+function runCrossTab() {
+  if (!state.dataset) return;
+  const rowF = els.ctRow.value, colF = els.ctCol.value;
+  const bins = Math.max(2, Math.min(8, parseInt(els.ctBins.value, 10) || 4));
+  const rowVals = state.dataset.rows.map(r => r.values[rowF]);
+  const colVals = state.dataset.rows.map(r => r.values[colF]);
+  const rowBreaks = computeBreaks(rowVals, bins, "quantile").breaks;
+  const colBreaks = computeBreaks(colVals, bins, "quantile").breaks;
+  // matrix[i][j]
+  const mat = Array.from({ length: bins }, () => new Array(bins).fill(0));
+  const rowTot = new Array(bins).fill(0);
+  const colTot = new Array(bins).fill(0);
+  let total = 0;
+  for (let k = 0; k < state.dataset.rows.length; k++) {
+    const rv = rowVals[k], cv = colVals[k];
+    if (!Number.isFinite(rv) || !Number.isFinite(cv)) continue;
+    const ri = clamp(classifyValue(rv, rowBreaks), 0, bins - 1);
+    const ci = clamp(classifyValue(cv, colBreaks), 0, bins - 1);
+    mat[ri][ci]++;
+    rowTot[ri]++; colTot[ci]++; total++;
+  }
+  // Render table
+  let html = `<table><thead><tr><th class="corner">${escapeHtmlText(rowF)} ＼ ${escapeHtmlText(colF)}</th>`;
+  for (let j = 0; j < bins; j++) html += `<th>${formatNum(colBreaks[j])}〜${formatNum(colBreaks[j+1])}</th>`;
+  html += `<th class="total">合計</th></tr></thead><tbody>`;
+  for (let i = 0; i < bins; i++) {
+    html += `<tr><th>${formatNum(rowBreaks[i])}〜${formatNum(rowBreaks[i+1])}</th>`;
+    for (let j = 0; j < bins; j++) {
+      const cnt = mat[i][j];
+      const intensity = cnt > 0 ? Math.min(1, cnt / Math.max(1, ...mat.flat())) : 0;
+      const bg = `rgba(37, 99, 235, ${(intensity * 0.55).toFixed(2)})`;
+      html += `<td style="background:${bg}">${cnt}</td>`;
+    }
+    html += `<td class="total">${rowTot[i]}</td></tr>`;
+  }
+  html += `<tr><th class="total">合計</th>`;
+  for (let j = 0; j < bins; j++) html += `<td class="total">${colTot[j]}</td>`;
+  html += `<td class="total">${total}</td></tr></tbody></table>`;
+  els.ctResult.innerHTML = html;
+}
+
+function escapeHtmlText(s) {
+  return String(s ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
 
 function applyAttributeFilter() {
   if (!state.dataset) return;
@@ -1135,6 +1187,15 @@ function onDatasetReady(ds, label) {
   els.panelLegend.hidden = false;
   els.panelTable.hidden = false;
   if (ds.fields.length >= 2) {
+    els.panelCt.hidden = false;
+    if (els.ctRow.options.length >= 2) {
+      els.ctRow.value = ds.fields[0];
+      els.ctCol.value = ds.fields[1];
+    }
+  } else {
+    els.panelCt.hidden = true;
+  }
+  if (ds.fields.length >= 2) {
     els.panelScatter.hidden = false;
     populateScatterSelectors(ds.fields);
   } else {
@@ -1514,7 +1575,7 @@ function renderStats(values) {
 
 function populateFieldSelects() {
   const fields = state.dataset?.fields || [];
-  for (const sel of [els.selectField, els.selectFieldB, els.derivedA, els.derivedB, els.filterField]) {
+  for (const sel of [els.selectField, els.selectFieldB, els.derivedA, els.derivedB, els.filterField, els.ctRow, els.ctCol]) {
     const prev = sel.value;
     sel.innerHTML = "";
     for (const f of fields) {
