@@ -151,6 +151,7 @@ const els = {
   legendBox:    $("legend-container"),
   selectLegendPos: $("select-legend-pos"),
   selectLegendFs:  $("select-legend-fs"),
+  selectLegendPrec: $("select-legend-prec"),
   panelTable:   $("panel-table"),
   tableSearch:  $("table-search"),
   tableSearchInfo: $("table-search-info"),
@@ -1007,6 +1008,22 @@ els.selectLegendFs?.addEventListener("change", () => {
 // Apply previously-saved value on startup
 applyLegendFs(state.legendFs || "m");
 if (els.selectLegendFs && state.legendFs) els.selectLegendFs.value = state.legendFs;
+
+// Cycle 198: legend break-value precision (auto / 0..3 decimals).
+// Persisted alongside legendFs and re-applied via refresh().
+els.selectLegendPrec?.addEventListener("change", () => {
+  state.legendPrec = els.selectLegendPrec.value;
+  saveSettings(state);
+  if (state.dataset && state.field) refresh();
+});
+if (els.selectLegendPrec && state.legendPrec) els.selectLegendPrec.value = state.legendPrec;
+// Returns null for "auto" (default), otherwise an integer 0..3.
+function getLegendPrec() {
+  const v = els.selectLegendPrec?.value;
+  if (!v || v === "auto") return null;
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) ? n : null;
+}
 
 // Cursor coordinate readout: live lat/lng under the cursor.
 let _coordsEnabled = true;
@@ -3960,6 +3977,7 @@ function snapshotCurrent() {
     legendFreeLeft: els.overlay?.style.left || "",
     legendFreeTop:  els.overlay?.style.top  || "",
     legendFs: els.selectLegendFs?.value || "m",
+    legendPrec: els.selectLegendPrec?.value || "auto",
   };
 }
 let demoScenes = {}; // name → snapshot, loaded from data/scenes/index.json
@@ -4090,6 +4108,9 @@ els.selectScene.addEventListener("change", async () => {
   if (snap.legendFs !== undefined && els.selectLegendFs) {
     els.selectLegendFs.value = snap.legendFs;
     els.selectLegendFs.dispatchEvent(new Event("change"));
+  }
+  if (snap.legendPrec !== undefined && els.selectLegendPrec) {
+    els.selectLegendPrec.value = snap.legendPrec;
   }
   // Apply visibility toggles
   els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both" || state.mode === "graduated");
@@ -4676,8 +4697,9 @@ function refresh() {
       const idx = classifyValue(v, state.breaks);
       if (idx >= 0 && idx < chochoCounts.length) chochoCounts[idx]++;
     }
-    renderLegend(els.legendBox, state.breaks, state.colors, { title: state.field, showNA: naFlag, classCounts: chochoCounts });
-    renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag, classCounts: chochoCounts });
+    const _prec = getLegendPrec();
+    renderLegend(els.legendBox, state.breaks, state.colors, { title: state.field, showNA: naFlag, classCounts: chochoCounts, precision: _prec });
+    renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag, classCounts: chochoCounts, precision: _prec });
     els.overlay.hidden = false;
     els.overlayTitle.textContent = state.field;
     els.overlayFooter.textContent = `MandaraNext ·${state.chochoPref}${state.chochoMuni} · ${new Date().toLocaleDateString("ja-JP")}`;
@@ -4816,7 +4838,7 @@ function refresh() {
     if (idx >= 0 && idx < classCounts.length) classCounts[idx]++;
   }
   renderLegend(els.legendBox, state.breaks, state.colors, {
-    title: state.field, showNA: naFlag, classCounts,
+    title: state.field, showNA: naFlag, classCounts, precision: getLegendPrec(),
     onClassHover: (idx, ev) => {
       if (ev.type === "mouseenter") mapper.highlightByClass(idx);
     },
@@ -4842,7 +4864,7 @@ function refresh() {
     },
   });
   els.legendBox.addEventListener("mouseleave", () => mapper.clearHighlight(), { once: true });
-  renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag, classCounts });
+  renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag, classCounts, precision: getLegendPrec() });
   els.overlay.hidden = false;
   els.overlayTitle.textContent = state.field;
   const src = (els.inputDataSource?.value || "").trim();
@@ -4871,7 +4893,7 @@ function refresh() {
       const idx = classifyValue(v, breaksB);
       if (idx >= 0 && idx < classCountsB.length) classCountsB[idx]++;
     }
-    renderLegend(els.overlayLegendB, breaksB, colorsB, { showNA: false, classCounts: classCountsB });
+    renderLegend(els.overlayLegendB, breaksB, colorsB, { showNA: false, classCounts: classCountsB, precision: getLegendPrec() });
     els.overlayB.hidden = false;
     els.overlayTitleB.textContent = state.fieldB;
   } else if (mapperB) {

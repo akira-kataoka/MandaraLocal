@@ -6,8 +6,21 @@ import { formatNum, extractUnit } from "./stats.js";
 
 // Format a single break value: extreme magnitudes get special treatment so
 // the legend never overflows. Falls back to the shared formatNum() helper.
-function formatBreak(v) {
+// Cycle 197: when precision is a number 0..3, force that many decimals (still
+// using thousand separators for the integer part). Very large values keep the
+// integer comma format even at precision=0.
+function formatBreak(v, precision) {
   if (v == null || !Number.isFinite(v)) return formatNum(v);
+  if (typeof precision === "number" && precision >= 0) {
+    const abs = Math.abs(v);
+    if (abs >= 100000 && precision === 0) {
+      return Math.round(v).toLocaleString("ja-JP");
+    }
+    return v.toLocaleString("ja-JP", {
+      minimumFractionDigits: precision,
+      maximumFractionDigits: precision,
+    });
+  }
   const abs = Math.abs(v);
   if (abs >= 100000) return Math.round(v).toLocaleString("ja-JP");
   if (abs > 0 && abs < 0.001) return v.toExponential(2);
@@ -50,6 +63,7 @@ export function renderLegend(container, breaks, colors, options = {}) {
   const onClassHover = typeof options.onClassHover === "function"
     ? options.onClassHover
     : null;
+  const precision = typeof options.precision === "number" ? options.precision : null;
 
   for (let i = k - 1; i >= 0; i--) {
     const lo = breaks[i];
@@ -78,7 +92,7 @@ export function renderLegend(container, breaks, colors, options = {}) {
       });
     }
     const label = document.createElement("span");
-    const range = `${formatBreak(lo)} 〜 ${formatBreak(hi)}`;
+    const range = `${formatBreak(lo, precision)} 〜 ${formatBreak(hi, precision)}`;
     label.textContent = unit ? `${range} ${unit}` : range;
     // Per-class count (MANDARA classic feature) — shows how data is distributed
     // across the chosen classification. Helps spot empty or overstuffed classes.

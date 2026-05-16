@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=197" />
+  <link rel="stylesheet" href="css/style.css?v=198" />
 </head>
 <body>
   <header class="app-header">
@@ -412,6 +412,16 @@
             <option value="s">小 (印刷向き)</option>
             <option value="m" selected>標準</option>
             <option value="l">大 (プレゼン向き)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="select-legend-prec">桁数</label>
+          <select id="select-legend-prec" title="凡例の境界値の小数点桁数">
+            <option value="auto" selected>自動</option>
+            <option value="0">0 (整数)</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
           </select>
         </div>
         <div id="legend-container"></div>
@@ -822,7 +832,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=197"></script>
+  <script type="module" src="js/main.js?v=198"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
