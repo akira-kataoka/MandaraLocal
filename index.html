@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=224" />
+  <link rel="stylesheet" href="css/style.css?v=225" />
 </head>
 <body>
   <header class="app-header">
@@ -55,6 +55,7 @@
       <button id="btn-scene-export" class="btn" title="全シーンを JSON で書き出し">⬇</button>
       <label class="btn" for="file-scene-import" title="シーンJSONを読み込み" style="cursor:pointer">⬆<input type="file" id="file-scene-import" accept=".json" hidden /></label>
       <button id="btn-scene-share-url" class="btn" title="現在の設定をURLで共有 (リンクをコピー)">🔗</button>
+      <button id="btn-scene-qr" class="btn" title="共有URLをQRコードで表示（スマホから読み取り用）">📱</button>
       <button id="btn-scene-delete" class="btn" title="選択中のシーンを削除" hidden>🗑</button>
       <button id="btn-install" class="btn" title="このアプリをホーム画面/デスクトップに追加" hidden>📲 アプリ化</button>
       <button id="btn-copy-results" class="btn" title="現在の分析結果を Markdown でクリップボードへ">📋 結果コピー</button>
@@ -880,10 +881,11 @@
   <script src="https://unpkg.com/d3-contour@4.0.2/dist/d3-contour.min.js"></script>
   <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/polygon-clipping@0.15.7/dist/polygon-clipping.umd.js"></script>
+  <script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=224"></script>
+  <script type="module" src="js/main.js?v=225"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

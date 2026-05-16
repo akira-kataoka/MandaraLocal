@@ -303,6 +303,7 @@ const els = {
   btnSceneExport: $("btn-scene-export"),
   fileSceneImport: $("file-scene-import"),
   btnSceneShareUrl: $("btn-scene-share-url"),
+  btnSceneQr: $("btn-scene-qr"),
 };
 
 // ----- Restore prior session settings -----
@@ -4610,6 +4611,55 @@ els.btnSceneShareUrl.addEventListener("click", async () => {
     prompt("以下のURLをコピーして共有してください:", url);
   }
 });
+
+// Cycle 225: show the same share-URL as a QR code so people in the room can
+// scan it from their phone. Uses the qrcode (npm) CDN bundle; falls back to a
+// plain prompt() if QR generation fails.
+els.btnSceneQr?.addEventListener("click", async () => {
+  const snap = snapshotCurrent();
+  const url = location.origin + location.pathname + snapshotToHash(snap);
+  if (typeof window.QRCode === "undefined") {
+    setSummary("QRライブラリの読み込みに失敗しました", "error"); return;
+  }
+  try {
+    const dataUrl = await window.QRCode.toDataURL(url, {
+      margin: 1, width: 240, errorCorrectionLevel: "M",
+    });
+    showQrModal(url, dataUrl);
+  } catch (e) {
+    console.error(e);
+    setSummary("QR生成に失敗: " + (e?.message || e), "error");
+  }
+});
+function showQrModal(url, dataUrl) {
+  // Remove any prior modal so repeat clicks don't stack.
+  document.getElementById("qr-modal")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "qr-modal";
+  overlay.style.cssText =
+    "position:fixed;inset:0;background:rgba(15,23,42,0.55);" +
+    "display:flex;align-items:center;justify-content:center;z-index:99999";
+  const card = document.createElement("div");
+  card.style.cssText =
+    "background:#fff;border-radius:8px;padding:18px;max-width:300px;" +
+    "box-shadow:0 8px 32px rgba(0,0,0,0.3);text-align:center;font-family:inherit";
+  card.innerHTML = `
+    <div style="font-weight:600;margin-bottom:8px">📱 共有URL QRコード</div>
+    <img src="${dataUrl}" width="240" height="240" alt="QR" style="display:block;margin:0 auto" />
+    <div style="font-size:10px;color:#475569;margin:6px 0;word-break:break-all;max-height:48px;overflow:auto">${escapeHtmlText(url)}</div>
+    <div style="display:flex;gap:6px;justify-content:center;margin-top:8px">
+      <a class="btn" id="qr-download" download="mandara_share_qr.png">PNG保存</a>
+      <button class="btn" id="qr-close" type="button">閉じる</button>
+    </div>
+  `;
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+  const dl = card.querySelector("#qr-download");
+  if (dl) dl.href = dataUrl;
+  const close = () => overlay.remove();
+  card.querySelector("#qr-close")?.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+}
 
 // On boot, if a snapshot hash is present, apply it after the level has loaded.
 (async function applyHashSnapshot() {
