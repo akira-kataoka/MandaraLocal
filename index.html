@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=93" />
+  <link rel="stylesheet" href="css/style.css?v=94" />
 </head>
 <body>
   <header class="app-header">
@@ -338,6 +338,10 @@
       <section class="panel" id="panel-legend" hidden>
         <h2>5. 凡例</h2>
         <div class="form-row">
+          <label for="input-map-title">地図タイトル</label>
+          <input id="input-map-title" type="text" placeholder="例: 都道府県人口分布 (2020年)" />
+        </div>
+        <div class="form-row">
           <label for="select-legend-pos">位置</label>
           <select id="select-legend-pos">
             <option value="br" selected>右下</option>
@@ -488,6 +492,7 @@
           <ul id="search-suggestions" class="search-suggestions" hidden></ul>
         </div>
         <div id="tooltip" class="map-tooltip" hidden></div>
+        <div id="map-title" class="map-title" hidden></div>
         <div id="map-overlay" class="map-overlay" hidden>
           <div class="map-overlay-title" id="overlay-title"></div>
           <div class="map-overlay-legend" id="overlay-legend"></div>
@@ -530,7 +535,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=93"></script>
+  <script type="module" src="js/main.js?v=94"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

@@ -506,6 +506,33 @@ body.dark #histogram-svg .axis line, body.dark #histogram-svg .axis path { strok
   margin-left: 6px;
 }
 
+.map-title {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.93);
+  color: #0f172a;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 14px;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  z-index: 700;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  max-width: 70%;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.dark .map-title {
+  background: rgba(30,41,59,0.93); color: #f1f5f9;
+  border-color: #334155;
+}
+
 .feature-detail {
   position: absolute;
   top: 12px;

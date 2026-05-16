@@ -66,6 +66,8 @@ const els = {
   btnTemplate:  $("btn-download-template"),
   btnPaste:     $("btn-paste"),
   inputDataSource: $("input-data-source"),
+  inputMapTitle: $("input-map-title"),
+  mapTitle:      $("map-title"),
   dataSummary:  $("data-summary"),
   panelField:   $("panel-field"),
   selectField:  $("select-field"),
@@ -842,6 +844,18 @@ els.inputDataSource?.addEventListener("change", () => {
   if (state.dataset && state.field) refresh();
 });
 
+els.inputMapTitle?.addEventListener("input", () => {
+  if (!els.mapTitle) return;
+  const t = (els.inputMapTitle.value || "").trim();
+  if (t) {
+    els.mapTitle.textContent = t;
+    els.mapTitle.hidden = false;
+  } else {
+    els.mapTitle.textContent = "";
+    els.mapTitle.hidden = true;
+  }
+});
+
 els.selectLegendPos?.addEventListener("change", () => {
   const pos = els.selectLegendPos.value;
   els.overlay.classList.remove("pos-br", "pos-bl", "pos-tr", "pos-tl");
@@ -1332,6 +1346,7 @@ function snapshotCurrent() {
     manualBreaks: els.inputManualBreaks?.value || "",
     pieFields: [...(els.selectPieFields?.selectedOptions || [])].map(o => o.value),
     dataSource: els.inputDataSource?.value || "",
+    mapTitle: els.inputMapTitle?.value || "",
   };
 }
 let demoScenes = {}; // name → snapshot, loaded from data/scenes/index.json
@@ -1408,6 +1423,10 @@ els.selectScene.addEventListener("change", async () => {
   if (snap.manualBreaks !== undefined) els.inputManualBreaks.value = snap.manualBreaks;
   if (snap.prefFilter !== undefined && els.selectPrefFilter) els.selectPrefFilter.value = snap.prefFilter;
   if (snap.dataSource !== undefined && els.inputDataSource) els.inputDataSource.value = snap.dataSource;
+  if (snap.mapTitle !== undefined && els.inputMapTitle) {
+    els.inputMapTitle.value = snap.mapTitle;
+    els.inputMapTitle.dispatchEvent(new Event("input"));
+  }
   // Apply visibility toggles
   els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both" || state.mode === "graduated");
   els.rowDotUnit.hidden = state.mode !== "dot";
