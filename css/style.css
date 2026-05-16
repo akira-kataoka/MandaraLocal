@@ -266,6 +266,9 @@ body.dark .field-list .fl-item:hover { background: #1e3a8a; }
 .field-list button:hover { color: #fee; background: #dc2626; border-radius: 3px; }
 .field-list button[data-rename] { color: #2563eb; font-size: 12px; }
 .field-list button[data-rename]:hover { color: #fff; background: #2563eb; }
+.field-list button[data-star] { color: #cbd5e1; font-size: 14px; }
+.field-list button[data-star]:hover { color: #d97706; background: none; }
+.field-list button[data-star].is-starred { color: #d97706; }
 
 details.derived .form-row input[type="text"] {
   flex: 1;

@@ -40,6 +40,7 @@ const state = {
   mode: "choropleth",
   maxR: 32,
   customColors: {},   // { paletteName: { classIdx: hexColor } } — user overrides
+  starredFields: new Set(),  // user-favorited columns (Cycle 180)
 };
 
 // ----- DOM cache -----
@@ -3476,6 +3477,7 @@ els.btnDataReset?.addEventListener("click", () => {
   state.lisaResult = null;
   state.corrMatrix = null;
   state.crosstab = null;
+  state.starredFields = new Set();
   // Reset map visuals
   mapper.resetColors?.();
   mapper.clearSymbols?.();
@@ -4351,6 +4353,7 @@ els.btnSvg.addEventListener("click", () => {
 function onDatasetReady(ds, label) {
   state.dataset = ds;
   state.filteredKeys = null;
+  state.starredFields = new Set();
   // pick first numeric field as default
   state.field = ds.fields[0];
 
@@ -5256,17 +5259,30 @@ function renderFieldList() {
   if (!state.dataset || !state.dataset.fields.length) {
     els.fieldList.innerHTML = ""; return;
   }
-  els.fieldList.innerHTML = state.dataset.fields.map((f) =>
-    `<div class="fl-item"><span class="fl-name">${escapeHtmlText(f)}</span>` +
-    `<button data-rename="${escapeHtmlText(f)}" title="列名を変更">✎</button>` +
-    `<button data-f="${escapeHtmlText(f)}" title="この列を削除">×</button></div>`
-  ).join("");
+  els.fieldList.innerHTML = state.dataset.fields.map((f) => {
+    const star = state.starredFields.has(f) ? "★" : "☆";
+    const starClass = state.starredFields.has(f) ? "is-starred" : "";
+    return `<div class="fl-item"><span class="fl-name">${escapeHtmlText(f)}</span>` +
+      `<button class="${starClass}" data-star="${escapeHtmlText(f)}" title="お気に入り（選択肢の上部に表示）">${star}</button>` +
+      `<button data-rename="${escapeHtmlText(f)}" title="列名を変更">✎</button>` +
+      `<button data-f="${escapeHtmlText(f)}" title="この列を削除">×</button></div>`;
+  }).join("");
   els.fieldList.querySelectorAll("button[data-f]").forEach(btn => {
     btn.addEventListener("click", () => deleteField(btn.dataset.f));
   });
   els.fieldList.querySelectorAll("button[data-rename]").forEach(btn => {
     btn.addEventListener("click", () => renameField(btn.dataset.rename));
   });
+  els.fieldList.querySelectorAll("button[data-star]").forEach(btn => {
+    btn.addEventListener("click", () => toggleStarField(btn.dataset.star));
+  });
+}
+
+function toggleStarField(field) {
+  if (state.starredFields.has(field)) state.starredFields.delete(field);
+  else state.starredFields.add(field);
+  // Re-populate every field selector to reflect the new ordering.
+  populateFieldSelects();
 }
 
 function renameField(oldName) {
@@ -5314,15 +5330,24 @@ function deleteField(field) {
 function populateFieldSelects() {
   const fields = state.dataset?.fields || [];
   renderFieldList();
+  // Cycle 180: starred fields rise to the top of every selector, with a ★
+  // prefix in the option label so the favorite status is obvious mid-select.
+  const starredFirst = (arr) => {
+    const starred = arr.filter(f => state.starredFields.has(f));
+    const rest    = arr.filter(f => !state.starredFields.has(f));
+    return [...starred, ...rest];
+  };
+  const sorted = starredFirst(fields);
   for (const sel of [els.selectField, els.selectFieldB, els.derivedA, els.derivedB, els.filterField, els.ctRow, els.ctCol]) {
     const prev = sel.value;
     sel.innerHTML = "";
-    for (const f of fields) {
+    for (const f of sorted) {
       const o = document.createElement("option");
-      o.value = f; o.textContent = f;
+      o.value = f;
+      o.textContent = state.starredFields.has(f) ? `★ ${f}` : f;
       sel.appendChild(o);
     }
-    if (fields.includes(prev)) sel.value = prev;
+    if (sorted.includes(prev)) sel.value = prev;
   }
   if (fields.length >= 1) els.derivedA.value = fields[0];
   if (fields.length >= 2) els.derivedB.value = fields[1];
