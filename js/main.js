@@ -118,6 +118,7 @@ const els = {
   btnPng:       $("btn-export-png"),
   btnSvg:       $("btn-export-svg"),
   btnCsv:       $("btn-export-csv"),
+  btnMeasure:   $("btn-measure"),
   btnTheme:     $("btn-theme"),
 };
 
@@ -727,6 +728,19 @@ els.btnDerived.addEventListener("click", addDerivedField);
 els.btnTemplate.addEventListener("click", downloadTemplate);
 els.btnCsv.addEventListener("click", exportCurrentCsv);
 els.btnTheme.addEventListener("click", toggleTheme);
+
+let measureOn = false;
+els.btnMeasure.addEventListener("click", () => {
+  measureOn = !measureOn;
+  if (measureOn) {
+    mapper.enableMeasureTool();
+    els.btnMeasure.classList.add("btn-primary");
+    setSummary("地図を2点クリックして距離を測定。3点目で再開始。", "muted");
+  } else {
+    mapper.disableMeasureTool();
+    els.btnMeasure.classList.remove("btn-primary");
+  }
+});
 
 function toggleTheme() {
   const next = document.body.classList.toggle("dark");

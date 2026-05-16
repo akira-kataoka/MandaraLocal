@@ -540,6 +540,59 @@ export class MandaraMap {
     setTimeout(() => this.clearHighlight(), 2500);
   }
 
+  /**
+   * Distance-measurement tool. Two clicks add a polyline and a tooltip
+   * displaying the great-circle distance in km/m. Third click resets.
+   * Returns a function that disables the tool.
+   */
+  enableMeasureTool() {
+    if (this._measureCleanup) this._measureCleanup();
+    if (!this._measureLayer) this._measureLayer = L.layerGroup().addTo(this.map);
+    let points = [];
+    const me = this;
+    const container = this.map.getContainer();
+    container.style.cursor = "crosshair";
+    const onClick = (e) => {
+      points.push(e.latlng);
+      L.circleMarker(e.latlng, {
+        radius: 4, color: "#dc2626", fillColor: "#dc2626", fillOpacity: 1, weight: 0,
+      }).addTo(me._measureLayer);
+      if (points.length === 2) {
+        const line = L.polyline(points, { color: "#dc2626", weight: 3, dashArray: "6 4" });
+        line.addTo(me._measureLayer);
+        const km = me.map.distance(points[0], points[1]) / 1000;
+        const label = km < 1 ? `${(km * 1000).toFixed(0)} m` : `${km.toFixed(2)} km`;
+        const mid = L.latLng((points[0].lat + points[1].lat) / 2, (points[0].lng + points[1].lng) / 2);
+        L.marker(mid, {
+          icon: L.divIcon({
+            className: "measure-label",
+            html: `<div class="map-label"><span class="ml-val">${label}</span></div>`,
+            iconSize: null,
+          }),
+          interactive: false,
+        }).addTo(me._measureLayer);
+      } else if (points.length > 2) {
+        me._measureLayer.clearLayers();
+        points = [e.latlng];
+        L.circleMarker(e.latlng, {
+          radius: 4, color: "#dc2626", fillColor: "#dc2626", fillOpacity: 1, weight: 0,
+        }).addTo(me._measureLayer);
+      }
+    };
+    this.map.on("click", onClick);
+    this._measureCleanup = () => {
+      this.map.off("click", onClick);
+      container.style.cursor = "";
+      if (this._measureLayer) this._measureLayer.clearLayers();
+      this._measureCleanup = null;
+    };
+    return this._measureCleanup;
+  }
+
+  disableMeasureTool() {
+    if (this._measureCleanup) this._measureCleanup();
+  }
+
   getMapElement() { return this._mapEl; }
 }
 
