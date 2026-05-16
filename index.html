@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=211" />
+  <link rel="stylesheet" href="css/style.css?v=212" />
 </head>
 <body>
   <header class="app-header">
@@ -583,6 +583,7 @@
         </div>
         <div class="form-row">
           <button id="btn-scatter-clear-overlays" class="btn" style="font-size:11px" title="統計オーバーレイ・参照線・ジッター・LOWESS などを全て解除">⛒ オーバーレイ一括クリア</button>
+          <button id="btn-scatter-clear-pins" class="btn" type="button" style="font-size:11px" hidden title="ピン留めした点を全て解除（Shift+クリックで個別ピン留め）">📌 ピン解除 (0)</button>
         </div>
         <div class="form-row inline">
           <label><input type="checkbox" id="chk-scatter-stats" /> 統計オーバーレイ（重心 + IQR）</label>
@@ -858,7 +859,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=211"></script>
+  <script type="module" src="js/main.js?v=212"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

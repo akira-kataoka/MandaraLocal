@@ -213,6 +213,7 @@ const els = {
   chkScatterLowess: $("chk-scatter-lowess"),
   scatterLabels:   $("scatter-labels"),
   scatterLabelN:   $("scatter-label-n"),
+  btnScatterClearPins: $("btn-scatter-clear-pins"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
   scatterDataCsv:  $("scatter-data-csv"),
@@ -1768,6 +1769,14 @@ els.chkScatterZero?.addEventListener("change", drawScatter);
 els.chkScatterJitter?.addEventListener("change", drawScatter);
 els.chkScatterLowess?.addEventListener("change", drawScatter);
 // Cycle 195: clear every scatter overlay toggle in one click.
+els.btnScatterClearPins?.addEventListener("click", () => {
+  if (!(state.pinnedScatterIds instanceof Set) || state.pinnedScatterIds.size === 0) return;
+  state.pinnedScatterIds.clear();
+  syncScatterPinBtn();
+  drawScatter();
+  setSummary("散布図のピンを解除しました", "muted");
+});
+
 document.getElementById("btn-scatter-clear-overlays")?.addEventListener("click", () => {
   const toggles = [
     "chk-scatter-stats", "chk-scatter-ci", "chk-scatter-pi",
@@ -4849,6 +4858,9 @@ function onDatasetReady(ds, label) {
   // Cycle 201: also reset user column ordering for the same reason.
   state.hiddenColumns = new Set();
   state.columnOrder = null;
+  // Cycle 212: discard any scatter pins from the previous dataset.
+  state.pinnedScatterIds = new Set();
+  syncScatterPinBtn();
   if (els.tableColPicker) els.tableColPicker.hidden = true;
   // pick first numeric field as default
   state.field = ds.fields[0];
@@ -6374,6 +6386,7 @@ function drawScatter() {
     lowess: !!els.chkScatterLowess?.checked,
     labels: els.scatterLabels?.value || "outliers",
     labelTopN: parseInt(els.scatterLabelN?.value || "10", 10) || 10,
+    pinnedIds: state.pinnedScatterIds instanceof Set ? state.pinnedScatterIds : null,
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
     onBrush: (ids) => {
       mapper.markOutliers(ids);
@@ -6441,7 +6454,18 @@ function onScatterHover(id, isHot) {
   if (isHot) mapper.highlightById(id);
   else       mapper.clearHighlight();
 }
-function onScatterClick(id) {
+function onScatterClick(id, ev) {
+  // Cycle 212: Shift+click toggles a "pin" → forces the point's label to
+  // stay on across hovers and redraws. Plain click keeps the original
+  // behaviour (zoom map + scroll table).
+  if (ev && ev.shiftKey) {
+    if (!(state.pinnedScatterIds instanceof Set)) state.pinnedScatterIds = new Set();
+    if (state.pinnedScatterIds.has(id)) state.pinnedScatterIds.delete(id);
+    else state.pinnedScatterIds.add(id);
+    syncScatterPinBtn();
+    drawScatter();
+    return;
+  }
   if (state.level !== "chocho") {
     // Town points have no polygon — skip the map zoom but still scroll the table.
     mapper.zoomToFeature(id);
@@ -6454,6 +6478,12 @@ function onScatterClick(id) {
     setTimeout(() => tr.classList.remove("is-flashed"), 1500);
   }
   return;
+}
+function syncScatterPinBtn() {
+  if (!els.btnScatterClearPins) return;
+  const count = state.pinnedScatterIds?.size || 0;
+  els.btnScatterClearPins.hidden = count === 0;
+  els.btnScatterClearPins.textContent = `📌 ピン解除 (${count})`;
 }
 
 function onMapHover(id, isHot) {

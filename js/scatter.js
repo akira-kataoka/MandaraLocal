@@ -149,7 +149,10 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
         onHover(fid, false);
       });
       if (onSelect) {
-        c.addEventListener("click", () => onSelect(fid));
+        // Cycle 212: pass the mouse event so the caller can branch on Shift
+        // (pin/unpin) vs plain click (map zoom). Older callers ignore the
+        // second arg, so this is backwards compatible.
+        c.addEventListener("click", (e) => onSelect(fid, e));
       }
       c.style.cursor = "pointer";
     }
@@ -237,7 +240,10 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     );
     topNSet = new Set(idxs.slice(0, N));
   }
-  if (names && labelMode !== "none") {
+  // Cycle 212: pinned points are always labelled, regardless of labelMode,
+  // and decorated with a small ring so the user sees what's pinned at a glance.
+  const pinned = opts.pinnedIds instanceof Set ? opts.pinnedIds : null;
+  if (names && (labelMode !== "none" || (pinned && pinned.size))) {
     let xLo, xHi, yLo, yHi;
     if (labelMode === "outliers") {
       const quantile = (arr, p) => {
@@ -271,16 +277,35 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     const overlaps = (a, b) => !(a.x2 < b.x1 || b.x2 < a.x1 || a.y2 < b.y1 || b.y2 < a.y1);
     // Pre-filter candidates so the "outliers" path can keep its original order.
     const candidates = [];
+    const pinRings = [];
     for (let i = 0; i < pairs.length; i++) {
       const [vx, vy, fid, nm] = pairs[i];
       if (!nm) continue;
+      const isPinned = !!(pinned && fid != null && pinned.has(fid));
+      const cx = pxAt(sx(vx)), cy = pyAt(sy(vy));
+      if (isPinned) {
+        // Always queue a label *and* a ring for pinned points.
+        pinRings.push([cx, cy]);
+        candidates.push([cx, cy, nm]);
+        continue;
+      }
+      if (labelMode === "none") continue;
       if (labelMode === "outliers") {
         const isOutlier = vx < xLo || vx > xHi || vy < yLo || vy > yHi;
         if (!isOutlier) continue;
       } else if (topNSet && !topNSet.has(i)) {
         continue;
       }
-      candidates.push([pxAt(sx(vx)), pyAt(sy(vy)), nm]);
+      candidates.push([cx, cy, nm]);
+    }
+    // Draw pin rings underneath labels.
+    for (const [cx, cy] of pinRings) {
+      const ring = el("circle", {
+        cx: cx.toFixed(1), cy: cy.toFixed(1), r: 6,
+        fill: "none", stroke: "#dc2626", "stroke-width": "1.5",
+        "stroke-dasharray": "2,1.5", "pointer-events": "none",
+      });
+      labels.appendChild(ring);
     }
     for (const [cx, cy, nm] of candidates) {
       const approxW = Math.max(8, nm.length * fontSize * 0.6);
