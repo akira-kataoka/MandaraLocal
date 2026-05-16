@@ -79,6 +79,15 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
   const x = (i) => PAD.left + (i / k) * innerW;
   const y = (c) => PAD.top + innerH - (c / maxCount) * innerH;
 
+  // Cycle 288: axis font size shared with scatter (Cycle 287).
+  const fsKey = opts.axisFontSize === "S" || opts.axisFontSize === "L" ? opts.axisFontSize : "M";
+  const tickFs = fsKey === "S" ? 7 : fsKey === "L" ? 11 : 9;
+  const labelFs = tickFs + 1;
+  const tickText = (xc, yc, str, anchor) => {
+    const t = text(xc, yc, str, anchor);
+    t.setAttribute("font-size", String(tickFs));
+    return t;
+  };
   // Axes lines
   const axis = el("g", { class: "axis" });
   axis.appendChild(line(PAD.left, H - PAD.bottom, W - PAD.right, H - PAD.bottom));
@@ -89,15 +98,18 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
     axis.appendChild(line(tx, H - PAD.bottom, tx, H - PAD.bottom + 3));
     const sval = sMin + f * (sMax - sMin);
     const raw = logX ? Math.pow(10, sval) : sval;
-    axis.appendChild(text(tx, H - PAD.bottom + 12, formatShort(raw), "middle"));
+    axis.appendChild(tickText(tx, H - PAD.bottom + 12, formatShort(raw), "middle"));
   }
   // y ticks at 0 and maxCount
   for (const c of [0, maxCount]) {
     const ty = y(c);
     axis.appendChild(line(PAD.left - 3, ty, PAD.left, ty));
-    axis.appendChild(text(PAD.left - 5, ty + 3, String(c), "end"));
+    axis.appendChild(tickText(PAD.left - 5, ty + 3, String(c), "end"));
   }
-  axis.appendChild(text(W / 2, H - 4, label || "", "middle"));
+  const xLabelEl = text(W / 2, H - 4, label || "", "middle");
+  xLabelEl.setAttribute("font-size", String(labelFs));
+  xLabelEl.setAttribute("font-weight", "600");
+  axis.appendChild(xLabelEl);
   svgEl.appendChild(axis);
 
   // Class breaks overlay: shaded bands behind the bars showing how the choropleth

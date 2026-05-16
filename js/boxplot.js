@@ -15,7 +15,7 @@ const PAD = { top: 12, right: 14, bottom: 26, left: 14 };
  * @param values raw numbers
  * @param label  x-axis caption (field name)
  */
-export function renderBoxplot(svgEl, values, label) {
+export function renderBoxplot(svgEl, values, label, opts = {}) {
   svgEl.innerHTML = "";
   const v = values.filter(Number.isFinite);
   const n = v.length;
@@ -88,11 +88,15 @@ export function renderBoxplot(svgEl, values, label) {
   meanLab.textContent = "μ";
   svgEl.appendChild(meanLab);
 
+  // Cycle 288: axis font size shared with scatter (Cycle 287).
+  const fsKey = opts.axisFontSize === "S" || opts.axisFontSize === "L" ? opts.axisFontSize : "M";
+  const tickFs = fsKey === "S" ? 7 : fsKey === "L" ? 11 : 9;
+  const labelFs = tickFs + 1;
   // Axis tick labels: min, median, max
   for (const [val, anchor] of [[min, "start"], [med, "middle"], [max, "end"]]) {
     const t = make("text", {
       x: x(val), y: H - 6, "text-anchor": anchor,
-      "font-size": 9, fill: "#475569", "font-family": "sans-serif",
+      "font-size": tickFs, fill: "#475569", "font-family": "sans-serif",
     });
     t.textContent = formatNum(val);
     svgEl.appendChild(t);
@@ -101,7 +105,7 @@ export function renderBoxplot(svgEl, values, label) {
   if (label) {
     const lbl = make("text", {
       x: W / 2, y: PAD.top - 2, "text-anchor": "middle",
-      "font-size": 10, fill: "#1e293b", "font-weight": 600, "font-family": "sans-serif",
+      "font-size": labelFs, fill: "#1e293b", "font-weight": 600, "font-family": "sans-serif",
     });
     lbl.textContent = label;
     svgEl.appendChild(lbl);
