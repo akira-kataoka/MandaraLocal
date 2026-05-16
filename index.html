@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=152" />
+  <link rel="stylesheet" href="css/style.css?v=153" />
 </head>
 <body>
   <header class="app-header">
@@ -536,6 +536,9 @@
         <div class="form-row inline">
           <label><input type="checkbox" id="chk-scatter-pi" /> 95% 予測区間バンド（PI: 個別予測）</label>
         </div>
+        <div class="form-row inline">
+          <label><input type="checkbox" id="chk-scatter-yx" /> Y=X 参照線（45度線・予測 vs 実測比較）</label>
+        </div>
         <div class="form-row">
           <label for="scatter-labels">ラベル</label>
           <select id="scatter-labels">
@@ -724,7 +727,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=152"></script>
+  <script type="module" src="js/main.js?v=153"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

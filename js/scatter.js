@@ -236,6 +236,23 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     svgEl.appendChild(labels);
   }
 
+  // Y=X reference line (Cycle 153) — clipped to the overlap of the X and Y
+  // ranges. Drawn early so the regression line stays on top.
+  if (opts.yEqualsX) {
+    // Work in *scaled* (log-aware) coordinates: when log axes are active we
+    // want the visual line to remain straight, so we project log(x)=log(y).
+    const lo = Math.max(xMin, yMin);
+    const hi = Math.min(xMax, yMax);
+    if (hi > lo) {
+      const ref = el("line", {
+        x1: pxAt(lo), y1: pyAt(lo),
+        x2: pxAt(hi), y2: pyAt(hi),
+        stroke: "#94a3b8", "stroke-width": 1, "stroke-dasharray": "3,2",
+      });
+      svgEl.appendChild(ref);
+    }
+  }
+
   // OLS regression line in the *scaled* coordinate system so it stays
   // visually straight even on log axes. Pearson r is still on raw values.
   const r = pearson(x, y);
