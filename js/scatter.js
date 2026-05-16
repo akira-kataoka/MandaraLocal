@@ -252,6 +252,8 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   // Cycle 212: pinned points are always labelled, regardless of labelMode,
   // and decorated with a small ring so the user sees what's pinned at a glance.
   const pinned = opts.pinnedIds instanceof Set ? opts.pinnedIds : null;
+  // Cycle 271: insertion-order array → quick #index lookup for pin numbering.
+  const pinnedArr = pinned ? Array.from(pinned) : null;
   // Cycle 235: pin ring + bold label color is user-configurable (default red).
   const pinColor = typeof opts.pinColor === "string" && /^#[0-9a-f]{6}$/i.test(opts.pinColor)
     ? opts.pinColor : "#dc2626";
@@ -298,8 +300,10 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       if (isPinned) {
         // Always queue a label *and* a ring for pinned points.
         // Cycle 231: tag the entry so the renderer can paint pinned labels red.
-        pinRings.push([cx, cy]);
-        candidates.push([cx, cy, nm, true]);
+        // Cycle 271: prefix the label with its 1-indexed pin number.
+        const pinNo = pinnedArr ? pinnedArr.indexOf(fid) + 1 : 0;
+        pinRings.push([cx, cy, pinNo]);
+        candidates.push([cx, cy, pinNo > 0 ? `${pinNo}. ${nm}` : nm, true]);
         continue;
       }
       if (labelMode === "none") continue;
@@ -312,13 +316,24 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       candidates.push([cx, cy, nm, false]);
     }
     // Draw pin rings underneath labels.
-    for (const [cx, cy] of pinRings) {
+    for (const [cx, cy, pinNo] of pinRings) {
       const ring = el("circle", {
-        cx: cx.toFixed(1), cy: cy.toFixed(1), r: 6,
-        fill: "none", stroke: pinColor, "stroke-width": "1.5",
+        cx: cx.toFixed(1), cy: cy.toFixed(1), r: 7,
+        fill: "#ffffff", "fill-opacity": "0.85",
+        stroke: pinColor, "stroke-width": "1.5",
         "stroke-dasharray": "2,1.5", "pointer-events": "none",
       });
       labels.appendChild(ring);
+      // Cycle 271: show the 1-indexed pin order at the center of the ring.
+      if (pinNo) {
+        const numText = el("text", {
+          x: cx.toFixed(1), y: (cy + 2).toFixed(1),
+          "text-anchor": "middle", "font-size": "7", "font-weight": "700",
+          fill: pinColor, "pointer-events": "none",
+        });
+        numText.textContent = String(pinNo);
+        labels.appendChild(numText);
+      }
     }
     // Cycle 229: label placement strategy.
     //   "auto"    — original 8-direction collision-avoidance (default)
