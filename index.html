@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=158" />
+  <link rel="stylesheet" href="css/style.css?v=159" />
 </head>
 <body>
   <header class="app-header">
@@ -634,7 +634,14 @@
 
       <section class="panel" id="panel-corrmatrix" hidden>
         <h2>7b. 相関行列（全フィールド対）</h2>
-        <div class="hint">全フィールド対の Pearson r。クリック → 散布図にロード</div>
+        <div class="hint">全フィールド対の相関係数。クリック → 散布図にロード</div>
+        <div class="form-row">
+          <label for="corr-method">手法</label>
+          <select id="corr-method">
+            <option value="pearson" selected>Pearson r（線形相関）</option>
+            <option value="spearman">Spearman ρ（順位相関・非線形対応）</option>
+          </select>
+        </div>
         <div class="form-row">
           <button id="corr-run" class="btn btn-primary">行列を計算</button>
           <button id="corr-csv" class="btn" disabled style="margin-left:auto">CSV出力</button>
@@ -735,7 +742,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=158"></script>
+  <script type="module" src="js/main.js?v=159"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

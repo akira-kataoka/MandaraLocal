@@ -217,6 +217,7 @@ const els = {
   panelCorrMatrix: $("panel-corrmatrix"),
   corrRun:         $("corr-run"),
   corrCsv:         $("corr-csv"),
+  corrMethod:      $("corr-method"),
   corrResult:      $("corr-result"),
   chkScatterLogX: $("chk-scatter-logx"),
   chkScatterLogY: $("chk-scatter-logy"),
@@ -1491,6 +1492,7 @@ function runCorrelationMatrix() {
   if (!state.dataset || state.dataset.fields.length < 2) return;
   const fields = state.dataset.fields;
   const N = fields.length;
+  const method = els.corrMethod?.value || "pearson";
   // Pre-extract value arrays once
   const cols = fields.map(f => state.dataset.rows.map(r => r.values[f]));
   const mat = Array.from({ length: N }, () => new Array(N).fill(null));
@@ -1502,11 +1504,18 @@ function runCorrelationMatrix() {
         const a = cols[i][k], b = cols[j][k];
         if (Number.isFinite(a) && Number.isFinite(b)) { xs.push(a); ys.push(b); }
       }
-      const r = (xs.length >= 3) ? pearsonR(xs, ys) : null;
+      let r = null;
+      if (xs.length >= 3) {
+        if (method === "spearman") {
+          r = pearsonR(rankArray(xs), rankArray(ys));
+        } else {
+          r = pearsonR(xs, ys);
+        }
+      }
       mat[i][j] = mat[j][i] = r;
     }
   }
-  state.corrMatrix = { fields, matrix: mat };
+  state.corrMatrix = { fields, matrix: mat, method };
   // Render heatmap
   const cellFor = (r) => {
     if (r == null) return { bg: "#e2e8f0", txt: "—" };
@@ -1527,7 +1536,8 @@ function runCorrelationMatrix() {
       } else {
         const c = cellFor(mat[i][j]);
         const cls = (mat[i][j] != null && Math.abs(mat[i][j]) >= 0.7) ? "corr-strong" : "";
-        html += `<td class="${cls}" style="background:${c.bg}" data-i="${i}" data-j="${j}" title="${escapeHtmlText(fields[i])} × ${escapeHtmlText(fields[j])} : r=${c.txt}">${c.txt}</td>`;
+        const sym = method === "spearman" ? "ρ" : "r";
+        html += `<td class="${cls}" style="background:${c.bg}" data-i="${i}" data-j="${j}" title="${escapeHtmlText(fields[i])} × ${escapeHtmlText(fields[j])} : ${sym}=${c.txt}">${c.txt}</td>`;
       }
     }
     html += `</tr>`;
@@ -1548,6 +1558,23 @@ function runCorrelationMatrix() {
   });
   if (els.corrCsv) els.corrCsv.disabled = false;
 }
+// Rank an array (1-based, ties get the average rank). Used for Spearman ρ
+// (Cycle 159).
+function rankArray(arr) {
+  const n = arr.length;
+  const idx = arr.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0]);
+  const ranks = new Array(n);
+  let i = 0;
+  while (i < n) {
+    let j = i;
+    while (j + 1 < n && idx[j + 1][0] === idx[i][0]) j++;
+    const avg = (i + j) / 2 + 1;
+    for (let k = i; k <= j; k++) ranks[idx[k][1]] = avg;
+    i = j + 1;
+  }
+  return ranks;
+}
+
 function pearsonR(xs, ys) {
   const n = xs.length;
   let mx = 0, my = 0;
@@ -2567,7 +2594,7 @@ els.corrCsv?.addEventListener("click", () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `correlation_matrix_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `correlation_matrix_${cm.method || "pearson"}_${new Date().toISOString().slice(0,10)}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   setSummary(`相関行列を ${a.download} として保存しました（${cm.fields.length}×${cm.fields.length}）`, "success");
