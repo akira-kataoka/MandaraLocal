@@ -88,6 +88,15 @@ export function renderLegend(container, breaks, colors, options = {}) {
       c.textContent = ` (${options.classCounts[i]}件)`;
       c.style.color = "var(--muted)";
       c.style.marginLeft = "4px";
+      if (typeof options.onClassClick === "function") {
+        c.style.cursor = "pointer";
+        c.title = "クリックで該当地域をクリップボードへコピー";
+        c.style.textDecoration = "underline dotted";
+        c.addEventListener("click", (e) => {
+          e.stopPropagation();
+          options.onClassClick(i);
+        });
+      }
       label.appendChild(c);
     }
     if (typeof options.onBreakEdit === "function") {

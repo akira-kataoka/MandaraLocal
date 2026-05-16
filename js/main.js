@@ -4699,6 +4699,7 @@ function refresh() {
     onClassHover: (idx, ev) => {
       if (ev.type === "mouseenter") mapper.highlightByClass(idx);
     },
+    onClassClick: (idx) => copyClassMembers(idx),
     onColorPick: (idx, hex) => {
       if (!state.customColors[state.palette]) state.customColors[state.palette] = {};
       state.customColors[state.palette][idx] = hex;
@@ -5304,6 +5305,30 @@ function exportAllStatsCsv() {
   setSummary(`${state.dataset.fields.length}列の基本統計を ${a.download} として保存しました`, "success");
 }
 els.btnStatsExport?.addEventListener("click", exportAllStatsCsv);
+
+// Copy region list from a single class to clipboard (Cycle 188). Lets the
+// user drill into "which 5 prefectures fall into the top class".
+async function copyClassMembers(classIdx) {
+  if (!state.dataset || !state.valueMap || !state.breaks) return;
+  const members = [];
+  for (const r of state.dataset.rows) {
+    const v = state.valueMap.get(r.key);
+    if (!Number.isFinite(v)) continue;
+    const idx = classifyValue(v, state.breaks);
+    if (idx === classIdx) members.push({ name: r.name || `#${r.key}`, value: v });
+  }
+  if (members.length === 0) {
+    setSummary(`第${classIdx + 1}階級に該当する地域はありません`, "warn"); return;
+  }
+  members.sort((a, b) => b.value - a.value);
+  const tsv = members.map(m => `${m.name}\t${m.value}`).join("\n");
+  try {
+    await navigator.clipboard.writeText(tsv);
+    setSummary(`第${classIdx + 1}階級の ${members.length} 件をクリップボードにコピー`, "success");
+  } catch (e) {
+    setSummary("コピー失敗: " + e.message, "error");
+  }
+}
 
 function suggestClassMethod(values) {
   if (!els.suggestMethod) return;
