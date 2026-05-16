@@ -4284,25 +4284,29 @@ function buildAnalysisMarkdown() {
 
   // Cycle 239: list pinned scatter points so reviewers see which regions the
   // analyst flagged. Up to 20 rows; overflow collapsed into "他N件".
+  // Cycle 272: respect Set insertion order so the table's # column matches
+  // the scatter ring numbers (Cycle 271).
   const pinned = state.pinnedScatterIds;
   if (pinned instanceof Set && pinned.size && state.dataset) {
     const xf = state.scatterStats?.xf;
     const yf = state.scatterStats?.yf;
     const hasXY = xf && yf;
-    const rows = state.dataset.rows.filter(r => pinned.has(r.key));
+    const rowsByKey = new Map(state.dataset.rows.map(r => [r.key, r]));
+    const pinnedArr = Array.from(pinned);
+    const rows = pinnedArr.map(id => rowsByKey.get(id)).filter(Boolean);
     lines.push(`## ピン留め地域 (${rows.length} 件)`);
     if (hasXY) {
-      lines.push(`| 地域 | ${xf} | ${yf} |`);
-      lines.push(`|---|---:|---:|`);
+      lines.push(`| # | 地域 | ${xf} | ${yf} |`);
+      lines.push(`|---:|---|---:|---:|`);
       const shown = rows.slice(0, 20);
-      for (const r of shown) {
-        lines.push(`| ${r.name || ("#" + r.key)} | ${fmt(r.values[xf])} | ${fmt(r.values[yf])} |`);
-      }
-      if (rows.length > 20) lines.push(`| _他 ${rows.length - 20} 件_ | | |`);
+      shown.forEach((r, i) => {
+        lines.push(`| ${i + 1} | ${r.name || ("#" + r.key)} | ${fmt(r.values[xf])} | ${fmt(r.values[yf])} |`);
+      });
+      if (rows.length > 20) lines.push(`| | _他 ${rows.length - 20} 件_ | | |`);
     } else {
-      const list = rows.slice(0, 20).map(r => r.name || ("#" + r.key));
-      const overflow = rows.length > 20 ? ` …他 ${rows.length - 20} 件` : "";
-      lines.push(`- ${list.join(", ")}${overflow}`);
+      const list = rows.slice(0, 20).map((r, i) => `${i + 1}. ${r.name || ("#" + r.key)}`);
+      const overflow = rows.length > 20 ? `, …他 ${rows.length - 20} 件` : "";
+      lines.push(list.join(", ") + overflow);
     }
     lines.push("");
   }
@@ -4424,7 +4428,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "271"; // bumped each polish cycle
+const APP_VERSION = "272"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -7613,17 +7617,19 @@ els.btnScatterPinsMd?.addEventListener("click", async () => {
   if (!navigator.clipboard?.writeText) {
     setSummary("お使いのブラウザはクリップボード書込みに未対応です", "warn"); return;
   }
-  const rows = state.dataset.rows.filter(r => pinned.has(r.key));
+  // Cycle 272: keep pin order so the # column matches scatter ring numbers.
+  const rowsByKey = new Map(state.dataset.rows.map(r => [r.key, r]));
+  const rows = Array.from(pinned).map(id => rowsByKey.get(id)).filter(Boolean);
   const xf = state.scatterStats?.xf;
   const yf = state.scatterStats?.yf;
   const lines = [];
   lines.push(`# ピン留め地域 (${rows.length} 件)`);
   if (xf && yf) {
-    lines.push(`| 地域 | ${xf} | ${yf} |`);
-    lines.push(`|---|---:|---:|`);
-    for (const r of rows) lines.push(`| ${r.name || ("#" + r.key)} | ${formatNum(r.values[xf])} | ${formatNum(r.values[yf])} |`);
+    lines.push(`| # | 地域 | ${xf} | ${yf} |`);
+    lines.push(`|---:|---|---:|---:|`);
+    rows.forEach((r, i) => lines.push(`| ${i + 1} | ${r.name || ("#" + r.key)} | ${formatNum(r.values[xf])} | ${formatNum(r.values[yf])} |`));
   } else {
-    for (const r of rows) lines.push(`- ${r.name || ("#" + r.key)}`);
+    rows.forEach((r, i) => lines.push(`${i + 1}. ${r.name || ("#" + r.key)}`));
   }
   const md = lines.join("\n");
   try {
