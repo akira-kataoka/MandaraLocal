@@ -167,6 +167,7 @@ const els = {
   btnMesh:      $("btn-mesh"),
   selectMeshLevel: $("select-mesh-level"),
   btnDraw:      $("btn-draw"),
+  btnClearPins: $("btn-clear-pins"),
   inputGeocode: $("input-geocode"),
   btnTheme:     $("btn-theme"),
   selectScene:  $("select-scene"),
@@ -2191,6 +2192,14 @@ function onMapHover(id, isHot) {
 }
 
 mapper.onFeatureHover(onMapHover);
+
+mapper.onPinChange((ids) => {
+  els.btnClearPins.hidden = ids.length === 0;
+  if (ids.length) {
+    setSummary(`📍 ピン留め ${ids.length}件 (Shift+クリックでON/OFF)`, "muted");
+  }
+});
+els.btnClearPins.addEventListener("click", () => mapper.clearPins());
 
 const fdDiv = document.getElementById("feature-detail");
 const fdName = document.getElementById("fd-name");

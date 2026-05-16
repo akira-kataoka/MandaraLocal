@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=72" />
+  <link rel="stylesheet" href="css/style.css?v=73" />
 </head>
 <body>
   <header class="app-header">
@@ -36,6 +36,7 @@
              style="width:180px;font-size:12px;padding:4px 8px;" title="国土地理院 AddressSearch APIで住所→座標を検索" />
       <button id="btn-draw" class="btn" title="自由描画 (ライン・ポリゴン・マーカー)">✏ 描画</button>
       <button id="btn-mesh" class="btn" title="日本標準地域メッシュを表示">🔲 メッシュ</button>
+      <button id="btn-clear-pins" class="btn" title="Shift+クリックで地域をピン留めできます。ここで全解除" hidden>📍 解除</button>
       <select id="select-mesh-level" style="font-size:12px;padding:4px 6px;">
         <option value="1">1次 (80km)</option>
         <option value="2" selected>2次 (10km)</option>
@@ -466,7 +467,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=72"></script>
+  <script type="module" src="js/main.js?v=73"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

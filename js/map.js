@@ -112,8 +112,13 @@ export class MandaraMap {
       if (this._hoverHandler) this._hoverHandler(feature.properties.id, true);
     });
     lyr.on("mousemove", (e) => this._showTooltip(feature, e));
-    lyr.on("click", () => {
-      if (this._clickHandler) this._clickHandler(feature.properties.id, feature.properties);
+    lyr.on("click", (e) => {
+      const shift = e.originalEvent && (e.originalEvent.shiftKey || e.originalEvent.metaKey);
+      if (shift) {
+        this.togglePin(feature.properties.id);
+      } else if (this._clickHandler) {
+        this._clickHandler(feature.properties.id, feature.properties);
+      }
     });
     lyr.on("mouseout", () => {
       // Revert outline only — never call resetStyle() here, that would
@@ -913,6 +918,38 @@ export class MandaraMap {
   }
   onFeatureClick(handler) {
     this._clickHandler = handler;
+  }
+
+  // ----- Pin set (Shift+Click) -----
+  togglePin(id) {
+    if (!this._pinnedIds) this._pinnedIds = new Set();
+    if (this._pinnedIds.has(id)) this._pinnedIds.delete(id);
+    else this._pinnedIds.add(id);
+    this._applyPinStyles();
+    if (this._pinChangeHandler) this._pinChangeHandler([...this._pinnedIds]);
+  }
+  clearPins() {
+    if (this._pinnedIds) this._pinnedIds.clear();
+    this._applyPinStyles();
+    if (this._pinChangeHandler) this._pinChangeHandler([]);
+  }
+  onPinChange(handler) { this._pinChangeHandler = handler; }
+  _applyPinStyles() {
+    if (!this.layer) return;
+    const pins = this._pinnedIds || new Set();
+    this.layer.eachLayer((lyr) => {
+      const id = lyr.feature.properties.id;
+      const isPin = pins.has(id);
+      const info = this._lookupFn ? this._lookupFn(id) : null;
+      lyr.setStyle({
+        weight: isPin ? 3 : 0.6,
+        color: isPin ? "#9333ea" : "#475569",
+        fillColor: info ? info.color : "#e5e7eb",
+        fillOpacity: 0.88,
+      });
+      if (isPin && lyr.bringToFront) lyr.bringToFront();
+    });
+    this.symbolLayer.eachLayer(s => s.bringToFront && s.bringToFront());
   }
 
   /**
