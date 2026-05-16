@@ -6014,6 +6014,26 @@ const fdDiv = document.getElementById("feature-detail");
 const fdName = document.getElementById("fd-name");
 const fdTable = document.getElementById("fd-table");
 document.getElementById("fd-close")?.addEventListener("click", () => fdDiv.hidden = true);
+// Copy the detail panel's contents to clipboard as TSV (Cycle 194).
+document.getElementById("fd-copy")?.addEventListener("click", async () => {
+  const name = fdName.textContent || "";
+  const lines = [name];
+  for (const row of fdTable.querySelectorAll("tr")) {
+    const cells = row.querySelectorAll("td");
+    if (cells.length === 2) {
+      lines.push(`${cells[0].textContent}\t${cells[1].textContent}`);
+    }
+  }
+  if (lines.length <= 1) {
+    setSummary("コピー対象がありません", "warn"); return;
+  }
+  try {
+    await navigator.clipboard.writeText(lines.join("\n"));
+    setSummary(`「${name}」の詳細をクリップボードへコピー`, "success");
+  } catch (e) {
+    setSummary("コピー失敗: " + e.message, "error");
+  }
+});
 mapper.onFeatureClick((id, props) => {
   if (!state.dataset) {
     fdName.textContent = props?.nam_ja || props?.name_jp || props?.name_en || "#" + id;

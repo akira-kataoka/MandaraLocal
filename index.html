@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=193" />
+  <link rel="stylesheet" href="css/style.css?v=194" />
 </head>
 <body>
   <header class="app-header">
@@ -782,6 +782,7 @@
         <div id="feature-detail" class="feature-detail" hidden>
           <div class="fd-head">
             <strong id="fd-name"></strong>
+            <button id="fd-copy" title="この詳細をクリップボードへコピー（TSV）" style="font-size:14px">📋</button>
             <button id="fd-close" title="閉じる">×</button>
           </div>
           <table id="fd-table"></table>
@@ -816,7 +817,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=193"></script>
+  <script type="module" src="js/main.js?v=194"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
