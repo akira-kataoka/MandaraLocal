@@ -4385,6 +4385,8 @@ window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     if (k === "m") { e.preventDefault(); els.btnCopyResults?.click(); }
     else if (k === "t") { e.preventDefault(); els.btnCopyResultsTxt?.click(); }
+    // Cycle 279: Ctrl/⌘+Shift+S triggers scene save (overrides browser save).
+    else if (k === "s") { e.preventDefault(); els.btnSceneSave?.click(); }
   }
   // Cycle 266: Shift+P zooms the map to fit all pinned features.
   if (!inField && e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === "P" || e.key === "p")) {
@@ -4428,7 +4430,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "278"; // bumped each polish cycle
+const APP_VERSION = "279"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -4452,6 +4454,7 @@ function showHelpModal() {
       <strong>キーボード</strong><span></span>
       <code>Ctrl/⌘+Shift+M</code><span>分析結果を Markdown でクリップボードへ</span>
       <code>Ctrl/⌘+Shift+T</code><span>同結果を平文（Word/メール向け）で</span>
+      <code>Ctrl/⌘+Shift+S</code><span>現在の設定をシーンとして保存</span>
       <code>?</code><span>このヘルプを表示</span>
       <code>Esc</code><span>ヘルプ / QR モーダルを閉じる</span>
       <code>Shift+Esc</code><span>ピン留めを全解除</span>
