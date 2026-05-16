@@ -2005,6 +2005,8 @@ els.btnScatterPinBrush?.addEventListener("click", () => {
   drawScatter();
   if (typeof refreshTable === "function") refreshTable();
   mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
+  // Cycle 261: brush bbox served its purpose once promoted to pins.
+  mapper.clearBrushBounds?.();
   setSummary(`brush 選択 ${sel.size} 件中 ${added} 件を新規ピン留め（計 ${state.pinnedScatterIds.size} 件）`, "success");
 });
 
@@ -4335,6 +4337,7 @@ els.btnViewReset?.addEventListener("click", () => {
   if (typeof syncScatterPinBtn === "function") syncScatterPinBtn();
   if (typeof syncBrushPinBtn === "function") syncBrushPinBtn();
   mapper.clearPinned?.();
+  mapper.clearBrushBounds?.();
   // Attribute filter
   if (Array.isArray(filterStack)) filterStack.length = 0;
   state.filteredKeys = null;
@@ -4377,7 +4380,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "260"; // bumped each polish cycle
+const APP_VERSION = "261"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -5525,6 +5528,7 @@ function onDatasetReady(ds, label) {
   syncScatterPinBtn();
   if (typeof syncBrushPinBtn === "function") syncBrushPinBtn();
   mapper.clearPinned?.();
+  mapper.clearBrushBounds?.();
   if (els.tableColPicker) els.tableColPicker.hidden = true;
   // pick first numeric field as default
   state.field = ds.fields[0];
@@ -7176,6 +7180,8 @@ function drawScatter() {
       // into permanent pins via the dedicated button.
       state.lastBrushIds = new Set(ids);
       syncBrushPinBtn();
+      // Cycle 261: also outline the geographical bbox of the selection.
+      mapper.showBrushBounds?.(state.lastBrushIds);
       setSummary(`${ids.size} 件を地図でハイライト中（散布図 brush 選択）`, "success");
     },
     sizeFor,

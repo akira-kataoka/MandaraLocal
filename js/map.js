@@ -1063,6 +1063,46 @@ export class MandaraMap {
   }
 
   /**
+   * Cycle 261: draw a translucent rectangle over the geographical bounding
+   * box of an arbitrary id set (e.g. scatter brush selection). The rectangle
+   * lives on its own layer so markOutliers / pinLayer stay independent.
+   */
+  showBrushBounds(idSet) {
+    if (!this._brushBoundsLayer) {
+      this._brushBoundsLayer = L.layerGroup().addTo(this.map);
+    }
+    this._brushBoundsLayer.clearLayers();
+    if (!idSet || !idSet.size) return false;
+    const bounds = L.latLngBounds([]);
+    let count = 0;
+    if (this.layer) {
+      this.layer.eachLayer((lyr) => {
+        const id = lyr.feature?.properties?.id;
+        if (id == null || !idSet.has(id)) return;
+        try { bounds.extend(lyr.getBounds()); count++; } catch {}
+      });
+    }
+    if (this.symbolLayer) {
+      this.symbolLayer.eachLayer((s) => {
+        const tid = s.feature?.properties?.id ?? s.options?._townId;
+        if (tid != null && idSet.has(tid) && typeof s.getLatLng === "function") {
+          bounds.extend(s.getLatLng()); count++;
+        }
+      });
+    }
+    if (!count) return false;
+    L.rectangle(bounds, {
+      color: "#7c3aed", weight: 1.5,
+      fillColor: "#7c3aed", fillOpacity: 0.08,
+      dashArray: "4 3", interactive: false,
+    }).addTo(this._brushBoundsLayer);
+    return true;
+  }
+  clearBrushBounds() {
+    this._brushBoundsLayer?.clearLayers();
+  }
+
+  /**
    * Cycle 243: zoom (or pan) the map to fit all currently pinned features.
    * For 0 pins: no-op. For 1: zoomToFeature so detail is visible. For >=2:
    * fit a LatLngBounds across all features + town points.
