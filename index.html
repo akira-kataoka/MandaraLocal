@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=154" />
+  <link rel="stylesheet" href="css/style.css?v=155" />
 </head>
 <body>
   <header class="app-header">
@@ -468,6 +468,7 @@
         <svg id="histogram-svg" viewBox="0 0 280 180" preserveAspectRatio="xMidYMid meet"></svg>
         <div class="form-row">
           <button id="hist-png" class="btn">💾 PNGで保存</button>
+          <button id="hist-svg" class="btn">SVGで保存</button>
         </div>
       </section>
 
@@ -475,6 +476,9 @@
         <h2>6e. ボックスプロット</h2>
         <div class="hint">5数要約 (min / Q1 / median / Q3 / max) と外れ値を視覚化</div>
         <svg id="boxplot-svg" viewBox="0 0 280 140" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="form-row">
+          <button id="box-svg" class="btn">SVGで保存</button>
+        </div>
       </section>
 
       <section class="panel" id="panel-table" hidden>
@@ -559,6 +563,7 @@
         <svg id="scatter-svg" viewBox="0 0 280 220" preserveAspectRatio="xMidYMid meet"></svg>
         <div class="form-row">
           <button id="scatter-png" class="btn">💾 PNGで保存</button>
+          <button id="scatter-svg-btn" class="btn">SVGで保存</button>
           <button id="scatter-csv" class="btn" disabled style="margin-left:auto">統計CSV出力</button>
         </div>
       </section>
@@ -727,7 +732,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=154"></script>
+  <script type="module" src="js/main.js?v=155"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

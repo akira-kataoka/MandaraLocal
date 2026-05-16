@@ -1283,6 +1283,36 @@ async function svgToPng(svg, filename) {
 els.histPng?.addEventListener("click", () => svgToPng(els.histSvg, `histogram_${(state.field || "data").replace(/\s+/g, "_")}.png`));
 els.scatterPng?.addEventListener("click", () => svgToPng(els.scatterSvg, `scatter_${(els.scatterX.value || "x")}_vs_${(els.scatterY.value || "y")}.png`));
 
+// SVG download (Cycle 155): vector export for Illustrator/Inkscape editing.
+function downloadSvg(svgEl, filename) {
+  if (!svgEl) return;
+  const clone = svgEl.cloneNode(true);
+  // Ensure width/height attributes (some SVGs only have viewBox)
+  const vb = clone.getAttribute("viewBox");
+  if (vb) {
+    const parts = vb.split(/\s+/).map(Number);
+    if (parts.length === 4) {
+      if (!clone.getAttribute("width"))  clone.setAttribute("width",  String(parts[2]));
+      if (!clone.getAttribute("height")) clone.setAttribute("height", String(parts[3]));
+    }
+  }
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+  const xml = new XMLSerializer().serializeToString(clone);
+  const body = `<?xml version="1.0" encoding="UTF-8"?>\n${xml}`;
+  const blob = new Blob([body], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`${filename} を保存しました`, "success");
+}
+const safeName = (v) => String(v || "data").replace(/[\s\\/:*?"<>|]+/g, "_");
+$("hist-svg")?.addEventListener("click", () => downloadSvg(els.histSvg, `histogram_${safeName(state.field)}.svg`));
+$("scatter-svg-btn")?.addEventListener("click", () => downloadSvg(els.scatterSvg, `scatter_${safeName(els.scatterX.value)}_vs_${safeName(els.scatterY.value)}.svg`));
+$("box-svg")?.addEventListener("click", () => downloadSvg(els.boxplotSvg, `boxplot_${safeName(state.field)}.svg`));
+
 function runCrossTab() {
   if (!state.dataset) return;
   const rowF = els.ctRow.value, colF = els.ctCol.value;
