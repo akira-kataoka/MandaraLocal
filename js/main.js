@@ -119,6 +119,8 @@ const els = {
   panelScatter: $("panel-scatter"),
   scatterX:     $("scatter-x"),
   scatterY:     $("scatter-y"),
+  chkScatterLogX: $("chk-scatter-logx"),
+  chkScatterLogY: $("chk-scatter-logy"),
   scatterCorr:  $("scatter-correlation"),
   scatterSvg:   $("scatter-svg"),
   tooltip:      $("tooltip"),
@@ -134,6 +136,7 @@ const els = {
   btnCsv:       $("btn-export-csv"),
   btnKml:       $("btn-export-kml"),
   btnGeoJson:   $("btn-export-geojson"),
+  btnPdf:       $("btn-export-pdf"),
   btnMeasure:   $("btn-measure"),
   btnArea:      $("btn-area"),
   btnBuffer:    $("btn-buffer"),
@@ -771,9 +774,42 @@ function clearAttributeFilter() {
 
 els.scatterX.addEventListener("change", drawScatter);
 els.scatterY.addEventListener("change", drawScatter);
+els.chkScatterLogX.addEventListener("change", drawScatter);
+els.chkScatterLogY.addEventListener("change", drawScatter);
 els.btnDerived.addEventListener("click", addDerivedField);
 els.btnTemplate.addEventListener("click", downloadTemplate);
 els.btnCsv.addEventListener("click", exportCurrentCsv);
+els.btnPdf.addEventListener("click", async () => {
+  if (typeof htmlToImage === "undefined" || typeof window.jspdf === "undefined") {
+    setSummary("PDFライブラリの読み込みに失敗しました", "error"); return;
+  }
+  setSummary("PDF を生成中…", "muted");
+  try {
+    const wrap = document.querySelector(".map-wrap");
+    const dataUrl = await htmlToImage.toPng(wrap, {
+      pixelRatio: 2, backgroundColor: "#ffffff",
+      filter: (n) => !(n.classList && (n.classList.contains("leaflet-control-zoom") || n.classList.contains("leaflet-control-layers"))),
+    });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const w = pdf.internal.pageSize.getWidth();
+    const h = pdf.internal.pageSize.getHeight();
+    // Title bar
+    pdf.setFontSize(14);
+    pdf.text(state.field || "MandaraNext", 10, 12);
+    pdf.setFontSize(9);
+    pdf.setTextColor(120);
+    pdf.text(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`, w - 60, 12);
+    // Map image
+    pdf.addImage(dataUrl, "PNG", 10, 18, w - 20, h - 28);
+    const fname = `mandara_${(state.field || "map").replace(/\s+/g, "_")}.pdf`;
+    pdf.save(fname);
+    setSummary(`PDFを ${fname} として保存しました`, "success");
+  } catch (e) {
+    setSummary("PDF生成失敗: " + e.message, "error");
+  }
+});
+
 els.btnGeoJson.addEventListener("click", () => {
   if (!state.geojson) { setSummary("地図データが読み込まれていません", "warn"); return; }
   // Clone features and inject every dataset value into each feature's properties
@@ -1487,7 +1523,10 @@ function drawScatter() {
   const xs = state.dataset.rows.map(r => r.values[xf]);
   const ys = state.dataset.rows.map(r => r.values[yf]);
   const ids = state.dataset.rows.map(r => r.key);
-  const { r, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick);
+  const { r, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick, {
+    logX: els.chkScatterLogX.checked,
+    logY: els.chkScatterLogY.checked,
+  });
   if (r == null) {
     els.scatterCorr.textContent = `n=${n} — 相関係数を計算できません`;
   } else {

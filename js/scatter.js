@@ -16,42 +16,57 @@ const PAD = { top: 10, right: 12, bottom: 28, left: 38 };
  *              Each circle is tagged with data-id for cross-highlighting.
  * @param onHover (id, on) callback fired on circle mouseover/out
  */
-export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover = null, onSelect = null) {
-  // Pair up & drop missing
+export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover = null, onSelect = null, opts = {}) {
+  const logX = !!opts.logX;
+  const logY = !!opts.logY;
+  // Pair up & drop missing (drop non-positive when using log)
   const pairs = [];
   for (let i = 0; i < xs.length; i++) {
     if (Number.isFinite(xs[i]) && Number.isFinite(ys[i])) {
+      if (logX && xs[i] <= 0) continue;
+      if (logY && ys[i] <= 0) continue;
       pairs.push([xs[i], ys[i], ids ? ids[i] : null]);
     }
   }
   svgEl.innerHTML = "";
   if (pairs.length < 2) return { r: null, n: pairs.length };
 
+  // Pearson on raw values; visualisation uses log-transformed coordinates if requested.
   const x = pairs.map(p => p[0]);
   const y = pairs.map(p => p[1]);
-  const xMin = Math.min(...x), xMax = Math.max(...x);
-  const yMin = Math.min(...y), yMax = Math.max(...y);
+  // Helper: project a value through the chosen scale
+  const sx = logX ? (v) => Math.log10(v) : (v) => v;
+  const sy = logY ? (v) => Math.log10(v) : (v) => v;
+  const xs2 = x.map(sx), ys2 = y.map(sy);
+  const xMin = Math.min(...xs2), xMax = Math.max(...xs2);
+  const yMin = Math.min(...ys2), yMax = Math.max(...ys2);
 
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
-  const px = v => PAD.left + (xMax === xMin ? innerW / 2 : ((v - xMin) / (xMax - xMin)) * innerW);
-  const py = v => PAD.top + innerH - (yMax === yMin ? innerH / 2 : ((v - yMin) / (yMax - yMin)) * innerH);
+  // pxAt/pyAt take *scaled* (i.e. already sx/sy-applied) values
+  const pxAt = v => PAD.left + (xMax === xMin ? innerW / 2 : ((v - xMin) / (xMax - xMin)) * innerW);
+  const pyAt = v => PAD.top + innerH - (yMax === yMin ? innerH / 2 : ((v - yMin) / (yMax - yMin)) * innerH);
+  // px/py take *raw* values
+  const px = vRaw => pxAt(sx(vRaw));
+  const py = vRaw => pyAt(sy(vRaw));
 
   // axes
   const axis = el("g", { class: "axis" });
   axis.appendChild(line(PAD.left, H - PAD.bottom, W - PAD.right, H - PAD.bottom));
   axis.appendChild(line(PAD.left, PAD.top, PAD.left, H - PAD.bottom));
 
-  // tick labels
+  // tick labels (in scaled coords; display the raw value)
   for (const t of ticks(xMin, xMax, 4)) {
-    const tx = px(t);
+    const tx = pxAt(t);
+    const raw = logX ? Math.pow(10, t) : t;
     axis.appendChild(line(tx, H - PAD.bottom, tx, H - PAD.bottom + 3));
-    axis.appendChild(text(tx, H - PAD.bottom + 12, formatShort(t), "middle"));
+    axis.appendChild(text(tx, H - PAD.bottom + 12, formatShort(raw), "middle"));
   }
   for (const t of ticks(yMin, yMax, 4)) {
-    const ty = py(t);
+    const ty = pyAt(t);
+    const raw = logY ? Math.pow(10, t) : t;
     axis.appendChild(line(PAD.left - 3, ty, PAD.left, ty));
-    axis.appendChild(text(PAD.left - 5, ty + 3, formatShort(t), "end"));
+    axis.appendChild(text(PAD.left - 5, ty + 3, formatShort(raw), "end"));
   }
   axis.appendChild(text(W / 2, H - 4, xLabel, "middle"));
   axis.appendChild(text(8, PAD.top + innerH / 2, yLabel, "middle", { transform: `rotate(-90, 8, ${PAD.top + innerH / 2})` }));
@@ -82,13 +97,14 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   }
   svgEl.appendChild(pts);
 
-  // OLS regression line
+  // OLS regression line in the *scaled* coordinate system so it stays
+  // visually straight even on log axes. Pearson r is still on raw values.
   const r = pearson(x, y);
   if (Number.isFinite(r) && xMax !== xMin) {
-    const { slope, intercept } = ols(x, y);
+    const { slope, intercept } = ols(xs2, ys2);
     const lineEl = el("line", {
-      x1: px(xMin), y1: py(slope * xMin + intercept),
-      x2: px(xMax), y2: py(slope * xMax + intercept),
+      x1: pxAt(xMin), y1: pyAt(slope * xMin + intercept),
+      x2: pxAt(xMax), y2: pyAt(slope * xMax + intercept),
       class: "regline",
     });
     svgEl.appendChild(lineEl);
