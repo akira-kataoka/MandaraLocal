@@ -2051,7 +2051,8 @@ function runKmeansClustering() {
   const K = parseInt(els.kmK.value, 10) || 3;
   const out = kmeansCore(xFields, K);
   if (!out) { setSummary("サンプル不足、または有効データなし", "warn"); return; }
-  state.kmResult = { K, xFields, n: out.n, iterations: out.iter, wss: out.wss, keys: out.keys, assignments: out.assignments };
+  const sil = silhouetteScore(out.Z, out.assignments, K);
+  state.kmResult = { K, xFields, n: out.n, iterations: out.iter, wss: out.wss, silhouette: sil, keys: out.keys, assignments: out.assignments };
   renderKmResult(state.kmResult);
   if (els.kmAdd) els.kmAdd.disabled = false;
   if (els.kmCsv) els.kmCsv.disabled = false;
@@ -2118,11 +2119,54 @@ function euclidSq(a, b) {
   return s;
 }
 
+// Silhouette score for clustering quality (Cycle 162). Returns the average
+// silhouette over all points in [-1, +1]; higher = better cluster separation.
+function silhouetteScore(points, assignments, K) {
+  const n = points.length;
+  if (n < 2 || K < 2) return null;
+  const clusters = Array.from({ length: K }, () => []);
+  for (let i = 0; i < n; i++) clusters[assignments[i]].push(i);
+  const euclid = (a, b) => Math.sqrt(euclidSq(a, b));
+  let sum = 0;
+  let count = 0;
+  for (let i = 0; i < n; i++) {
+    const ki = assignments[i];
+    if (clusters[ki].length <= 1) continue; // s undefined for singletons → skip
+    let aSum = 0;
+    for (const j of clusters[ki]) if (j !== i) aSum += euclid(points[i], points[j]);
+    const a = aSum / (clusters[ki].length - 1);
+    let b = Infinity;
+    for (let k = 0; k < K; k++) {
+      if (k === ki || clusters[k].length === 0) continue;
+      let bSum = 0;
+      for (const j of clusters[k]) bSum += euclid(points[i], points[j]);
+      const meanB = bSum / clusters[k].length;
+      if (meanB < b) b = meanB;
+    }
+    if (!Number.isFinite(b)) continue;
+    const s = a === 0 && b === 0 ? 0 : (b - a) / Math.max(a, b);
+    sum += s;
+    count++;
+  }
+  return count > 0 ? sum / count : null;
+}
+
+function silhouetteLabel(s) {
+  if (s == null) return "";
+  if (s >= 0.5) return "強い構造";
+  if (s >= 0.25) return "弱いが妥当な構造";
+  if (s > 0) return "弱い構造（要改善）";
+  return "構造なし";
+}
+
 function renderKmResult(r) {
   if (!els.kmResult) return;
   const sizes = new Array(r.K).fill(0);
   for (const a of r.assignments) sizes[a]++;
-  let html = `<div class="mr-summary">k-means: K=${r.K}, n=${r.n}, 反復=${r.iterations}, WSS=${r.wss.toFixed(2)}</div>`;
+  const silTxt = r.silhouette == null
+    ? ""
+    : `, シルエット=<strong>${r.silhouette.toFixed(3)}</strong> (${silhouetteLabel(r.silhouette)})`;
+  let html = `<div class="mr-summary">k-means: K=${r.K}, n=${r.n}, 反復=${r.iterations}, WSS=${r.wss.toFixed(2)}${silTxt}</div>`;
   html += "<table style='margin-top:6px'><thead><tr><th>クラスタ</th><th>件数</th><th>割合</th></tr></thead><tbody>";
   for (let k = 0; k < r.K; k++) {
     html += `<tr><td>${k + 1}</td><td class="num">${sizes[k]}</td><td class="num">${(sizes[k] / r.n * 100).toFixed(1)}%</td></tr>`;
@@ -2154,6 +2198,7 @@ els.kmCsv?.addEventListener("click", () => {
   lines.push(["n (有効サンプル)", String(r.n)].map(csvEscape).join(","));
   lines.push(["反復回数", String(r.iterations)].map(csvEscape).join(","));
   lines.push(["WSS", r.wss.toFixed(4)].map(csvEscape).join(","));
+  if (r.silhouette != null) lines.push(["シルエット係数", r.silhouette.toFixed(4)].map(csvEscape).join(","));
   lines.push("");
   // 3. Per-region assignment
   lines.push(["id", "地域", "クラスタ"].map(csvEscape).join(","));
@@ -2550,7 +2595,8 @@ function runHierarchical() {
     assignments[i] = rootMap.get(root);
   }
   const Kfinal = rootMap.size;
-  state.hcResult = { xFields, n, K: Kfinal, linkage, keys, assignments, merges: allMerges };
+  const sil = silhouetteScore(Z, assignments, Kfinal);
+  state.hcResult = { xFields, n, K: Kfinal, linkage, silhouette: sil, keys, assignments, merges: allMerges };
   renderHcResult(state.hcResult);
   if (els.hcAdd) els.hcAdd.disabled = false;
   if (els.hcCsv) els.hcCsv.disabled = false;
@@ -2566,7 +2612,10 @@ function renderHcResult(r) {
   if (!els.hcResult) return;
   const sizes = new Array(r.K).fill(0);
   for (const a of r.assignments) sizes[a]++;
-  let html = `<div class="mr-summary">階層: ${r.linkage}, n=${r.n}, カット K=${r.K}, マージ数=${r.merges.length}</div>`;
+  const silTxt = r.silhouette == null
+    ? ""
+    : `, シルエット=<strong>${r.silhouette.toFixed(3)}</strong> (${silhouetteLabel(r.silhouette)})`;
+  let html = `<div class="mr-summary">階層: ${r.linkage}, n=${r.n}, カット K=${r.K}, マージ数=${r.merges.length}${silTxt}</div>`;
   html += "<table style='margin-top:6px'><thead><tr><th>クラスタ</th><th>件数</th><th>割合</th></tr></thead><tbody>";
   for (let k = 0; k < r.K; k++) {
     html += `<tr><td>${k + 1}</td><td class="num">${sizes[k]}</td><td class="num">${(sizes[k] / r.n * 100).toFixed(1)}%</td></tr>`;
@@ -2656,6 +2705,7 @@ els.hcCsv?.addEventListener("click", () => {
   lines.push(["説明変数 X", r.xFields.join(", ")].map(csvEscape).join(","));
   lines.push(["n (有効サンプル)", String(r.n)].map(csvEscape).join(","));
   lines.push(["マージ回数", String(r.merges.length)].map(csvEscape).join(","));
+  if (r.silhouette != null) lines.push(["シルエット係数", r.silhouette.toFixed(4)].map(csvEscape).join(","));
   lines.push("");
   // 3. Per-region assignment
   lines.push(["id", "地域", "クラスタ"].map(csvEscape).join(","));
