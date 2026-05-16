@@ -11,6 +11,7 @@ import { MandaraMap } from "./map.js";
 import { exportPng, exportSvg, exportKml } from "./export.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { renderScatter } from "./scatter.js";
+import { renderHistogram } from "./histogram.js";
 import { renderTable } from "./table.js";
 
 // ----- State -----
@@ -111,6 +112,9 @@ const els = {
   panelLegend:  $("panel-legend"),
   legendBox:    $("legend-container"),
   panelTable:   $("panel-table"),
+  panelHist:    $("panel-histogram"),
+  histBins:     $("hist-bins"),
+  histSvg:      $("histogram-svg"),
   panelCt:      $("panel-crosstab"),
   ctRow:        $("ct-row"),
   ctCol:        $("ct-col"),
@@ -520,6 +524,7 @@ async function applyLevel(level) {
       els.panelLegend.hidden = true;
       els.panelScatter.hidden = true;
       els.panelTable.hidden = true;
+      els.panelHist.hidden = true;
     }
     setSummary("地図準備完了。サンプルまたはCSVを読み込んでください。", "muted");
   } catch (e) {
@@ -748,6 +753,11 @@ els.filterOp.addEventListener("change", () => {
 els.btnFilterApply.addEventListener("click", applyAttributeFilter);
 els.btnFilterClear.addEventListener("click", clearAttributeFilter);
 els.ctRun.addEventListener("click", runCrossTab);
+els.histBins.addEventListener("change", () => {
+  if (!state.dataset || !state.field) return;
+  const values = state.dataset.rows.map(r => r.values[state.field]);
+  renderHistogram(els.histSvg, values, state.field, parseInt(els.histBins.value, 10) || 10);
+});
 
 function runCrossTab() {
   if (!state.dataset) return;
@@ -1186,6 +1196,7 @@ function onDatasetReady(ds, label) {
   els.panelStats.hidden = false;
   els.panelLegend.hidden = false;
   els.panelTable.hidden = false;
+  els.panelHist.hidden = false;
   if (ds.fields.length >= 2) {
     els.panelCt.hidden = false;
     if (els.ctRow.options.length >= 2) {
@@ -1345,6 +1356,12 @@ function refresh() {
 
   // Data table
   renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover);
+
+  // Histogram
+  if (els.histSvg) {
+    const bins = parseInt(els.histBins.value, 10) || 10;
+    renderHistogram(els.histSvg, values, state.field, bins);
+  }
 
   // Outlier highlight
   applyOutlierHighlight(values);

@@ -342,6 +342,23 @@ body.dark .ct-result td.total { background: #78350f; }
   margin-top: 6px;
   display: block;
 }
+#histogram-svg {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 280 / 180;
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-top: 6px;
+  display: block;
+}
+#histogram-svg .axis line, #histogram-svg .axis path { stroke: #64748b; stroke-width: 0.8; fill: none; }
+#histogram-svg .axis text { fill: #475569; font-size: 9px; font-family: sans-serif; }
+#histogram-svg .hist-bar { fill: #2563eb; opacity: 0.78; transition: opacity 80ms; }
+#histogram-svg .hist-bar:hover { opacity: 1; fill: #1e3a8a; }
+body.dark #histogram-svg { background: #0f172a; border-color: #334155; }
+body.dark #histogram-svg .axis text { fill: #cbd5e1; }
+body.dark #histogram-svg .axis line, body.dark #histogram-svg .axis path { stroke: #94a3b8; }
 #scatter-svg .grid line { stroke: #e5e7eb; stroke-width: 0.5; }
 #scatter-svg .axis line, #scatter-svg .axis path { stroke: #64748b; stroke-width: 0.8; fill: none; }
 #scatter-svg .axis text { fill: #475569; font-size: 9px; font-family: sans-serif; }
