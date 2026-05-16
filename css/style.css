@@ -701,15 +701,20 @@ body.dark .feature-detail td { border-bottom-color: #334155; }
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 12px;
+  /* Legend font sizing — driven by the body class set in Cycle 110. */
+  --legend-fs: 12px;
+  font-size: var(--legend-fs);
   min-width: 160px;
   max-width: 260px;
   z-index: 800;
   box-shadow: 0 1px 6px rgba(0,0,0,0.12);
 }
+body.legend-fs-s .map-overlay { --legend-fs: 11px; }
+body.legend-fs-m .map-overlay { --legend-fs: 13px; }
+body.legend-fs-l .map-overlay { --legend-fs: 15px; }
 .map-overlay-title {
   font-weight: 700;
-  font-size: 13px;
+  font-size: calc(var(--legend-fs) + 1px);
   margin-bottom: 6px;
   color: #1e293b;
   cursor: move;
@@ -729,7 +734,7 @@ body.dark .feature-detail td { border-bottom-color: #334155; }
 .map-overlay-footer {
   margin-top: 6px;
   color: #64748b;
-  font-size: 10px;
+  font-size: calc(var(--legend-fs) - 2px);
   border-top: 1px solid #e5e7eb;
   padding-top: 4px;
 }

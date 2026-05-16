@@ -142,6 +142,7 @@ const els = {
   panelLegend:  $("panel-legend"),
   legendBox:    $("legend-container"),
   selectLegendPos: $("select-legend-pos"),
+  selectLegendFs:  $("select-legend-fs"),
   panelTable:   $("panel-table"),
   panelHist:    $("panel-histogram"),
   histBins:     $("hist-bins"),
@@ -872,6 +873,22 @@ els.chkShowScale?.addEventListener("change", () => {
 els.chkShowNorth?.addEventListener("change", () => {
   if (els.northArrow) els.northArrow.hidden = !els.chkShowNorth.checked;
 });
+
+// Legend font size: small / medium / large, applied as a body class so the
+// overlay's CSS variable cascades to all sub-elements.
+function applyLegendFs(v) {
+  document.body.classList.remove("legend-fs-s", "legend-fs-m", "legend-fs-l");
+  document.body.classList.add(`legend-fs-${v || "m"}`);
+}
+els.selectLegendFs?.addEventListener("change", () => {
+  const v = els.selectLegendFs.value;
+  applyLegendFs(v);
+  state.legendFs = v;
+  saveSettings(state);
+});
+// Apply previously-saved value on startup
+applyLegendFs(state.legendFs || "m");
+if (els.selectLegendFs && state.legendFs) els.selectLegendFs.value = state.legendFs;
 
 // Cursor coordinate readout: live lat/lng under the cursor.
 let _coordsEnabled = true;
@@ -1626,6 +1643,7 @@ function snapshotCurrent() {
     legendPos: els.selectLegendPos?.value || "br",
     legendFreeLeft: els.overlay?.style.left || "",
     legendFreeTop:  els.overlay?.style.top  || "",
+    legendFs: els.selectLegendFs?.value || "m",
   };
 }
 let demoScenes = {}; // name → snapshot, loaded from data/scenes/index.json
@@ -1739,6 +1757,10 @@ els.selectScene.addEventListener("change", async () => {
       if (snap.legendFreeLeft) els.overlay.style.left = snap.legendFreeLeft;
       if (snap.legendFreeTop)  els.overlay.style.top  = snap.legendFreeTop;
     }
+  }
+  if (snap.legendFs !== undefined && els.selectLegendFs) {
+    els.selectLegendFs.value = snap.legendFs;
+    els.selectLegendFs.dispatchEvent(new Event("change"));
   }
   // Apply visibility toggles
   els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both" || state.mode === "graduated");
