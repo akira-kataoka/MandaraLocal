@@ -294,8 +294,9 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       const cx = pxAt(sx(vx)), cy = pyAt(sy(vy));
       if (isPinned) {
         // Always queue a label *and* a ring for pinned points.
+        // Cycle 231: tag the entry so the renderer can paint pinned labels red.
         pinRings.push([cx, cy]);
-        candidates.push([cx, cy, nm]);
+        candidates.push([cx, cy, nm, true]);
         continue;
       }
       if (labelMode === "none") continue;
@@ -305,7 +306,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       } else if (topNSet && !topNSet.has(i)) {
         continue;
       }
-      candidates.push([cx, cy, nm]);
+      candidates.push([cx, cy, nm, false]);
     }
     // Draw pin rings underneath labels.
     for (const [cx, cy] of pinRings) {
@@ -323,7 +324,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     const placeMode = opts.labelPlace === "corner" || opts.labelPlace === "overlap"
       ? opts.labelPlace : "auto";
     const tryOffsets = placeMode === "auto" ? offsets : [offsets[0]];
-    for (const [cx, cy, nm] of candidates) {
+    for (const [cx, cy, nm, isPinned] of candidates) {
       const approxW = Math.max(8, nm.length * fontSize * 0.6);
       let chosen = null;
       for (const o of tryOffsets) {
@@ -339,8 +340,10 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       if (!chosen) continue;  // Position overlapped (auto/corner) — skip for readability
       const lbl = el("text", { x: chosen.tx, y: chosen.ty, "text-anchor": chosen.anchor });
       lbl.setAttribute("font-size", String(fontSize));
-      lbl.setAttribute("fill", fillColor);
-      lbl.setAttribute("font-weight", fontWeight);
+      // Cycle 231: pinned labels are painted red and slightly bolder so they
+      // pop out of the default neutral palette in exported images.
+      lbl.setAttribute("fill", isPinned ? "#dc2626" : fillColor);
+      lbl.setAttribute("font-weight", isPinned ? "700" : fontWeight);
       lbl.textContent = nm;
       labels.appendChild(lbl);
       // In overlap mode we still track bboxes so consumers can introspect,
