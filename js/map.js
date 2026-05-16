@@ -227,6 +227,41 @@ export class MandaraMap {
     });
   }
 
+  /**
+   * Bivariate choropleth: paint each polygon by a (xClass, yClass) pair derived
+   * from two value lookups (Cycle 129). palette9 is row-major, 3×3 — row=yClass,
+   * col=xClass. Both classifications use the supplied quantile-style breaks.
+   */
+  applyBivariate(valueMapX, valueMapY, breaksX, breaksY, palette9, fieldNameX, fieldNameY) {
+    if (!this.layer) return;
+    this._fieldName = `${fieldNameX} × ${fieldNameY}`;
+    const clampClass = (v, breaks) => {
+      if (v == null || !Number.isFinite(v)) return -1;
+      const idx = classifyValue(v, breaks);
+      return Math.max(0, Math.min(2, idx));
+    };
+    this._lookupFn = (code) => {
+      const vx = valueMapX.get(code);
+      const vy = valueMapY.get(code);
+      const cx = clampClass(vx, breaksX);
+      const cy = clampClass(vy, breaksY);
+      if (cx < 0 || cy < 0) return { value: null, classIndex: -1, color: NA_COLOR };
+      return {
+        value: { x: vx, y: vy, xClass: cx, yClass: cy },
+        classIndex: cy * 3 + cx,
+        color: palette9[cy * 3 + cx],
+      };
+    };
+    this.layer.eachLayer((lyr) => {
+      const feat = lyr.feature;
+      const info = this._lookupFn(feat.properties.id);
+      lyr.setStyle({
+        weight: 0.6, color: "#475569",
+        fillColor: info.color, fillOpacity: 0.88,
+      });
+    });
+  }
+
   resetColors() {
     if (!this.layer) return;
     this._lookupFn = null;

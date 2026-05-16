@@ -808,6 +808,14 @@ els.selectMode.addEventListener("change", () => {
   els.hintPie.hidden = !multiOn;
   els.rowPieSize.hidden = state.mode !== "pie";   // radius is pie-only
   if (multiOn) populatePieFields();
+  // Bivariate mode needs a Y field — reuse the compare's B selector.
+  if (state.mode === "bivariate") {
+    els.rowFieldB.hidden = false;
+    if (!state.fieldB && state.dataset?.fields.length >= 2) {
+      state.fieldB = state.dataset.fields.find(f => f !== state.field) || state.dataset.fields[1];
+      els.selectFieldB.value = state.fieldB;
+    }
+  }
   refresh();
 });
 els.selectPieFields.addEventListener("change", () => refresh());
@@ -2552,6 +2560,33 @@ function refresh() {
   }
 
   // choropleth coloring (or reset to neutral if "symbol" only)
+  if (state.mode === "bivariate") {
+    if (!state.fieldB) {
+      setSummary("二変量モードは Y 軸列 (compare の B 列) も必要です", "warn");
+    } else {
+      const valuesY = state.dataset.rows.map(r => r.values[state.fieldB]);
+      const { breaks: bx } = computeBreaks(values, 3, "quantile");
+      const { breaks: by } = computeBreaks(valuesY, 3, "quantile");
+      const valueMapY = buildValueLookup(state.dataset, state.fieldB);
+      mapper.applyBivariate(state.valueMap, valueMapY, bx, by, BIVARIATE_PALETTE, state.field, state.fieldB);
+      // Bivariate legend in side panel and overlay
+      renderBivariateLegend(els.legendBox, BIVARIATE_PALETTE, state.field, state.fieldB);
+      renderBivariateLegend(els.overlayLegend, BIVARIATE_PALETTE, state.field, state.fieldB);
+      els.overlay.hidden = false;
+      els.overlayTitle.textContent = `${state.field} × ${state.fieldB}`;
+      const src = (els.inputDataSource?.value || "").trim();
+      const author = (els.inputMapAuthor?.value || "").trim();
+      const parts = [];
+      if (src) parts.push(`出典: ${src}`);
+      if (author) parts.push(`作成: ${author}`);
+      parts.push(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`);
+      els.overlayFooter.textContent = parts.join(" · ");
+      renderStats(values);
+      renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete);
+      saveSettings(state);
+      return;
+    }
+  }
   if (state.mode === "symbol") {
     mapper.resetColors();
     // tooltip still needs the value lookup, so attach via applyChoropleth with neutral colors
@@ -3576,6 +3611,49 @@ function hasMissing(values) {
   return values.some(v => v == null || !Number.isFinite(v));
 }
 function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
+
+// Stevens 3×3 bivariate palette (row=Y class, col=X class). The standard
+// teal-pink scheme used in many cartography textbooks.
+const BIVARIATE_PALETTE = [
+  "#e8e8e8", "#ace4e4", "#5ac8c8", // Y=low,  X=low/mid/high
+  "#dfb0d6", "#a5add3", "#5698b9", // Y=mid
+  "#be64ac", "#8c62aa", "#3b4994", // Y=high
+];
+
+function renderBivariateLegend(container, palette9, fieldX, fieldY) {
+  container.innerHTML = "";
+  container.setAttribute("role", "img");
+  container.setAttribute("aria-label", `凡例: ${fieldX} × ${fieldY}`);
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "font-size:11px; display:flex; align-items:flex-end; gap:6px;";
+  // Y-axis label rotated
+  const yLab = document.createElement("div");
+  yLab.style.cssText = "writing-mode:vertical-rl; transform:rotate(180deg); font-weight:600; text-align:center; padding:0 2px; flex-shrink:0;";
+  yLab.textContent = `${fieldY} →`;
+  wrap.appendChild(yLab);
+  // 3x3 grid
+  const grid = document.createElement("div");
+  grid.style.cssText = "display:grid; grid-template-columns:repeat(3,16px); grid-template-rows:repeat(3,16px); gap:1px;";
+  // Render top→bottom: row 0 = Y high, row 2 = Y low (visually intuitive)
+  for (let row = 0; row < 3; row++) {
+    const y = 2 - row;
+    for (let x = 0; x < 3; x++) {
+      const sw = document.createElement("div");
+      sw.style.cssText = `width:16px;height:16px;background:${palette9[y * 3 + x]};border:1px solid #cbd5e1;`;
+      sw.title = `X=${["低","中","高"][x]} / Y=${["低","中","高"][y]}`;
+      grid.appendChild(sw);
+    }
+  }
+  const colWrap = document.createElement("div");
+  colWrap.style.cssText = "display:flex; flex-direction:column; gap:2px; align-items:center;";
+  colWrap.appendChild(grid);
+  const xLab = document.createElement("div");
+  xLab.style.cssText = "font-weight:600;";
+  xLab.textContent = `${fieldX} →`;
+  colWrap.appendChild(xLab);
+  wrap.appendChild(colWrap);
+  container.appendChild(wrap);
+}
 
 // Chi-square survival function P(X > x) for df degrees of freedom.
 // Uses the regularized upper incomplete gamma function Q(df/2, x/2) via a
