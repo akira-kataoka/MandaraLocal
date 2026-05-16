@@ -4595,7 +4595,9 @@ function onDatasetReady(ds, label) {
   state.starredFields = new Set();
   // Cycle 200: reset column visibility for a fresh dataset so previously-hidden
   // field names from a different CSV don't carry over.
+  // Cycle 201: also reset user column ordering for the same reason.
   state.hiddenColumns = new Set();
+  state.columnOrder = null;
   if (els.tableColPicker) els.tableColPicker.hidden = true;
   // pick first numeric field as default
   state.field = ds.fields[0];
@@ -5102,12 +5104,27 @@ function getTableRows() {
 // Cycle 200: per-column visibility — users can hide noisy/irrelevant fields
 // from the data table. Hidden columns remain in the dataset (and CSV export);
 // only the on-screen rendering is filtered.
+// Cycle 201: state.columnOrder lets users reorder visible columns. Persists
+// only the user-chosen overrides; new fields not in columnOrder fall back to
+// dataset.fields order.
 state.hiddenColumns = state.hiddenColumns instanceof Set ? state.hiddenColumns : new Set();
-function getVisibleFields() {
+state.columnOrder = Array.isArray(state.columnOrder) ? state.columnOrder : null;
+function getOrderedFields() {
   const all = state.dataset?.fields || [];
-  const vis = all.filter(f => !state.hiddenColumns.has(f));
+  if (!state.columnOrder?.length) return all.slice();
+  const set = new Set(all);
+  // Honored order first (only those still present), then any newly-added
+  // fields appended in their original order.
+  const honored = state.columnOrder.filter(f => set.has(f));
+  const seen = new Set(honored);
+  const tail = all.filter(f => !seen.has(f));
+  return [...honored, ...tail];
+}
+function getVisibleFields() {
+  const ordered = getOrderedFields();
+  const vis = ordered.filter(f => !state.hiddenColumns.has(f));
   // Safety: never end up with 0 visible columns — keep at least the first.
-  return vis.length ? vis : (all.length ? [all[0]] : []);
+  return vis.length ? vis : (ordered.length ? [ordered[0]] : []);
 }
 function buildTableColPicker() {
   if (!els.tableColPicker || !state.dataset?.fields?.length) return;
@@ -5132,24 +5149,57 @@ function buildTableColPicker() {
     buildTableColPicker();
     refreshTable();
   });
-  head.appendChild(all); head.appendChild(none);
+  const reset = document.createElement("button");
+  reset.type = "button"; reset.className = "btn"; reset.style.fontSize = "10px"; reset.style.padding = "1px 6px";
+  reset.textContent = "順序リセット";
+  reset.title = "列順をCSV元の並びに戻す";
+  reset.addEventListener("click", () => {
+    state.columnOrder = null;
+    buildTableColPicker();
+    refreshTable();
+  });
+  head.appendChild(all); head.appendChild(none); head.appendChild(reset);
   els.tableColPicker.appendChild(head);
-  for (const f of state.dataset.fields) {
-    const lab = document.createElement("label");
-    lab.style.cssText = "display:block;line-height:1.6;cursor:pointer";
+  // Cycle 201: render in current ordered view so ↑/↓ feels intuitive.
+  const ordered = getOrderedFields();
+  for (let i = 0; i < ordered.length; i++) {
+    const f = ordered[i];
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;align-items:center;line-height:1.6;gap:2px";
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.checked = !state.hiddenColumns.has(f);
-    cb.style.marginRight = "4px";
     cb.addEventListener("change", () => {
       if (cb.checked) state.hiddenColumns.delete(f);
       else state.hiddenColumns.add(f);
       refreshTable();
     });
+    const up = document.createElement("button");
+    up.type = "button"; up.textContent = "↑"; up.disabled = (i === 0);
+    up.title = "上に移動"; up.style.cssText = "padding:0 4px;font-size:10px";
+    up.addEventListener("click", () => moveColumn(i, -1));
+    const dn = document.createElement("button");
+    dn.type = "button"; dn.textContent = "↓"; dn.disabled = (i === ordered.length - 1);
+    dn.title = "下に移動"; dn.style.cssText = "padding:0 4px;font-size:10px";
+    dn.addEventListener("click", () => moveColumn(i, +1));
+    const lab = document.createElement("label");
+    lab.style.cssText = "flex:1;cursor:pointer;margin-left:2px";
     lab.appendChild(cb);
-    lab.appendChild(document.createTextNode(f));
-    els.tableColPicker.appendChild(lab);
+    lab.appendChild(document.createTextNode(" " + f));
+    row.appendChild(up); row.appendChild(dn); row.appendChild(lab);
+    els.tableColPicker.appendChild(row);
   }
+}
+// Swap a column with its neighbor (dir=-1 up, +1 down). Promotes the implicit
+// dataset order to an explicit columnOrder on first reorder.
+function moveColumn(i, dir) {
+  const ordered = getOrderedFields();
+  const j = i + dir;
+  if (j < 0 || j >= ordered.length) return;
+  [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
+  state.columnOrder = ordered;
+  buildTableColPicker();
+  refreshTable();
 }
 function refreshTable() {
   if (!state.dataset) return;
