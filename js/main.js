@@ -3491,6 +3491,7 @@ function drawScatter() {
   // Size-by-field: third dimension as point radius (3..10 px).
   const sizeField = els.scatterSizeBy?.value || "";
   let sizeFor = null;
+  let sizeLegend = null;
   if (sizeField) {
     const sizeMap = new Map(state.dataset.rows.map(r => [r.key, r.values[sizeField]]));
     const sizeVals = [...sizeMap.values()].filter(v => Number.isFinite(v));
@@ -3502,6 +3503,7 @@ function drawScatter() {
         if (!Number.isFinite(v)) return 3;
         return 3 + 7 * ((v - smn) / range);
       };
+      sizeLegend = { fieldName: sizeField, min: smn, max: smx };
     }
   }
   const scatterResult = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick, {
@@ -3516,6 +3518,7 @@ function drawScatter() {
       setSummary(`${ids.size} 件を地図でハイライト中（散布図 brush 選択）`, "success");
     },
     sizeFor,
+    sizeLegend,
   }, colorFor, names, categoryFor);
   const { r, rho, rCI, rhoCI, n, slope, intercept, r2, degree, coeffs, polyR2, sse, aic, bic } = scatterResult;
   state.scatterStats = {

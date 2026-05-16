@@ -477,6 +477,50 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   const nValid = pairs.length;
   const rCI   = fisherCI(r, nValid);
   const rhoCI = fisherCI(rho, nValid);
+  // Size (bubble) legend — only when a third variable drives point radius.
+  if (opts.sizeLegend && opts.sizeLegend.fieldName && Number.isFinite(opts.sizeLegend.min)) {
+    const sl = opts.sizeLegend;
+    const fmt = (v) => {
+      const a = Math.abs(v);
+      if (a >= 1e6) return (v / 1e6).toFixed(1) + "M";
+      if (a >= 1e3) return (v / 1e3).toFixed(0) + "k";
+      if (a >= 1) return v.toFixed(0);
+      return v.toFixed(2);
+    };
+    const lg = el("g", { class: "scatter-size-legend" });
+    const radii = [3, 6.5, 10];
+    const vals = [sl.min, (sl.min + sl.max) / 2, sl.max];
+    const padX = 6, padY = 4;
+    const x0 = PAD.left + 4;
+    const y0 = H - PAD.bottom - 4;
+    const boxW = 80, boxH = 56;
+    const bg = el("rect", {
+      x: x0, y: y0 - boxH, width: boxW, height: boxH,
+      fill: "rgba(255,255,255,0.85)", stroke: "#cbd5e1", "stroke-width": 0.6, rx: 3,
+    });
+    lg.appendChild(bg);
+    const title = el("text", {
+      x: x0 + padX, y: y0 - boxH + 10, "font-size": 9, "font-weight": 700, fill: "#1e293b",
+    });
+    title.textContent = sl.fieldName.length > 11 ? sl.fieldName.slice(0, 10) + "…" : sl.fieldName;
+    lg.appendChild(title);
+    // Sample bubbles arranged in a column
+    radii.forEach((r0, i) => {
+      const cy = y0 - boxH + 22 + i * 12;
+      const cx = x0 + padX + 10;
+      lg.appendChild(el("circle", {
+        cx, cy, r: r0,
+        fill: "rgba(37,99,235,0.4)", stroke: "#1e3a8a", "stroke-width": 0.5,
+      }));
+      const t = el("text", {
+        x: cx + 14, y: cy + 3, "font-size": 8, fill: "#1e293b",
+      });
+      t.textContent = fmt(vals[i]);
+      lg.appendChild(t);
+    });
+    svgEl.appendChild(lg);
+  }
+
   return {
     r, rho, rCI, rhoCI, n: nValid, slope, intercept,
     r2: Number.isFinite(r) ? r*r : null,
