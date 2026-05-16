@@ -1163,6 +1163,8 @@ function refresh() {
     mapper.applyGraduatedSymbols(state.valueMap, state.breaks, state.colors, {
       maxRadiusPx: state.maxR,
     });
+  } else if (state.mode === "cartogram") {
+    mapper.applyCartogram(state.valueMap, state.breaks, state.colors);
   } else if (state.mode === "label") {
     mapper.applyLabels(state.valueMap, state.field);
   } else if (state.mode === "contour") {

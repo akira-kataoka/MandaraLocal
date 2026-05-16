@@ -232,6 +232,59 @@ export class MandaraMap {
   }
 
   /**
+   * Non-contiguous cartogram: each feature's polygon is shrunk toward
+   * its centroid by a factor of √(value / maxValue), so the visible
+   * polygon area becomes proportional to the data value while the
+   * spatial position (and recognisable outline) is preserved.
+   *
+   * MANDARA 「カートグラム / 変形地図」相当 (non-contiguous scheme).
+   * @param valueMap Map<id, number|null>
+   * @param breaks/colors  optional → use classified fill colour
+   */
+  applyCartogram(valueMap, breaks, colors) {
+    this.symbolLayer.clearLayers();
+    if (!this.layer || !valueMap) return;
+    let maxV = 0;
+    for (const v of valueMap.values()) if (Number.isFinite(v) && v > maxV) maxV = v;
+    if (maxV <= 0) return;
+    // First: fade the original layer
+    this.layer.eachLayer((lyr) => {
+      lyr.setStyle({
+        weight: 0.5, color: "#94a3b8", fillColor: "#e2e8f0", fillOpacity: 0.25,
+        dashArray: "2 3",
+      });
+    });
+    // Second: draw a scaled cartogram polygon per feature
+    this.layer.eachLayer((lyr) => {
+      const f = lyr.feature;
+      const id = f.properties.id;
+      const v = valueMap.get(id);
+      if (!Number.isFinite(v) || v <= 0) return;
+      // centroid (lng, lat) from precomputed cache
+      const c = this._centroidCache.get(id);
+      if (!c) return;
+      const [lat0, lng0] = c;
+      const scale = Math.sqrt(v / maxV);
+      // Classified colour
+      let fill = "#2563eb";
+      if (breaks && colors) {
+        const idx = classifyValue(v, breaks);
+        if (idx >= 0) fill = colors[idx];
+      }
+      const shrunk = scalePolygonAroundCenter(f.geometry, lng0, lat0, scale);
+      if (!shrunk) return;
+      const poly = L.polygon(shrunk, {
+        color: "#1e293b", weight: 0.8,
+        fillColor: fill, fillOpacity: 0.85,
+      });
+      poly.bindTooltip(`<strong>${escapeHtml(this._nameFor(f.properties))}</strong><br/>${formatNum(v)}`, {
+        sticky: true, direction: "top", className: "chocho-tip",
+      });
+      poly.addTo(this.symbolLayer);
+    });
+  }
+
+  /**
    * Graduated-symbol map: instead of continuous radius proportional to
    * sqrt(value/max), each value is mapped to a **class index** and the
    * radius takes one of K discrete sizes. Clear visual ranking of
@@ -1359,6 +1412,28 @@ function sphericalPolygonAreaKm2(ring) {
          (2 + Math.sin(lat1 * Math.PI / 180) + Math.sin(lat2 * Math.PI / 180));
   }
   return Math.abs(s) * R * R / 2;
+}
+
+/**
+ * Scale a Polygon / MultiPolygon around (cx, cy) by `factor` (linear).
+ * The visible area scales by factor² (so pass sqrt(v/max) to get
+ * area-proportional cartogram cells).
+ * Returns an array of rings in Leaflet [lat, lng] order, ready for
+ * L.polygon() with multi-ring support.
+ */
+function scalePolygonAroundCenter(geom, cx, cy, factor) {
+  if (!geom) return null;
+  const scaleRing = (ring) => ring.map(([lng, lat]) => [
+    cy + (lat - cy) * factor,
+    cx + (lng - cx) * factor,
+  ]);
+  if (geom.type === "Polygon") return geom.coordinates.map(scaleRing);
+  if (geom.type === "MultiPolygon") {
+    const out = [];
+    for (const poly of geom.coordinates) out.push(...poly.map(scaleRing));
+    return out;
+  }
+  return null;
 }
 
 function escapeHtml(s) {
