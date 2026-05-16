@@ -132,6 +132,10 @@ const els = {
   tsStop:       $("ts-stop"),
   tsSpeed:      $("ts-speed"),
   tsGif:        $("ts-gif"),
+  tsFrom:       $("ts-from"),
+  tsTo:         $("ts-to"),
+  tsDiff:       $("ts-diff"),
+  tsRatio:      $("ts-ratio"),
   panelScatter: $("panel-scatter"),
   scatterX:     $("scatter-x"),
   scatterY:     $("scatter-y"),
@@ -1182,11 +1186,47 @@ els.fileSceneImport.addEventListener("change", async (e) => {
   }
 });
 
+function addTsDerivedColumn(kind) {
+  if (!state.dataset) return;
+  const s = tsState.series[tsState.baseIdx];
+  if (!s) return;
+  const fi = parseInt(els.tsFrom.value, 10) || 0;
+  const ti = parseInt(els.tsTo.value, 10) || (s.points.length - 1);
+  const pf = s.points[fi], pt = s.points[ti];
+  if (!pf || !pt || pf === pt) { setSummary("起点と終点は別の時点を選んでください", "warn"); return; }
+  const name = kind === "diff"
+    ? `${s.base}_差分_${pf.year}→${pt.year}`
+    : `${s.base}_増減率_${pf.year}→${pt.year}_%`;
+  if (state.dataset.fields.includes(name)) {
+    setSummary(`列「${name}」はすでに存在します`, "warn");
+    state.field = name; els.selectField.value = name; refresh();
+    return;
+  }
+  for (const r of state.dataset.rows) {
+    const a = r.values[pf.field], b = r.values[pt.field];
+    if (!Number.isFinite(a) || !Number.isFinite(b)) { r.values[name] = null; continue; }
+    if (kind === "diff") r.values[name] = b - a;
+    else r.values[name] = a !== 0 ? ((b - a) / Math.abs(a)) * 100 : null;
+  }
+  state.dataset.fields.push(name);
+  populateFieldSelects();
+  state.field = name; els.selectField.value = name;
+  refresh();
+  setSummary(`派生列「${name}」を追加しました (${state.dataset.fields.length}列)`, "success");
+}
+els.tsDiff.addEventListener("click", () => addTsDerivedColumn("diff"));
+els.tsRatio.addEventListener("click", () => addTsDerivedColumn("ratio"));
+
 els.tsBase.addEventListener("change", () => {
   tsState.baseIdx = parseInt(els.tsBase.value, 10) || 0;
   const pts = tsState.series[tsState.baseIdx].points;
   els.tsSlider.max = String(pts.length - 1);
   els.tsSlider.value = "0";
+  const opts = pts.map((p, i) => `<option value="${i}">${p.year}年: ${escapeHtmlText(p.field)}</option>`).join("");
+  if (els.tsFrom) els.tsFrom.innerHTML = opts;
+  if (els.tsTo)   els.tsTo.innerHTML   = opts;
+  if (els.tsFrom) els.tsFrom.value = "0";
+  if (els.tsTo)   els.tsTo.value   = String(pts.length - 1);
   setTsField();
 });
 els.tsSlider.addEventListener("input", setTsField);
@@ -1775,6 +1815,12 @@ function setupTimeSeriesPanel() {
   const pts = tsState.series[tsState.baseIdx].points;
   els.tsSlider.max = String(pts.length - 1);
   els.tsSlider.value = "0";
+  // Also populate from/to selectors for the diff/ratio buttons
+  const opts = pts.map((p, i) => `<option value="${i}">${p.year}年: ${escapeHtmlText(p.field)}</option>`).join("");
+  if (els.tsFrom) els.tsFrom.innerHTML = opts;
+  if (els.tsTo)   els.tsTo.innerHTML   = opts;
+  if (els.tsFrom) els.tsFrom.value = "0";
+  if (els.tsTo)   els.tsTo.value   = String(pts.length - 1);
   updateTsLabel();
 }
 
