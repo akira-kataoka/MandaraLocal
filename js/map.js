@@ -304,6 +304,80 @@ export class MandaraMap {
   }
 
   /**
+   * Render a small bar chart at each feature centroid.
+   * Sister mode of applyPieCharts — same selected fields but rendered
+   * as side-by-side vertical bars whose heights are proportional to
+   * each field's value relative to the **global maximum across all
+   * features** for that field (so heights compare across regions).
+   *
+   * MANDARA 「棒グラフモード」相当。
+   */
+  applyBarCharts(dataset, fields, colors, opts = {}) {
+    this.symbolLayer.clearLayers();
+    if (!this.layer || !dataset || !fields?.length) return;
+    const maxH = opts.maxHeightPx ?? 30;
+    const barW = opts.barWidthPx ?? 6;
+    const gap  = 1;
+    const pad  = 2;
+
+    // Global max per field for height scaling
+    const globalMax = fields.map(fn => {
+      let m = 0;
+      for (const r of dataset.rows) {
+        const v = r.values[fn];
+        if (Number.isFinite(v) && v > m) m = v;
+      }
+      return m;
+    });
+
+    const byId = new Map();
+    for (const r of dataset.rows) byId.set(r.key, r);
+
+    const totalW = fields.length * barW + (fields.length - 1) * gap + pad * 2;
+    const totalH = maxH + pad * 2 + 8;   // 8px baseline label space
+
+    this.layer.eachLayer((lyr) => {
+      const f = lyr.feature;
+      const row = byId.get(f.properties.id);
+      if (!row) return;
+      let lat, lng;
+      try { const c = lyr.getBounds().getCenter(); lat = c.lat; lng = c.lng; } catch { return; }
+
+      const bars = [];
+      const tipLines = [];
+      let anyVal = false;
+      fields.forEach((fn, i) => {
+        const v = row.values[fn];
+        const gMax = globalMax[i] || 1;
+        const h = Number.isFinite(v) && v > 0 ? (v / gMax) * maxH : 0;
+        if (h > 0) anyVal = true;
+        const x = pad + i * (barW + gap);
+        const y = pad + (maxH - h);
+        bars.push(`<rect x="${x}" y="${y}" width="${barW}" height="${h.toFixed(1)}" fill="${colors[i] || "#94a3b8"}" stroke="#1e293b" stroke-width="0.4"/>`);
+        tipLines.push(`${escapeHtml(fn)}: ${Number.isFinite(v) ? formatNum(v) : "—"}`);
+      });
+      if (!anyVal) return;
+      // baseline
+      const baseY = pad + maxH + 0.5;
+      bars.push(`<line x1="${pad}" y1="${baseY}" x2="${totalW - pad}" y2="${baseY}" stroke="#475569" stroke-width="0.6"/>`);
+
+      const html = `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}">${bars.join("")}</svg>`;
+      const icon = L.divIcon({
+        className: "bar-icon",
+        html,
+        iconSize: [totalW, totalH],
+        iconAnchor: [totalW / 2, totalH - pad],
+      });
+      const name = this._nameFor(f.properties);
+      const m = L.marker([lat, lng], { icon, interactive: true });
+      m.bindTooltip(`<strong>${escapeHtml(name)}</strong><br/>${tipLines.join("<br/>")}`, {
+        sticky: true, direction: "top", className: "chocho-tip",
+      });
+      m.addTo(this.symbolLayer);
+    });
+  }
+
+  /**
    * Render text labels at each feature centroid: "name\nvalue".
    * Inspired by MANDARA's 「文字モード / ラベル表示モード」.
    *

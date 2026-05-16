@@ -649,11 +649,12 @@ els.selectMode.addEventListener("change", () => {
   state.mode = els.selectMode.value;
   els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both");
   els.rowDotUnit.hidden = state.mode !== "dot";
-  const pieOn = state.mode === "pie";
-  els.rowPie.hidden = !pieOn;
-  els.hintPie.hidden = !pieOn;
-  els.rowPieSize.hidden = !pieOn;
-  if (pieOn) populatePieFields();
+  // Pie + Bar share the same multi-field selector UI
+  const multiOn = state.mode === "pie" || state.mode === "bar";
+  els.rowPie.hidden = !multiOn;
+  els.hintPie.hidden = !multiOn;
+  els.rowPieSize.hidden = state.mode !== "pie";   // radius is pie-only
+  if (multiOn) populatePieFields();
   refresh();
 });
 els.selectPieFields.addEventListener("change", () => refresh());
@@ -989,15 +990,19 @@ function refresh() {
     mapper.applyDotDensity(state.geojson, state.valueMap, unit);
   } else if (state.mode === "label") {
     mapper.applyLabels(state.valueMap, state.field);
-  } else if (state.mode === "pie") {
+  } else if (state.mode === "pie" || state.mode === "bar") {
     const selected = [...els.selectPieFields.selectedOptions].map(o => o.value);
-    const radius = Math.max(8, parseInt(els.inputPieRadius.value || "18", 10));
-    // Match palette to slice colors (recompute for the selected count)
-    const pieColors = getPalette(state.palette, Math.max(2, selected.length), state.reverse);
-    mapper.applyPieCharts(state.dataset, selected, pieColors, { radiusPx: radius });
-    // Re-render legend with the pie series colors instead of break ranges
-    renderPieLegend(els.legendBox, selected, pieColors, "円グラフ構成");
-    renderPieLegend(els.overlayLegend, selected, pieColors);
+    const seriesColors = getPalette(state.palette, Math.max(2, selected.length), state.reverse);
+    if (state.mode === "pie") {
+      const radius = Math.max(8, parseInt(els.inputPieRadius.value || "18", 10));
+      mapper.applyPieCharts(state.dataset, selected, seriesColors, { radiusPx: radius });
+      renderPieLegend(els.legendBox, selected, seriesColors, "円グラフ構成");
+      renderPieLegend(els.overlayLegend, selected, seriesColors);
+    } else {
+      mapper.applyBarCharts(state.dataset, selected, seriesColors);
+      renderPieLegend(els.legendBox, selected, seriesColors, "棒グラフ構成");
+      renderPieLegend(els.overlayLegend, selected, seriesColors);
+    }
   } else {
     mapper.clearSymbols();
   }
