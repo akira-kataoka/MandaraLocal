@@ -359,6 +359,19 @@ body.dark .ct-result td.total { background: #78350f; }
   margin-top: 6px;
   display: block;
 }
+#boxplot-svg {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 280 / 140;
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-top: 6px;
+  display: block;
+}
+body.dark #boxplot-svg { background: #0f172a; border-color: #334155; }
+body.dark #boxplot-svg text { fill: #cbd5e1; }
+
 #histogram-svg {
   width: 100%;
   height: auto;

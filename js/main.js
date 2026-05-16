@@ -12,6 +12,7 @@ import { exportPng, exportSvg, exportKml } from "./export.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { renderScatter } from "./scatter.js";
 import { renderHistogram } from "./histogram.js";
+import { renderBoxplot } from "./boxplot.js";
 import { renderTable } from "./table.js";
 
 // ----- State -----
@@ -120,6 +121,8 @@ const els = {
   panelTable:   $("panel-table"),
   panelHist:    $("panel-histogram"),
   histBins:     $("hist-bins"),
+  panelBox:     $("panel-boxplot"),
+  boxplotSvg:   $("boxplot-svg"),
   histSvg:      $("histogram-svg"),
   histPng:      $("hist-png"),
   scatterPng:   $("scatter-png"),
@@ -548,6 +551,7 @@ async function applyLevel(level) {
       els.panelScatter.hidden = true;
       els.panelTable.hidden = true;
       els.panelHist.hidden = true;
+      els.panelBox.hidden = true;
     }
     setSummary("地図準備完了。サンプルまたはCSVを読み込んでください。", "muted");
   } catch (e) {
@@ -1725,6 +1729,7 @@ function onDatasetReady(ds, label) {
   els.panelLegend.hidden = false;
   els.panelTable.hidden = false;
   els.panelHist.hidden = false;
+  els.panelBox.hidden = false;
   if (ds.fields.length >= 2) {
     els.panelCt.hidden = false;
     if (els.ctRow.options.length >= 2) {
@@ -1886,6 +1891,9 @@ function refresh() {
 
   // Data table
   renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover);
+
+  // Box plot
+  if (els.boxplotSvg) renderBoxplot(els.boxplotSvg, values, state.field);
 
   // Histogram with bin → map highlight link
   if (els.histSvg) {
