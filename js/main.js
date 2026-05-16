@@ -164,6 +164,8 @@ const els = {
   selectScene:  $("select-scene"),
   btnSceneSave: $("btn-scene-save"),
   btnSceneDelete: $("btn-scene-delete"),
+  btnSceneExport: $("btn-scene-export"),
+  fileSceneImport: $("file-scene-import"),
 };
 
 // ----- Restore prior session settings -----
@@ -1080,6 +1082,45 @@ els.btnSceneDelete.addEventListener("click", () => {
   setSummary(`シーン「${name}」を削除しました`, "muted");
 });
 refreshSceneList();
+
+els.btnSceneExport.addEventListener("click", () => {
+  const all = loadScenes();
+  const keys = Object.keys(all);
+  if (!keys.length) { setSummary("保存されているシーンがありません", "warn"); return; }
+  const blob = new Blob([JSON.stringify({ format: "mandaranext-scenes", version: 1, scenes: all }, null, 2)],
+    { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `mandaranext_scenes_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`${keys.length} シーンを書き出しました`, "success");
+});
+
+els.fileSceneImport.addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const json = JSON.parse(text);
+    const incoming = json.scenes || json;
+    if (typeof incoming !== "object") throw new Error("形式不正");
+    const existing = loadScenes();
+    let added = 0, replaced = 0;
+    for (const [k, v] of Object.entries(incoming)) {
+      if (existing[k]) replaced++; else added++;
+      existing[k] = v;
+    }
+    saveScenes(existing);
+    refreshSceneList();
+    setSummary(`シーン読込完了: 新規 ${added} / 上書き ${replaced} = 計 ${added + replaced}`, "success");
+  } catch (err) {
+    setSummary("シーン読込失敗: " + err.message, "error");
+  } finally {
+    e.target.value = "";
+  }
+});
 
 els.tsBase.addEventListener("change", () => {
   tsState.baseIdx = parseInt(els.tsBase.value, 10) || 0;
