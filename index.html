@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=65" />
+  <link rel="stylesheet" href="css/style.css?v=66" />
 </head>
 <body>
   <header class="app-header">
@@ -280,7 +280,9 @@
             <input id="filter-value2" type="text" placeholder="例: 5000000" />
           </div>
           <div class="form-row">
-            <button id="btn-filter-add" class="btn">＋ 条件追加 (AND)</button>
+            <button id="btn-filter-add" class="btn" title="現在の条件を AND で追加">＋AND</button>
+            <button id="btn-filter-add-or" class="btn" title="現在の条件を OR で追加">＋OR</button>
+            <button id="btn-filter-add-not" class="btn" title="現在の条件を AND NOT (除外) で追加">＋NOT</button>
             <button id="btn-filter-apply" class="btn btn-primary">適用</button>
             <button id="btn-filter-clear" class="btn">クリア</button>
           </div>
@@ -431,7 +433,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=65"></script>
+  <script type="module" src="js/main.js?v=66"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

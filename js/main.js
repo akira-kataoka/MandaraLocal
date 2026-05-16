@@ -109,6 +109,8 @@ const els = {
   btnFilterApply: $("btn-filter-apply"),
   btnFilterClear: $("btn-filter-clear"),
   btnFilterAdd:   $("btn-filter-add"),
+  btnFilterAddOr: $("btn-filter-add-or"),
+  btnFilterAddNot:$("btn-filter-add-not"),
   filterConditions: $("filter-conditions"),
   filterResult: $("filter-result"),
   panelLegend:  $("panel-legend"),
@@ -765,9 +767,11 @@ els.filterOp.addEventListener("change", () => {
 });
 els.btnFilterApply.addEventListener("click", applyAttributeFilter);
 els.btnFilterClear.addEventListener("click", clearAttributeFilter);
-els.btnFilterAdd.addEventListener("click", addCurrentFilterCondition);
+els.btnFilterAdd.addEventListener("click", () => addCurrentFilterCondition("AND"));
+els.btnFilterAddOr.addEventListener("click", () => addCurrentFilterCondition("OR"));
+els.btnFilterAddNot.addEventListener("click", () => addCurrentFilterCondition("NOT"));
 
-const filterStack = [];   // array of {field, op, v1, v2}
+const filterStack = [];   // array of {field, op, v1, v2, joiner: "AND"|"OR"|"NOT"}
 
 function readCurrentFilter() {
   const field = els.filterField.value;
@@ -778,9 +782,10 @@ function readCurrentFilter() {
   return { field, op, v1, v2: Number.isFinite(v2) ? v2 : null };
 }
 
-function addCurrentFilterCondition() {
+function addCurrentFilterCondition(joiner = "AND") {
   const c = readCurrentFilter();
   if (!c) { setSummary("値を入力してから追加してください", "warn"); return; }
+  c.joiner = joiner;
   filterStack.push(c);
   renderFilterStack();
   applyAttributeFilter();
@@ -793,7 +798,8 @@ function renderFilterStack() {
     div.className = "fc-item";
     const op = { ">":"&gt;", ">=":"≥", "<":"&lt;", "<=":"≤", "==":"=", "!=":"≠", "between":"〜" }[c.op] || c.op;
     const valStr = c.op === "between" ? `${c.v1}〜${c.v2}` : `${c.v1}`;
-    div.innerHTML = `<span>${i > 0 ? "AND " : ""}<strong>${escapeHtmlText(c.field)}</strong> ${op} ${valStr}</span>`;
+    const joinPrefix = i === 0 ? "" : ({ AND:"AND ", OR:"OR ", NOT:"AND NOT " }[c.joiner] || "AND ");
+    div.innerHTML = `<span><em style="color:var(--accent)">${joinPrefix}</em><strong>${escapeHtmlText(c.field)}</strong> ${op} ${valStr}</span>`;
     const btn = document.createElement("button");
     btn.textContent = "削除";
     btn.addEventListener("click", () => {
@@ -889,21 +895,33 @@ function evalCondition(c, x) {
 
 function applyAttributeFilter() {
   if (!state.dataset) return;
-  // Combine the stack (committed conditions) with the current row, AND together
   const current = readCurrentFilter();
   const conds = [...filterStack];
-  if (current) conds.push(current);
+  if (current) conds.push({ ...current, joiner: filterStack.length ? "AND" : undefined });
   if (!conds.length) {
     els.filterResult.textContent = "条件を入力または追加してください";
     els.filterResult.className = "data-summary warn";
     return;
   }
+  // Evaluate left-to-right: c0 is the seed, then each subsequent condition
+  //   joiner=AND → acc && c
+  //   joiner=OR  → acc || c
+  //   joiner=NOT → acc && !c     (== AND NOT, i.e. set difference)
   const matched = new Set();
   for (const r of state.dataset.rows) {
-    if (conds.every(c => evalCondition(c, r.values[c.field]))) matched.add(r.key);
+    let acc = evalCondition(conds[0], r.values[conds[0].field]);
+    for (let i = 1; i < conds.length; i++) {
+      const v = r.values[conds[i].field];
+      const ok = evalCondition(conds[i], v);
+      const j = conds[i].joiner || "AND";
+      if (j === "AND") acc = acc && ok;
+      else if (j === "OR") acc = acc || ok;
+      else if (j === "NOT") acc = acc && !ok;
+    }
+    if (acc) matched.add(r.key);
   }
   mapper.markOutliers(matched);
-  els.filterResult.textContent = `${conds.length}条件AND結合 → 一致: ${matched.size}件 / 全${state.dataset.rows.length}件`;
+  els.filterResult.textContent = `${conds.length}条件 → 一致: ${matched.size}件 / 全${state.dataset.rows.length}件`;
   els.filterResult.className = "data-summary success";
 }
 
