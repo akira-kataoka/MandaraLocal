@@ -107,7 +107,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     return ((h / 0xFFFFFFFF) * 2 - 1) * jitterPx;
   };
   const pts = el("g");
-  for (const [vx, vy, fid] of pairs) {
+  for (const [vx, vy, fid, nm] of pairs) {
     const r0 = sizeFn && fid != null ? sizeFn(fid) : 3;
     const jx = jitterPx && fid != null ? hashOffset(fid, 0) : 0;
     const jy = jitterPx && fid != null ? hashOffset(fid, 1) : 0;
@@ -129,6 +129,13 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       c.style.fillOpacity = "0.85";
       c.style.stroke = "#1e293b";
       c.style.strokeWidth = "0.6";
+    }
+    // Native SVG tooltip with name + values (Cycle 189). Shows after the
+    // browser-standard hover delay; complements the live map highlight.
+    if (nm) {
+      const t = el("title");
+      t.textContent = `${nm}\n${xLabel}: ${formatNum(vx)}\n${yLabel}: ${formatNum(vy)}`;
+      c.appendChild(t);
     }
     if (onHover && fid != null) {
       c.addEventListener("mouseenter", () => {
