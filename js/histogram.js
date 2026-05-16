@@ -172,7 +172,10 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
       return PAD.left + ((sv - sMin) / (sMax - sMin)) * innerW;
     };
     const overlay = el("g", { class: "hist-stat-overlay" });
-    const addLine = (val, color, dash, labelStr) => {
+    // Cycle 196: show numeric value next to each label so users see the actual
+    // μ / M / ±σ without hovering. Stagger Y per row to avoid overlap when the
+    // four lines cluster, and flip anchor at right edge so text doesn't clip.
+    const addLine = (val, color, dash, prefix, row) => {
       if (val < min || val > max) return;
       const xpx = xAt(val);
       const ln = el("line", {
@@ -181,17 +184,21 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
       });
       if (dash) ln.setAttribute("stroke-dasharray", dash);
       overlay.appendChild(ln);
+      const txt = `${prefix}=${formatShort(val)}`;
+      const nearRight = xpx > W - PAD.right - 50;
       const lab = el("text", {
-        x: xpx + 2, y: PAD.top + 8,
+        x: nearRight ? xpx - 2 : xpx + 2,
+        y: PAD.top + 8 + row * 9,
         "font-size": 9, "font-weight": 700, fill: color,
+        "text-anchor": nearRight ? "end" : "start",
       });
-      lab.textContent = labelStr;
+      lab.textContent = txt;
       overlay.appendChild(lab);
     };
-    addLine(mean,       "#dc2626", "",       "μ");
-    addLine(median,     "#2563eb", "3,2",    "M");
-    addLine(mean - sd,  "#64748b", "1,2",    "-σ");
-    addLine(mean + sd,  "#64748b", "1,2",    "+σ");
+    addLine(mean,       "#dc2626", "",       "μ",  0);
+    addLine(median,     "#2563eb", "3,2",    "M",  1);
+    addLine(mean - sd,  "#64748b", "1,2",    "-σ", 2);
+    addLine(mean + sd,  "#64748b", "1,2",    "+σ", 3);
     // Theoretical normal-distribution curve (Cycle 156) — scaled to the
     // histogram's count axis: density × n × binWidth.
     if (opts.normalCurve !== false && sd > 0) {
