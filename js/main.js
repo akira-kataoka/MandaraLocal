@@ -4445,7 +4445,14 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "284"; // bumped each polish cycle
+const APP_VERSION = "285"; // bumped each polish cycle
+// Cycle 285: 600ms green pulse on clipboard / save success to give the user
+// immediate visual feedback in addition to setSummary().
+function flashBtn(el) {
+  if (!el) return;
+  el.classList.add("flash-ok");
+  setTimeout(() => el.classList.remove("flash-ok"), 600);
+}
 // Cycle 284: surface the version in the header h1 badge.
 (() => {
   const b = document.getElementById("app-version-badge");
@@ -4543,6 +4550,7 @@ els.btnCopyResultsTxt?.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(txt);
     setSummary(`分析結果を平文でクリップボードにコピーしました（${txt.split("\n").length}行）`, "success");
+    flashBtn(els.btnCopyResultsTxt);
   } catch (e) {
     setSummary("コピー失敗: " + e.message, "error");
   }
@@ -4556,6 +4564,7 @@ els.btnCopyResults?.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(md);
     setSummary(`分析結果を Markdown でクリップボードにコピーしました（${md.split("\n").length}行）`, "success");
+    flashBtn(els.btnCopyResults);
   } catch (e) {
     setSummary("コピー失敗: " + e.message, "error");
   }
@@ -5147,6 +5156,7 @@ els.btnSceneShareUrl.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(url);
     setSummary("共有URLをクリップボードにコピーしました", "success");
+    flashBtn(els.btnSceneShareUrl);
   } catch {
     prompt("以下のURLをコピーして共有してください:", url);
   }
@@ -7682,6 +7692,7 @@ els.btnScatterPinsMd?.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(md);
     setSummary(`ピン ${rows.length} 件を Markdown でコピーしました`, "success");
+    flashBtn(els.btnScatterPinsMd);
   } catch (e) {
     setSummary("コピー失敗: " + (e?.message || e), "error");
   }

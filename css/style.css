@@ -212,6 +212,12 @@ body.dark .panel h2 { color: #cbd5e1; border-bottom-color: #334155; }
   cursor: pointer;
   transition: background .15s;
 }
+/* Cycle 285: 600ms green flash after clipboard / save success. */
+.btn.flash-ok {
+  background: #16a34a !important;
+  color: #fff !important;
+  border-color: #15803d !important;
+}
 .btn:hover { background: #f1f5f9; }
 .btn-primary {
   background: var(--accent);
