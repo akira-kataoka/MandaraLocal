@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=189" />
+  <link rel="stylesheet" href="css/style.css?v=190" />
 </head>
 <body>
   <header class="app-header">
@@ -670,6 +670,7 @@
         <div class="form-row">
           <button id="pca-run" class="btn btn-primary">PCA を実行</button>
           <button id="pca-csv" class="btn" disabled>CSV出力</button>
+          <button id="pca-mahalanobis" class="btn" disabled title="多変量外れ値検出">Mahalanobis 距離</button>
           <button id="pca-add" class="btn" disabled style="margin-left:auto">PC1, PC2 を列に追加</button>
         </div>
         <div id="pca-result" class="mr-result"></div>
@@ -814,7 +815,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=189"></script>
+  <script type="module" src="js/main.js?v=190"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

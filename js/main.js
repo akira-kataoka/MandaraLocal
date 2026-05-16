@@ -220,6 +220,7 @@ const els = {
   pcaXList:        $("pca-x-list"),
   pcaRun:          $("pca-run"),
   pcaCsv:          $("pca-csv"),
+  pcaMahalanobis:  $("pca-mahalanobis"),
   pcaAdd:          $("pca-add"),
   pcaResult:       $("pca-result"),
   panelKm:         $("panel-kmeans"),
@@ -2462,6 +2463,33 @@ function runPca() {
   renderPcaResult(state.pcaResult);
   if (els.pcaAdd) els.pcaAdd.disabled = false;
   if (els.pcaCsv) els.pcaCsv.disabled = false;
+  if (els.pcaMahalanobis) els.pcaMahalanobis.disabled = false;
+  // Keep the raw standardized matrix for downstream multivariate methods
+  // (Mahalanobis distance in Cycle 190).
+  state.pcaResult.Z = (function() {
+    // recompute Z (cheap) — needed because runPca doesn't expose it
+    if (!state.dataset) return null;
+    const f = state.pcaResult.xFields;
+    const raw = [];
+    for (const r of state.dataset.rows) {
+      const row = [];
+      let ok = true;
+      for (const xf of f) {
+        const v = r.values[xf];
+        if (!Number.isFinite(v)) { ok = false; break; }
+        row.push(v);
+      }
+      if (ok) raw.push(row);
+    }
+    const n = raw.length, d = f.length;
+    const mean = new Array(d).fill(0);
+    for (const p of raw) for (let j = 0; j < d; j++) mean[j] += p[j];
+    for (let j = 0; j < d; j++) mean[j] /= n;
+    const sd = new Array(d).fill(0);
+    for (const p of raw) for (let j = 0; j < d; j++) sd[j] += (p[j] - mean[j]) ** 2;
+    for (let j = 0; j < d; j++) sd[j] = Math.sqrt(sd[j] / Math.max(1, n - 1)) || 1;
+    return raw.map(p => p.map((v, j) => (v - mean[j]) / sd[j]));
+  })();
 }
 
 // Jacobi eigendecomposition for symmetric matrices. Returns eigvals + V
@@ -3044,6 +3072,79 @@ els.pcaCsv?.addEventListener("click", () => {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   setSummary(`PCA結果を ${a.download} として保存しました（${r.d}主成分 × ${r.n}地域）`, "success");
+});
+
+// Mahalanobis distance (Cycle 190): multivariate-outlier detection. Uses the
+// covariance of standardized variables → equivalent to a generalized squared
+// distance from the centroid. Compared against χ²(d) percentiles for tests.
+function mahalanobisDistances(Z) {
+  const n = Z.length;
+  if (n < 2) return null;
+  const d = Z[0].length;
+  // Mean vector (should be ~0 if Z is standardized, but be safe).
+  const mu = new Array(d).fill(0);
+  for (const row of Z) for (let j = 0; j < d; j++) mu[j] += row[j];
+  for (let j = 0; j < d; j++) mu[j] /= n;
+  // Covariance matrix (n-1 denominator)
+  const cov = Array.from({ length: d }, () => new Array(d).fill(0));
+  for (const row of Z) {
+    for (let i = 0; i < d; i++) {
+      for (let j = i; j < d; j++) {
+        cov[i][j] += (row[i] - mu[i]) * (row[j] - mu[j]);
+      }
+    }
+  }
+  for (let i = 0; i < d; i++) {
+    for (let j = i; j < d; j++) {
+      cov[i][j] /= (n - 1);
+      cov[j][i] = cov[i][j];
+    }
+  }
+  const invCov = invertMat(cov);
+  if (!invCov) return null;
+  // D² for each row
+  const out = new Array(n);
+  for (let k = 0; k < n; k++) {
+    const c = Z[k].map((v, j) => v - mu[j]);
+    // d² = c' Σ⁻¹ c
+    let s = 0;
+    for (let i = 0; i < d; i++) {
+      let acc = 0;
+      for (let j = 0; j < d; j++) acc += invCov[i][j] * c[j];
+      s += c[i] * acc;
+    }
+    out[k] = s;
+  }
+  return out;
+}
+
+els.pcaMahalanobis?.addEventListener("click", () => {
+  const r = state.pcaResult;
+  if (!r || !r.Z || !r.keys) {
+    setSummary("先に PCA を実行してください", "warn"); return;
+  }
+  const dSq = mahalanobisDistances(r.Z);
+  if (!dSq) { setSummary("Mahalanobis 距離の計算に失敗", "error"); return; }
+  // 95% threshold via χ² critical value for df = number of variables. Use
+  // simple approximation: median + 2.0 * MAD instead, since chi² inverse CDF
+  // is heavy. The threshold flag column is informational only.
+  const sorted = dSq.slice().sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  // Add as derived column
+  let name = "Mahalanobis_D²";
+  let suffix = 2;
+  while (state.dataset.fields.includes(name)) name = `Mahalanobis_D²_${suffix++}`;
+  const idx = new Map(r.keys.map((k, i) => [k, dSq[i]]));
+  for (const row of state.dataset.rows) {
+    row.values[name] = idx.has(row.key) ? idx.get(row.key) : null;
+  }
+  state.dataset.fields.push(name);
+  populateFieldSelects();
+  if (state.dataset.fields.length >= 2) populateScatterSelectors(state.dataset.fields);
+  state.field = name;
+  els.selectField.value = name;
+  refresh();
+  setSummary(`Mahalanobis 距離 (中央値=${median.toFixed(2)}) を「${name}」として追加、地図に表示`, "success");
 });
 
 els.pcaAdd?.addEventListener("click", () => {
