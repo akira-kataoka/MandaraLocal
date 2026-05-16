@@ -3463,6 +3463,7 @@ function drawScatter() {
   const colorByField = els.scatterColorBy?.value || "";
   let categoryFor = null;
   let welchResult = null;  // populated below when exactly 2 categories exist
+  let anovaResult = null;  // populated when 3+ categories exist (Cycle 139)
   if (colorByField) {
     const rowsByKey = new Map(state.dataset.rows.map(r => [r.key, r]));
     const allVals = state.dataset.rows.map(r => r.values[colorByField]);
@@ -3505,6 +3506,8 @@ function drawScatter() {
         if (a1.length >= 2 && a2.length >= 2) {
           welchResult = welchTTest(a1, a2, k1, k2);
         }
+      } else if (groupY.size >= 3) {
+        anovaResult = onewayAnova(groupY);
       }
     }
   }
@@ -3573,6 +3576,11 @@ function drawScatter() {
     const sig = w.pValue < 0.001 ? " ***" : w.pValue < 0.01 ? " **" : w.pValue < 0.05 ? " *" : "";
     const pFmt = w.pValue < 0.001 ? "< 0.001" : w.pValue.toFixed(3);
     welchInfo = ` · <small style="color:#1e3a8a">Welch t-test: ${escapeHtmlText(w.label1)} (n=${w.n1}, μ=${formatNum(w.mean1)}) vs ${escapeHtmlText(w.label2)} (n=${w.n2}, μ=${formatNum(w.mean2)}) → t(${w.df.toFixed(1)})=${w.t.toFixed(2)}, p=${pFmt}${sig}</small>`;
+  } else if (anovaResult) {
+    const av = anovaResult;
+    const sig = av.pValue < 0.001 ? " ***" : av.pValue < 0.01 ? " **" : av.pValue < 0.05 ? " *" : "";
+    const pFmt = av.pValue < 0.001 ? "< 0.001" : av.pValue.toFixed(3);
+    welchInfo = ` · <small style="color:#1e3a8a">一元ANOVA (k=${av.k}, N=${av.N}): F(${av.df1}, ${av.df2})=${av.F.toFixed(2)}, p=${pFmt}${sig}, η²=${av.eta2.toFixed(3)}</small>`;
   }
   els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong>${ciTxt(rCI)} （${strength}${sign}の相関）${rhoTxt}${note} · 決定係数 R²=${r2}%${polyInfo}${welchInfo}`;
 }
@@ -3998,6 +4006,45 @@ function welchTTest(a, b, label1, label2) {
   // incomplete beta function instead.
   const pValue = 2 * (1 - studentTCdfAbs(Math.abs(t), df));
   return { t, df, pValue, mean1: m1, mean2: m2, label1, label2, n1, n2, var1: v1, var2: v2 };
+}
+
+// One-way ANOVA (Cycle 139). Input: Map<category, Y[]>. Returns
+// { F, df1, df2, pValue, eta2, k, N, groups: [{name, n, mean}] } or null.
+function onewayAnova(groupMap) {
+  const groups = [];
+  let N = 0;
+  let allSum = 0;
+  for (const [name, arr] of groupMap.entries()) {
+    if (arr.length < 1) continue;
+    const n = arr.length;
+    const sum = arr.reduce((s, v) => s + v, 0);
+    const mean = sum / n;
+    groups.push({ name, n, mean, arr, sum });
+    N += n;
+    allSum += sum;
+  }
+  const k = groups.length;
+  if (k < 2 || N - k < 1) return null;
+  const grand = allSum / N;
+  let SSB = 0, SSW = 0;
+  for (const g of groups) {
+    SSB += g.n * (g.mean - grand) ** 2;
+    for (const v of g.arr) SSW += (v - g.mean) ** 2;
+  }
+  if (SSW <= 0) return null;
+  const df1 = k - 1;
+  const df2 = N - k;
+  const MSB = SSB / df1;
+  const MSW = SSW / df2;
+  const F = MSB / MSW;
+  // P(F > f) = I_{df2/(df2+df1*F)}(df2/2, df1/2)
+  const x = df2 / (df2 + df1 * F);
+  const pValue = regularizedBeta(x, df2 / 2, df1 / 2);
+  const eta2 = SSB / (SSB + SSW);
+  return {
+    F, df1, df2, pValue, eta2, k, N,
+    groups: groups.map(g => ({ name: g.name, n: g.n, mean: g.mean })),
+  };
 }
 
 // Student-t one-sided CDF for |t|: P(T <= |t|) using the incomplete beta function.
