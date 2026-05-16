@@ -4428,7 +4428,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "276"; // bumped each polish cycle
+const APP_VERSION = "277"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -4894,16 +4894,21 @@ let demoScenes = {}; // name → snapshot, loaded from data/scenes/index.json
 function refreshSceneList() {
   const all = loadScenes();
   let html = '<option value="">— シーン —</option>';
-  // Cycle 242: append "📌N" badge to scene labels carrying pin selections.
-  const pinBadge = (snap) => {
-    const n = Array.isArray(snap?.pinIds) ? snap.pinIds.length : 0;
-    return n ? ` 📌${n}` : "";
+  // Cycle 242/277: append "📌N ★M" badges to scene labels for pin and
+  // starred-field counts captured in the snapshot.
+  const sceneBadges = (snap) => {
+    const pinN = Array.isArray(snap?.pinIds) ? snap.pinIds.length : 0;
+    const starN = Array.isArray(snap?.starredFields) ? snap.starredFields.length : 0;
+    let out = "";
+    if (pinN) out += ` 📌${pinN}`;
+    if (starN) out += ` ★${starN}`;
+    return out;
   };
   const demoNames = Object.keys(demoScenes);
   if (demoNames.length) {
     html += '<optgroup label="サンプル">';
     for (const n of demoNames) {
-      const badge = pinBadge(demoScenes[n]);
+      const badge = sceneBadges(demoScenes[n]);
       html += `<option value="demo:${escapeHtmlText(n)}">${escapeHtmlText(n)}${badge}</option>`;
     }
     html += '</optgroup>';
@@ -4915,7 +4920,7 @@ function refreshSceneList() {
       const entry = all[n];
       const desc = entry?.description || "";
       const title = desc ? ` title="${escapeHtmlText(desc)}"` : "";
-      const badge = pinBadge(entry?.snapshot || entry);
+      const badge = sceneBadges(entry?.snapshot || entry);
       html += `<option value="${escapeHtmlText(n)}"${title}>${escapeHtmlText(n)}${badge}</option>`;
     }
     html += '</optgroup>';
