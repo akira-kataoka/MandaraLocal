@@ -155,6 +155,7 @@ const els = {
   histBins:     $("hist-bins"),
   chkHistOverlay: $("chk-hist-overlay"),
   chkHistBreaks:  $("chk-hist-breaks"),
+  chkHistLogX:    $("chk-hist-logx"),
   panelBox:     $("panel-boxplot"),
   boxplotSvg:   $("boxplot-svg"),
   histSvg:      $("histogram-svg"),
@@ -1273,6 +1274,7 @@ function exportCrossTabCsv() {
 els.histBins.addEventListener("change", () => { refresh(); });
 els.chkHistOverlay?.addEventListener("change", () => { refresh(); });
 els.chkHistBreaks?.addEventListener("change", () => { refresh(); });
+els.chkHistLogX?.addEventListener("change", () => { refresh(); });
 
 async function svgToPng(svg, filename) {
   try {
@@ -4520,6 +4522,7 @@ function refresh() {
       overlay: els.chkHistOverlay?.checked !== false,
       breaks:  els.chkHistBreaks?.checked !== false ? state.breaks : null,
       colors:  els.chkHistBreaks?.checked !== false ? state.colors : null,
+      logX:    !!els.chkHistLogX?.checked,
     });
   }
 

@@ -16,7 +16,14 @@ const PAD = { top: 10, right: 12, bottom: 24, left: 36 };
  */
 export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = null, opts = {}) {
   svgEl.innerHTML = "";
-  const v = values.filter(x => Number.isFinite(x));
+  const logX = !!opts.logX;
+  // When log axis is requested, only positive values are usable.
+  let v;
+  if (logX) {
+    v = values.filter(x => Number.isFinite(x) && x > 0);
+  } else {
+    v = values.filter(x => Number.isFinite(x));
+  }
   const n = v.length;
   if (n < 2) return { n: 0, binCount: 0, max: 0 };
 
@@ -24,15 +31,18 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
   const auto = Math.max(3, Math.min(30, Math.ceil(Math.log2(n) + 1)));
   const k = Math.max(3, Math.min(30, bins || auto));
 
+  // For log axis, bin in log10 space. tx() projects display coordinate.
   const min = Math.min(...v);
   const max = Math.max(...v);
   if (min === max) return { n, binCount: 1, max: n };
-  const width = (max - min) / k;
-
-  // Bin counts
+  // sx: source-space → bin-space (linear or log10)
+  const sx = logX ? (x) => Math.log10(x) : (x) => x;
+  const sMin = sx(min), sMax = sx(max);
+  const width = (sMax - sMin) / k;
+  // Bin counts (in sx space)
   const counts = new Array(k).fill(0);
   for (const x of v) {
-    let idx = Math.floor((x - min) / width);
+    let idx = Math.floor((sx(x) - sMin) / width);
     if (idx >= k) idx = k - 1;
     counts[idx]++;
   }
@@ -48,11 +58,13 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
   const axis = el("g", { class: "axis" });
   axis.appendChild(line(PAD.left, H - PAD.bottom, W - PAD.right, H - PAD.bottom));
   axis.appendChild(line(PAD.left, PAD.top, PAD.left, H - PAD.bottom));
-  // x ticks at min, mid, max
+  // x ticks at min, mid, max (display original values even on log axis)
   for (const f of [0, 0.5, 1]) {
     const tx = PAD.left + f * innerW;
     axis.appendChild(line(tx, H - PAD.bottom, tx, H - PAD.bottom + 3));
-    axis.appendChild(text(tx, H - PAD.bottom + 12, formatShort(min + f * (max - min)), "middle"));
+    const sval = sMin + f * (sMax - sMin);
+    const raw = logX ? Math.pow(10, sval) : sval;
+    axis.appendChild(text(tx, H - PAD.bottom + 12, formatShort(raw), "middle"));
   }
   // y ticks at 0 and maxCount
   for (const c of [0, maxCount]) {
@@ -68,12 +80,18 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
   if (opts.breaks && opts.colors && opts.breaks.length === opts.colors.length + 1) {
     const breaks = opts.breaks;
     const cls = el("g", { class: "hist-class-bands" });
+    // Helper: project a raw value to pixel x, honoring log axis if active.
+    const valToPx = (val) => {
+      if (logX && val <= 0) return PAD.left;
+      const sv = sx(val);
+      return PAD.left + ((sv - sMin) / (sMax - sMin)) * innerW;
+    };
     for (let i = 0; i < opts.colors.length; i++) {
       const lo = Math.max(min, breaks[i]);
       const hi = Math.min(max, breaks[i + 1]);
       if (hi <= lo) continue;
-      const bx = PAD.left + ((lo - min) / (max - min)) * innerW;
-      const bw = ((hi - lo) / (max - min)) * innerW;
+      const bx = valToPx(lo);
+      const bw = valToPx(hi) - bx;
       const band = el("rect", {
         x: bx, y: PAD.top, width: bw, height: innerH,
         fill: opts.colors[i], "fill-opacity": "0.18", "shape-rendering": "crispEdges",
@@ -84,7 +102,7 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
     for (let i = 1; i < breaks.length - 1; i++) {
       const bv = breaks[i];
       if (bv < min || bv > max) continue;
-      const bx = PAD.left + ((bv - min) / (max - min)) * innerW;
+      const bx = valToPx(bv);
       const ln = el("line", {
         x1: bx, y1: PAD.top, x2: bx, y2: H - PAD.bottom,
         stroke: "#475569", "stroke-width": "0.6", "stroke-dasharray": "2,2",
@@ -103,8 +121,11 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
     const bw = (innerW / k) - barGap * 2;
     const by = y(c);
     const bh = (H - PAD.bottom) - by;
-    const lo = min + i * width;
-    const hi = lo + width;
+    // sx-space lo/hi; if log axis, translate back to original units for tooltip
+    const sLo = sMin + i * width;
+    const sHi = sLo + width;
+    const lo = logX ? Math.pow(10, sLo) : sLo;
+    const hi = logX ? Math.pow(10, sHi) : sHi;
     const rect = el("rect", {
       x: bx, y: by, width: bw, height: bh,
       class: "hist-bar",
@@ -133,7 +154,11 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
       : sorted[Math.floor(n/2)];
     const variance = v.reduce((a, b) => a + (b - mean) * (b - mean), 0) / n;
     const sd = Math.sqrt(variance);
-    const xAt = (val) => PAD.left + ((val - min) / (max - min)) * innerW;
+    const xAt = (val) => {
+      if (logX && val <= 0) return PAD.left;
+      const sv = sx(val);
+      return PAD.left + ((sv - sMin) / (sMax - sMin)) * innerW;
+    };
     const overlay = el("g", { class: "hist-stat-overlay" });
     const addLine = (val, color, dash, labelStr) => {
       if (val < min || val > max) return;

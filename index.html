@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=170" />
+  <link rel="stylesheet" href="css/style.css?v=171" />
 </head>
 <body>
   <header class="app-header">
@@ -472,6 +472,9 @@
         <div class="form-row inline">
           <label><input type="checkbox" id="chk-hist-breaks" checked /> 階級境界（地図色バンド）</label>
         </div>
+        <div class="form-row inline">
+          <label><input type="checkbox" id="chk-hist-logx" /> X軸を対数（右に裾を引く分布向け）</label>
+        </div>
         <svg id="histogram-svg" viewBox="0 0 280 180" preserveAspectRatio="xMidYMid meet"></svg>
         <div class="form-row">
           <button id="hist-png" class="btn">💾 PNGで保存</button>
@@ -802,7 +805,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=170"></script>
+  <script type="module" src="js/main.js?v=171"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
