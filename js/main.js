@@ -5419,22 +5419,30 @@ els.btnStatsExport?.addEventListener("click", exportAllStatsCsv);
 async function copyClassMembers(classIdx) {
   if (!state.dataset || !state.valueMap || !state.breaks) return;
   const members = [];
+  const keys = new Set();
   for (const r of state.dataset.rows) {
     const v = state.valueMap.get(r.key);
     if (!Number.isFinite(v)) continue;
     const idx = classifyValue(v, state.breaks);
-    if (idx === classIdx) members.push({ name: r.name || `#${r.key}`, value: v });
+    if (idx === classIdx) {
+      members.push({ name: r.name || `#${r.key}`, value: v });
+      keys.add(r.key);
+    }
   }
   if (members.length === 0) {
     setSummary(`第${classIdx + 1}階級に該当する地域はありません`, "warn"); return;
   }
   members.sort((a, b) => b.value - a.value);
+  // Highlight on the map (Cycle 192) and auto-clear after 4 s so it's noticeable
+  // without permanently locking the visualization.
+  mapper.markOutliers(keys);
+  setTimeout(() => mapper.clearOutlierMarks(), 4000);
   const tsv = members.map(m => `${m.name}\t${m.value}`).join("\n");
   try {
     await navigator.clipboard.writeText(tsv);
-    setSummary(`第${classIdx + 1}階級の ${members.length} 件をクリップボードにコピー`, "success");
+    setSummary(`第${classIdx + 1}階級の ${members.length} 件を地図ハイライト + クリップボードへコピー（4秒で解除）`, "success");
   } catch (e) {
-    setSummary("コピー失敗: " + e.message, "error");
+    setSummary(`第${classIdx + 1}階級の ${members.length} 件を地図ハイライト（コピー失敗: ${e.message}）`, "warn");
   }
 }
 
