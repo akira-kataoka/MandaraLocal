@@ -142,6 +142,110 @@ function formatRange(lo, hi) {
   return `${f(lo)} 〜 ${f(hi)}`;
 }
 
+/**
+ * Build a KML (Google Earth) document from a GeoJSON FeatureCollection
+ * + an optional value-color lookup. Each feature becomes a Placemark
+ * with a Polygon and the current classified color as its PolyStyle.
+ *
+ * @param geojson  FeatureCollection
+ * @param opts.valueMap   Map<id, number|null>
+ * @param opts.breaks     classification breaks
+ * @param opts.colors     palette
+ * @param opts.title      KML <name>
+ * @param opts.fieldName  used for ExtendedData
+ */
+export async function exportKml({ geojson, valueMap, breaks, colors, title, fieldName }, filename = "mandara_map.kml") {
+  const { classifyValue } = await import("./classification.js");
+  const parts = [];
+  parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
+  parts.push(`<kml xmlns="http://www.opengis.net/kml/2.2">`);
+  parts.push(`<Document>`);
+  parts.push(`<name>${escapeXml(title || "MandaraNext export")}</name>`);
+
+  // Define one Style per palette color (id = cls0 ... cls{k-1}, + na)
+  if (colors && colors.length) {
+    colors.forEach((c, i) => {
+      parts.push(
+        `<Style id="cls${i}">` +
+        `<LineStyle><color>ff475569</color><width>0.6</width></LineStyle>` +
+        `<PolyStyle><color>${kmlColorFromHex(c, 0.88)}</color><outline>1</outline></PolyStyle>` +
+        `</Style>`
+      );
+    });
+  }
+  parts.push(
+    `<Style id="na">` +
+    `<LineStyle><color>ff475569</color><width>0.5</width></LineStyle>` +
+    `<PolyStyle><color>${kmlColorFromHex("#e5e7eb", 0.7)}</color><outline>1</outline></PolyStyle>` +
+    `</Style>`
+  );
+
+  for (const f of geojson.features) {
+    const id = f.properties?.id;
+    const v  = valueMap ? valueMap.get(id) : null;
+    let styleId = "na";
+    if (Number.isFinite(v) && breaks && colors) {
+      const idx = classifyValue(v, breaks);
+      if (idx >= 0) styleId = `cls${idx}`;
+    }
+    const name = f.properties?.nam_ja || f.properties?.name_jp || f.properties?.name_en || `#${id}`;
+    parts.push(`<Placemark>`);
+    parts.push(`<name>${escapeXml(name)}</name>`);
+    parts.push(`<styleUrl>#${styleId}</styleUrl>`);
+    if (fieldName && v != null) {
+      parts.push(
+        `<ExtendedData>` +
+        `<Data name="${escapeXml(fieldName)}"><value>${escapeXml(String(v))}</value></Data>` +
+        `</ExtendedData>`
+      );
+    }
+    parts.push(geometryToKml(f.geometry));
+    parts.push(`</Placemark>`);
+  }
+  parts.push(`</Document></kml>`);
+
+  const blob = new Blob([parts.join("\n")], { type: "application/vnd.google-earth.kml+xml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function kmlColorFromHex(hex, alpha = 1) {
+  // KML expects aabbggrr in hex
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || "");
+  if (!m) return "ff888888";
+  const a = Math.round(Math.max(0, Math.min(1, alpha)) * 255).toString(16).padStart(2, "0");
+  return `${a}${m[3]}${m[2]}${m[1]}`;
+}
+
+function geometryToKml(g) {
+  if (!g) return "";
+  if (g.type === "Polygon") return polygonToKml(g.coordinates);
+  if (g.type === "MultiPolygon") {
+    const parts = ["<MultiGeometry>"];
+    for (const poly of g.coordinates) parts.push(polygonToKml(poly));
+    parts.push("</MultiGeometry>");
+    return parts.join("");
+  }
+  if (g.type === "Point") {
+    return `<Point><coordinates>${g.coordinates[0]},${g.coordinates[1]},0</coordinates></Point>`;
+  }
+  return "";
+}
+function polygonToKml(rings) {
+  const out = ["<Polygon>"];
+  rings.forEach((ring, i) => {
+    const tag = i === 0 ? "outerBoundaryIs" : "innerBoundaryIs";
+    out.push(`<${tag}><LinearRing><coordinates>`);
+    out.push(ring.map(([x, y]) => `${x},${y},0`).join(" "));
+    out.push(`</coordinates></LinearRing></${tag}>`);
+  });
+  out.push("</Polygon>");
+  return out.join("");
+}
+
 function escapeXml(s) {
   return String(s ?? "").replace(/[&<>"']/g, ch => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"

@@ -8,7 +8,7 @@ import { getPalette } from "./color.js";
 import { computeStats, formatNum, detectOutliers } from "./stats.js";
 import { renderLegend } from "./legend.js";
 import { MandaraMap } from "./map.js";
-import { exportPng, exportSvg } from "./export.js";
+import { exportPng, exportSvg, exportKml } from "./export.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { renderScatter } from "./scatter.js";
 import { renderTable } from "./table.js";
@@ -132,6 +132,7 @@ const els = {
   btnPng:       $("btn-export-png"),
   btnSvg:       $("btn-export-svg"),
   btnCsv:       $("btn-export-csv"),
+  btnKml:       $("btn-export-kml"),
   btnMeasure:   $("btn-measure"),
   btnArea:      $("btn-area"),
   btnBuffer:    $("btn-buffer"),
@@ -771,6 +772,19 @@ els.scatterY.addEventListener("change", drawScatter);
 els.btnDerived.addEventListener("click", addDerivedField);
 els.btnTemplate.addEventListener("click", downloadTemplate);
 els.btnCsv.addEventListener("click", exportCurrentCsv);
+els.btnKml.addEventListener("click", () => {
+  if (!state.geojson) { setSummary("地図データが読み込まれていません", "warn"); return; }
+  const fname = `mandara_${(state.field || "map").replace(/\s+/g, "_")}.kml`;
+  exportKml({
+    geojson: state.geojson,
+    valueMap: state.valueMap,
+    breaks: state.breaks,
+    colors: state.colors,
+    title: state.field || "MandaraNext",
+    fieldName: state.field,
+  }, fname);
+  setSummary(`KMLを ${fname} として書き出しました (Google Earthで開けます)`, "success");
+});
 els.btnTheme.addEventListener("click", toggleTheme);
 
 els.tsBase.addEventListener("change", () => {
