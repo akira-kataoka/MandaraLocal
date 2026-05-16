@@ -4384,6 +4384,14 @@ window.addEventListener("keydown", (e) => {
     els.btnScatterPinOutliers?.click();
     return;
   }
+  // Cycle 268: Shift+B promotes the latest brush selection to permanent pins.
+  if (!inField && e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === "B" || e.key === "b")) {
+    if (state.lastBrushIds?.size) {
+      e.preventDefault();
+      els.btnScatterPinBrush?.click();
+    }
+    return;
+  }
   // Cycle 250: "?" / Shift+/ opens the help modal.
   if (!inField && (e.key === "?" || (e.shiftKey && e.key === "/"))) {
     e.preventDefault();
@@ -4404,7 +4412,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "267"; // bumped each polish cycle
+const APP_VERSION = "268"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -4433,6 +4441,7 @@ function showHelpModal() {
       <code>Shift+Esc</code><span>ピン留めを全解除</span>
       <code>Shift+P</code><span>ピン留め地域に地図をズーム</span>
       <code>Shift+O</code><span>散布図の外れ値を一括ピン</span>
+      <code>Shift+B</code><span>直前の brush 選択をピン留めに昇格</span>
       <code>Z</code><span>Zen モード切替（サイドバー隠して地図全画面）</span>
 
       <strong>散布図</strong><span></span>
