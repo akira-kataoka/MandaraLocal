@@ -191,6 +191,12 @@ const els = {
   scatterLabels:   $("scatter-labels"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
+  panelKm:         $("panel-kmeans"),
+  kmXList:         $("km-x-list"),
+  kmK:             $("km-k"),
+  kmRun:           $("km-run"),
+  kmAdd:           $("km-add"),
+  kmResult:        $("km-result"),
   panelMr:         $("panel-multireg"),
   mrY:             $("mr-y"),
   mrXList:         $("mr-x-list"),
@@ -1810,6 +1816,143 @@ function renderResidualPlot(r) {
 }
 
 els.mrRun?.addEventListener("click", runMultipleRegression);
+
+// ----- k-means clustering (Cycle 145) -----
+function populateKmSelectors(fields) {
+  if (!els.kmXList) return;
+  const prevChecked = new Set(
+    [...els.kmXList.querySelectorAll("input:checked")].map(el => el.value)
+  );
+  els.kmXList.innerHTML = "";
+  for (const f of fields) {
+    const label = document.createElement("label");
+    label.style.cssText = "display:block;padding:1px 0;";
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.value = f;
+    if (prevChecked.has(f)) cb.checked = true;
+    label.appendChild(cb);
+    label.append(" " + f);
+    els.kmXList.appendChild(label);
+  }
+}
+
+function runKmeansClustering() {
+  if (!state.dataset) return;
+  const xFields = [...els.kmXList.querySelectorAll("input:checked")].map(el => el.value);
+  if (xFields.length < 1) { setSummary("少なくとも 1 つの説明変数 X を選んでください", "warn"); return; }
+  const K = parseInt(els.kmK.value, 10) || 3;
+  // Complete-cases matrix (n × d)
+  const points = [];
+  const keys = [];
+  for (const r of state.dataset.rows) {
+    const row = [];
+    let ok = true;
+    for (const xf of xFields) {
+      const v = r.values[xf];
+      if (!Number.isFinite(v)) { ok = false; break; }
+      row.push(v);
+    }
+    if (ok) { points.push(row); keys.push(r.key); }
+  }
+  const n = points.length;
+  if (n < K + 1) {
+    setSummary(`サンプル不足: n=${n}, K=${K} (n>K が必要)`, "warn"); return;
+  }
+  // Z-score standardise each column so different scales don't dominate.
+  const d = xFields.length;
+  const mean = new Array(d).fill(0), sd = new Array(d).fill(0);
+  for (const p of points) for (let j = 0; j < d; j++) mean[j] += p[j];
+  for (let j = 0; j < d; j++) mean[j] /= n;
+  for (const p of points) for (let j = 0; j < d; j++) sd[j] += (p[j] - mean[j]) ** 2;
+  for (let j = 0; j < d; j++) sd[j] = Math.sqrt(sd[j] / n) || 1;
+  const Z = points.map(p => p.map((v, j) => (v - mean[j]) / sd[j]));
+  // k-means++ seeding
+  const centroids = [];
+  centroids.push(Z[Math.floor(Math.random() * n)].slice());
+  while (centroids.length < K) {
+    const dists = Z.map(p => Math.min(...centroids.map(c => euclidSq(p, c))));
+    const total = dists.reduce((s, v) => s + v, 0);
+    let r = Math.random() * total;
+    let idx = 0;
+    while (idx < n - 1 && (r -= dists[idx]) > 0) idx++;
+    centroids.push(Z[idx].slice());
+  }
+  // Lloyd's algorithm
+  let assignments = new Array(n).fill(-1);
+  let iter = 0;
+  while (iter < 100) {
+    let changed = false;
+    // Assign
+    for (let i = 0; i < n; i++) {
+      let bestK = 0, bestD = Infinity;
+      for (let k = 0; k < K; k++) {
+        const dist = euclidSq(Z[i], centroids[k]);
+        if (dist < bestD) { bestD = dist; bestK = k; }
+      }
+      if (assignments[i] !== bestK) { assignments[i] = bestK; changed = true; }
+    }
+    if (!changed) break;
+    // Update
+    const sums = Array.from({ length: K }, () => new Array(d).fill(0));
+    const counts = new Array(K).fill(0);
+    for (let i = 0; i < n; i++) {
+      const k = assignments[i];
+      counts[k]++;
+      for (let j = 0; j < d; j++) sums[k][j] += Z[i][j];
+    }
+    for (let k = 0; k < K; k++) {
+      if (counts[k] > 0) for (let j = 0; j < d; j++) centroids[k][j] = sums[k][j] / counts[k];
+    }
+    iter++;
+  }
+  // Within-cluster sum of squares
+  let wss = 0;
+  for (let i = 0; i < n; i++) wss += euclidSq(Z[i], centroids[assignments[i]]);
+  state.kmResult = { K, xFields, n, iterations: iter, wss, keys, assignments };
+  renderKmResult(state.kmResult);
+  if (els.kmAdd) els.kmAdd.disabled = false;
+}
+
+function euclidSq(a, b) {
+  let s = 0;
+  for (let j = 0; j < a.length; j++) { const d = a[j] - b[j]; s += d * d; }
+  return s;
+}
+
+function renderKmResult(r) {
+  if (!els.kmResult) return;
+  const sizes = new Array(r.K).fill(0);
+  for (const a of r.assignments) sizes[a]++;
+  let html = `<div class="mr-summary">k-means: K=${r.K}, n=${r.n}, 反復=${r.iterations}, WSS=${r.wss.toFixed(2)}</div>`;
+  html += "<table style='margin-top:6px'><thead><tr><th>クラスタ</th><th>件数</th><th>割合</th></tr></thead><tbody>";
+  for (let k = 0; k < r.K; k++) {
+    html += `<tr><td>${k + 1}</td><td class="num">${sizes[k]}</td><td class="num">${(sizes[k] / r.n * 100).toFixed(1)}%</td></tr>`;
+  }
+  html += "</tbody></table>";
+  els.kmResult.innerHTML = html;
+}
+
+els.kmRun?.addEventListener("click", runKmeansClustering);
+
+els.kmAdd?.addEventListener("click", () => {
+  const r = state.kmResult;
+  if (!r || !state.dataset) return;
+  let name = `クラスタ_K${r.K}`;
+  let suffix = 2;
+  while (state.dataset.fields.includes(name)) name = `クラスタ_K${r.K}_${suffix++}`;
+  const idx = new Map(r.keys.map((k, i) => [k, r.assignments[i]]));
+  for (const row of state.dataset.rows) {
+    const a = idx.get(row.key);
+    row.values[name] = a == null ? null : (a + 1); // 1..K for readability
+  }
+  state.dataset.fields.push(name);
+  populateFieldSelects();
+  if (state.dataset.fields.length >= 2) populateScatterSelectors(state.dataset.fields);
+  state.field = name;
+  els.selectField.value = name;
+  refresh();
+  setSummary(`列「${name}」を追加して地図に表示しました`, "success");
+});
 els.mrCsv?.addEventListener("click", () => {
   const r = state.mrResult;
   if (!r) { setSummary("先に「回帰を計算」してください", "warn"); return; }
@@ -2952,11 +3095,16 @@ function onDatasetReady(ds, label) {
       els.panelMr.hidden = false;
       populateMrSelectors(ds.fields);
     }
+    if (els.panelKm) {
+      els.panelKm.hidden = false;
+      populateKmSelectors(ds.fields);
+    }
     populateScatterSelectors(ds.fields);
   } else {
     els.panelScatter.hidden = true;
     if (els.panelCorrMatrix) els.panelCorrMatrix.hidden = true;
     if (els.panelMr) els.panelMr.hidden = true;
+    if (els.panelKm) els.panelKm.hidden = true;
   }
   // Pre-populate pie field options for the new dataset
   populatePieFields();
