@@ -162,6 +162,7 @@ const els = {
   ctCol:        $("ct-col"),
   ctBins:       $("ct-bins"),
   ctRun:        $("ct-run"),
+  ctExport:     $("ct-export"),
   ctResult:     $("ct-result"),
   tableWrap:    $("table-wrap"),
   panelTs:      $("panel-timeseries"),
@@ -1129,6 +1130,31 @@ function renderFilterStack() {
   });
 }
 els.ctRun.addEventListener("click", runCrossTab);
+els.ctExport?.addEventListener("click", exportCrossTabCsv);
+
+function exportCrossTabCsv() {
+  const ct = state.crosstab;
+  if (!ct) { setSummary("まず「集計」ボタンで集計を実行してください", "warn"); return; }
+  const fmt = (v) => formatNum(v);
+  const colHeaders = ct.colBreaks.slice(0, -1).map((_, j) => `${fmt(ct.colBreaks[j])}〜${fmt(ct.colBreaks[j + 1])}`);
+  const lines = [];
+  lines.push([`${ct.rowF} ＼ ${ct.colF}`, ...colHeaders, "合計"].map(csvEscape).join(","));
+  for (let i = 0; i < ct.matrix.length; i++) {
+    const rowLabel = `${fmt(ct.rowBreaks[i])}〜${fmt(ct.rowBreaks[i + 1])}`;
+    lines.push([rowLabel, ...ct.matrix[i].map(String), String(ct.rowTot[i])].map(csvEscape).join(","));
+  }
+  lines.push(["合計", ...ct.colTot.map(String), String(ct.total)].map(csvEscape).join(","));
+  const csv = "﻿" + lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const safeName = (s) => String(s).replace(/[\s\\/:*?"<>|]+/g, "_");
+  a.href = url;
+  a.download = `crosstab_${safeName(ct.rowF)}_x_${safeName(ct.colF)}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`クロス集計を ${a.download} として保存しました（${ct.matrix.length}×${ct.colBreaks.length - 1}、合計 ${ct.total}件）`, "success");
+}
 els.histBins.addEventListener("change", () => { refresh(); });
 els.chkHistOverlay?.addEventListener("change", () => { refresh(); });
 els.chkHistBreaks?.addEventListener("change", () => { refresh(); });
@@ -1201,6 +1227,9 @@ function runCrossTab() {
   for (let j = 0; j < bins; j++) html += `<td class="total">${colTot[j]}</td>`;
   html += `<td class="total">${total}</td></tr></tbody></table>`;
   els.ctResult.innerHTML = html;
+  // Stash the result for CSV export (Cycle 116)
+  state.crosstab = { rowF, colF, rowBreaks, colBreaks, matrix: mat, rowTot, colTot, total };
+  if (els.ctExport) els.ctExport.disabled = false;
 
   // Wire cell hover for map cross-highlight
   els.ctResult.querySelectorAll(".ct-cell").forEach((td) => {
