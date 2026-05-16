@@ -151,6 +151,7 @@ const els = {
   panelLegend:  $("panel-legend"),
   legendBox:    $("legend-container"),
   btnExportLegendPng: $("btn-export-legend-png"),
+  btnExportLegendSvg: $("btn-export-legend-svg"),
   selectLegendPos: $("select-legend-pos"),
   selectLegendFs:  $("select-legend-fs"),
   selectLegendPrec: $("select-legend-prec"),
@@ -1016,6 +1017,58 @@ els.btnExportLegendPng?.addEventListener("click", async () => {
   } catch (e) {
     console.error(e);
     setSummary("凡例PNG の生成に失敗しました: " + (e?.message || e), "error");
+  }
+});
+
+// Cycle 207: SVG export of the legend via <foreignObject> wrapping. Inlines
+// the most relevant computed styles so downstream editors (Inkscape /
+// Illustrator) don't lose the layout when external CSS is gone.
+els.btnExportLegendSvg?.addEventListener("click", () => {
+  if (!els.legendBox || !els.legendBox.children.length) {
+    setSummary("凡例が空のため書き出せません", "warn"); return;
+  }
+  try {
+    const rect = els.legendBox.getBoundingClientRect();
+    const w = Math.max(120, Math.ceil(rect.width) + 16);
+    const h = Math.max(40, Math.ceil(rect.height) + 16);
+    // Walk the legend tree and copy resolved styles to inline so the SVG is
+    // self-contained. Keep the prop list minimal to avoid huge files.
+    const STYLE_PROPS = [
+      "font-family", "font-size", "font-weight", "color",
+      "background", "background-color",
+      "padding", "margin", "border", "border-radius",
+      "display", "align-items", "gap", "white-space",
+      "width", "height", "line-height", "text-align",
+    ];
+    const clone = els.legendBox.cloneNode(true);
+    const srcAll  = [els.legendBox, ...els.legendBox.querySelectorAll("*")];
+    const dstAll  = [clone, ...clone.querySelectorAll("*")];
+    for (let i = 0; i < srcAll.length; i++) {
+      const cs = getComputedStyle(srcAll[i]);
+      const decl = STYLE_PROPS.map(p => `${p}:${cs.getPropertyValue(p)}`).join(";");
+      const prev = dstAll[i].getAttribute("style") || "";
+      dstAll[i].setAttribute("style", decl + ";" + prev);
+    }
+    const xml = new XMLSerializer().serializeToString(clone);
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <rect x="0" y="0" width="${w}" height="${h}" fill="#ffffff"/>
+  <foreignObject x="8" y="8" width="${w - 16}" height="${h - 16}">
+    <div xmlns="http://www.w3.org/1999/xhtml">${xml}</div>
+  </foreignObject>
+</svg>`;
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const safeField = (state.field || "legend").replace(/[\\/:*?"<>|]/g, "_");
+    a.href = url;
+    a.download = `mandara_legend_${safeField}.svg`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setSummary("凡例をSVGで保存しました", "success");
+  } catch (e) {
+    console.error(e);
+    setSummary("凡例SVG の生成に失敗しました: " + (e?.message || e), "error");
   }
 });
 els.chkReverse.addEventListener("change", () => {

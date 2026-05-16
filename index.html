@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=206" />
+  <link rel="stylesheet" href="css/style.css?v=207" />
 </head>
 <body>
   <header class="app-header">
@@ -428,6 +428,7 @@
         <div id="legend-container"></div>
         <div class="form-row">
           <button id="btn-export-legend-png" class="btn" type="button" style="font-size:11px;padding:2px 8px" title="凡例だけを切り出してPNG画像で保存（プレゼン資料への貼付け用）">💾 凡例のみPNG</button>
+          <button id="btn-export-legend-svg" class="btn" type="button" style="font-size:11px;padding:2px 8px" title="凡例だけをSVGベクターで保存（Illustrator/Inkscape編集用）">凡例のみSVG</button>
         </div>
       </section>
 
@@ -846,7 +847,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=206"></script>
+  <script type="module" src="js/main.js?v=207"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
