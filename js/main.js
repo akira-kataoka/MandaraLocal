@@ -199,6 +199,7 @@ const els = {
   hcLinkage:       $("hc-linkage"),
   hcK:             $("hc-k"),
   hcRun:           $("hc-run"),
+  hcCsv:           $("hc-csv"),
   hcAdd:           $("hc-add"),
   hcResult:        $("hc-result"),
   panelPca:        $("panel-pca"),
@@ -2552,6 +2553,7 @@ function runHierarchical() {
   state.hcResult = { xFields, n, K: Kfinal, linkage, keys, assignments, merges: allMerges };
   renderHcResult(state.hcResult);
   if (els.hcAdd) els.hcAdd.disabled = false;
+  if (els.hcCsv) els.hcCsv.disabled = false;
 }
 
 function makeDistFn(linkage) {
@@ -2633,6 +2635,44 @@ function buildDendrogram(r) {
 }
 
 els.hcRun?.addEventListener("click", runHierarchical);
+
+els.hcCsv?.addEventListener("click", () => {
+  const r = state.hcResult;
+  if (!r) { setSummary("先に階層クラスタを実行してください", "warn"); return; }
+  const nameById = new Map(state.dataset.rows.map(row => [row.key, row.name || `#${row.key}`]));
+  const sizes = new Array(r.K).fill(0);
+  for (const a of r.assignments) sizes[a]++;
+  const lines = [];
+  // 1. Cluster summary
+  lines.push(["クラスタ", "件数", "割合"].map(csvEscape).join(","));
+  for (let k = 0; k < r.K; k++) {
+    lines.push([String(k + 1), String(sizes[k]), (sizes[k] / r.n * 100).toFixed(2) + "%"].map(csvEscape).join(","));
+  }
+  lines.push("");
+  // 2. Meta
+  lines.push(["統計", "値"].map(csvEscape).join(","));
+  lines.push(["手法", r.linkage].map(csvEscape).join(","));
+  lines.push(["K (クラスタ数)", String(r.K)].map(csvEscape).join(","));
+  lines.push(["説明変数 X", r.xFields.join(", ")].map(csvEscape).join(","));
+  lines.push(["n (有効サンプル)", String(r.n)].map(csvEscape).join(","));
+  lines.push(["マージ回数", String(r.merges.length)].map(csvEscape).join(","));
+  lines.push("");
+  // 3. Per-region assignment
+  lines.push(["id", "地域", "クラスタ"].map(csvEscape).join(","));
+  for (let i = 0; i < r.keys.length; i++) {
+    const id = r.keys[i];
+    lines.push([String(id), nameById.get(id) || `#${id}`, String(r.assignments[i] + 1)].map(csvEscape).join(","));
+  }
+  const csv = "﻿" + lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `hclust_${r.linkage}_K${r.K}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`階層クラスタ結果を ${a.download} として保存しました（${r.linkage}, K=${r.K}, n=${r.n}）`, "success");
+});
 
 els.hcAdd?.addEventListener("click", () => {
   const r = state.hcResult;

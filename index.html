@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=160" />
+  <link rel="stylesheet" href="css/style.css?v=161" />
 </head>
 <body>
   <header class="app-header">
@@ -619,6 +619,7 @@
         </div>
         <div class="form-row">
           <button id="hc-run" class="btn btn-primary">階層クラスタを計算</button>
+          <button id="hc-csv" class="btn" disabled>CSV出力</button>
           <button id="hc-add" class="btn" disabled style="margin-left:auto">クラスタ列追加 → 地図化</button>
         </div>
         <div id="hc-result" class="mr-result"></div>
@@ -777,7 +778,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=160"></script>
+  <script type="module" src="js/main.js?v=161"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
