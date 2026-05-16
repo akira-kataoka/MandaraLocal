@@ -4355,6 +4355,8 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
+const APP_VERSION = "256"; // bumped each polish cycle (Cycle 256 baseline)
+const APP_VERSION_NOTE = "Polish cycles 195-256 (5 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
   const overlay = document.createElement("div");
@@ -4368,10 +4370,11 @@ function showHelpModal() {
     "max-height:80vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,0.3);" +
     "font-family:inherit;font-size:12.5px;line-height:1.55;color:#1e293b";
   card.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-      <div style="font-weight:700;font-size:14px">MandaraNext ショートカット</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+      <div style="font-weight:700;font-size:14px">MandaraNext ショートカット <span style="font-weight:400;color:#94a3b8;font-size:11px">v${APP_VERSION}</span></div>
       <button id="help-close" class="btn" type="button" style="font-size:11px">閉じる</button>
     </div>
+    <div style="color:#475569;font-size:10.5px;margin-bottom:8px">${escapeHtmlText(APP_VERSION_NOTE)}</div>
     <div style="display:grid;grid-template-columns:140px 1fr;gap:4px 10px">
       <strong>キーボード</strong><span></span>
       <code>Ctrl/⌘+Shift+M</code><span>分析結果を Markdown でクリップボードへ</span>
