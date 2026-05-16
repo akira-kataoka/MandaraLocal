@@ -2088,10 +2088,19 @@ function drawScatter() {
   const xs = state.dataset.rows.map(r => r.values[xf]);
   const ys = state.dataset.rows.map(r => r.values[yf]);
   const ids = state.dataset.rows.map(r => r.key);
+  // Color the dots by the *current* map field's class — so the scatter
+  // becomes a 3-variable plot (X, Y, classified colour of the map field).
+  const colorFor = (id) => {
+    if (!state.valueMap || !state.breaks || !state.colors) return null;
+    const v = state.valueMap.get(id);
+    if (!Number.isFinite(v)) return null;
+    const idx = classifyValue(v, state.breaks);
+    return idx < 0 ? null : state.colors[idx];
+  };
   const { r, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick, {
     logX: els.chkScatterLogX.checked,
     logY: els.chkScatterLogY.checked,
-  });
+  }, colorFor);
   if (r == null) {
     els.scatterCorr.textContent = `n=${n} — 相関係数を計算できません`;
   } else {

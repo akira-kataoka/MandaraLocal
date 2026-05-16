@@ -16,7 +16,7 @@ const PAD = { top: 10, right: 12, bottom: 28, left: 38 };
  *              Each circle is tagged with data-id for cross-highlighting.
  * @param onHover (id, on) callback fired on circle mouseover/out
  */
-export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover = null, onSelect = null, opts = {}) {
+export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover = null, onSelect = null, opts = {}, colorFor = null) {
   const logX = !!opts.logX;
   const logY = !!opts.logY;
   // Pair up & drop missing (drop non-positive when using log)
@@ -77,6 +77,15 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   for (const [vx, vy, fid] of pairs) {
     const c = circle(px(vx), py(vy), 3, "point");
     if (fid != null) c.setAttribute("data-id", String(fid));
+    if (colorFor && fid != null) {
+      const col = colorFor(fid);
+      if (col) {
+        c.style.fill = col;
+        c.style.fillOpacity = "0.85";
+        c.style.stroke = "#1e293b";
+        c.style.strokeWidth = "0.6";
+      }
+    }
     if (onHover && fid != null) {
       c.addEventListener("mouseenter", () => {
         c.classList.add("is-hot");
