@@ -120,6 +120,8 @@ const els = {
   panelHist:    $("panel-histogram"),
   histBins:     $("hist-bins"),
   histSvg:      $("histogram-svg"),
+  histPng:      $("hist-png"),
+  scatterPng:   $("scatter-png"),
   panelCt:      $("panel-crosstab"),
   ctRow:        $("ct-row"),
   ctCol:        $("ct-col"),
@@ -855,6 +857,34 @@ function renderFilterStack() {
 }
 els.ctRun.addEventListener("click", runCrossTab);
 els.histBins.addEventListener("change", () => { refresh(); });
+
+async function svgToPng(svg, filename) {
+  try {
+    // Serialize SVG → blob → image → canvas → PNG
+    const xml = new XMLSerializer().serializeToString(svg);
+    const rect = svg.getBoundingClientRect();
+    const w = Math.max(280, rect.width) * 2, h = Math.max(180, rect.height) * 2;
+    const svg64 = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = svg64; });
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = document.body.classList.contains("dark") ? "#0f172a" : "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setSummary(`${filename} を保存しました`, "success");
+  } catch (e) {
+    setSummary("PNG変換失敗: " + e.message, "error");
+  }
+}
+els.histPng?.addEventListener("click", () => svgToPng(els.histSvg, `histogram_${(state.field || "data").replace(/\s+/g, "_")}.png`));
+els.scatterPng?.addEventListener("click", () => svgToPng(els.scatterSvg, `scatter_${(els.scatterX.value || "x")}_vs_${(els.scatterY.value || "y")}.png`));
 
 function runCrossTab() {
   if (!state.dataset) return;
