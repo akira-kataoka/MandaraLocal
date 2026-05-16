@@ -58,7 +58,18 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
     if (idx >= k) idx = k - 1;
     counts[idx]++;
   }
-  const maxCount = Math.max(...counts);
+  // Cycle 210: cumulative (CDF-like) mode — replace per-bin counts with the
+  // running sum so each bar shows "values ≤ upper edge of this bin". maxCount
+  // stays equal to total n, which keeps μ/M/σ vertical lines positioned the
+  // same way as in the density view.
+  const cumulative = !!opts.cumulative;
+  let display = counts;
+  if (cumulative) {
+    display = new Array(k);
+    let run = 0;
+    for (let i = 0; i < k; i++) { run += counts[i]; display[i] = run; }
+  }
+  const maxCount = Math.max(...display);
 
   // Axes
   const innerW = W - PAD.left - PAD.right;
@@ -127,7 +138,7 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
   // Bars
   const bars = el("g");
   const barGap = 0.5;
-  counts.forEach((c, i) => {
+  display.forEach((c, i) => {
     if (c === 0) return;
     const bx = x(i) + barGap;
     const bw = (innerW / k) - barGap * 2;
@@ -146,7 +157,9 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
       "data-bin-hi": String(hi),
     });
     const tip = el("title");
-    tip.textContent = `${formatNum(lo)} 〜 ${formatNum(hi)}: ${c}件`;
+    tip.textContent = cumulative
+      ? `〜${formatNum(hi)}: 累積${c}件 (${(c / n * 100).toFixed(1)}%)`
+      : `${formatNum(lo)} 〜 ${formatNum(hi)}: ${c}件`;
     rect.appendChild(tip);
     if (onBinHover) {
       rect.style.cursor = "pointer";
@@ -201,7 +214,9 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
     addLine(mean + sd,  "#64748b", "1,2",    "+σ", 3);
     // Theoretical normal-distribution curve (Cycle 156) — scaled to the
     // histogram's count axis: density × n × binWidth.
-    if (opts.normalCurve !== false && sd > 0) {
+    // Cycle 210: skip in cumulative mode (would need a different formula
+    // for the CDF; keep the panel uncluttered).
+    if (opts.normalCurve !== false && sd > 0 && !cumulative) {
       const STEPS = 100;
       const pts = [];
       for (let i = 0; i <= STEPS; i++) {

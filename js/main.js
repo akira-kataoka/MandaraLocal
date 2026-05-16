@@ -166,6 +166,7 @@ const els = {
   chkHistOverlay: $("chk-hist-overlay"),
   chkHistBreaks:  $("chk-hist-breaks"),
   chkHistLogX:    $("chk-hist-logx"),
+  chkHistCumulative: $("chk-hist-cumulative"),
   histBinsHint:   $("hist-bins-hint"),
   panelBox:     $("panel-boxplot"),
   boxplotSvg:   $("boxplot-svg"),
@@ -1410,6 +1411,7 @@ els.histBins.addEventListener("change", () => { refresh(); });
 els.chkHistOverlay?.addEventListener("change", () => { refresh(); });
 els.chkHistBreaks?.addEventListener("change", () => { refresh(); });
 els.chkHistLogX?.addEventListener("change", () => { refresh(); });
+els.chkHistCumulative?.addEventListener("change", () => { refresh(); });
 
 async function svgToPng(svg, filename) {
   try {
@@ -5217,6 +5219,7 @@ function refresh() {
       breaks:  els.chkHistBreaks?.checked !== false ? state.breaks : null,
       colors:  els.chkHistBreaks?.checked !== false ? state.colors : null,
       logX:    !!els.chkHistLogX?.checked,
+      cumulative: !!els.chkHistCumulative?.checked,
       groups:  groupHist,
     });
   }
