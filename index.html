@@ -10,7 +10,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
 
-  <link rel="stylesheet" href="css/style.css?v=37" />
+  <link rel="stylesheet" href="css/style.css?v=38" />
 </head>
 <body>
   <header class="app-header">
@@ -247,6 +247,33 @@
         <div id="legend-container"></div>
       </section>
 
+      <section class="panel" id="panel-timeseries" hidden>
+        <h2>5b. 時系列再生</h2>
+        <div class="hint" id="hint-ts">列名に「(2020)」「2020年」などの年次パターンがあれば自動検出</div>
+        <div class="form-row">
+          <label for="ts-base">基準</label>
+          <select id="ts-base"></select>
+        </div>
+        <div class="form-row">
+          <label for="ts-slider">時点</label>
+          <input type="range" id="ts-slider" min="0" max="0" value="0" step="1" style="flex:1" />
+        </div>
+        <div class="form-row inline">
+          <strong id="ts-current"></strong>
+        </div>
+        <div class="form-row">
+          <button id="ts-play" class="btn btn-primary">▶ 再生</button>
+          <button id="ts-stop" class="btn" hidden>■ 停止</button>
+          <label style="margin-left:auto;font-size:11px;color:var(--muted)">速度
+            <select id="ts-speed">
+              <option value="1500">遅</option>
+              <option value="800" selected>中</option>
+              <option value="350">速</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
       <section class="panel" id="panel-table" hidden>
         <h2>6. データテーブル</h2>
         <div class="hint">列名クリックでソート / 行ホバーで地図ハイライト</div>
@@ -306,6 +333,6 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=37"></script>
+  <script type="module" src="js/main.js?v=38"></script>
 </body>
 </html>

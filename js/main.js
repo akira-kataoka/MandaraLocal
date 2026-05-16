@@ -107,6 +107,13 @@ const els = {
   legendBox:    $("legend-container"),
   panelTable:   $("panel-table"),
   tableWrap:    $("table-wrap"),
+  panelTs:      $("panel-timeseries"),
+  tsBase:       $("ts-base"),
+  tsSlider:     $("ts-slider"),
+  tsCurrent:    $("ts-current"),
+  tsPlay:       $("ts-play"),
+  tsStop:       $("ts-stop"),
+  tsSpeed:      $("ts-speed"),
   panelScatter: $("panel-scatter"),
   scatterX:     $("scatter-x"),
   scatterY:     $("scatter-y"),
@@ -758,6 +765,20 @@ els.btnTemplate.addEventListener("click", downloadTemplate);
 els.btnCsv.addEventListener("click", exportCurrentCsv);
 els.btnTheme.addEventListener("click", toggleTheme);
 
+els.tsBase.addEventListener("change", () => {
+  tsState.baseIdx = parseInt(els.tsBase.value, 10) || 0;
+  const pts = tsState.series[tsState.baseIdx].points;
+  els.tsSlider.max = String(pts.length - 1);
+  els.tsSlider.value = "0";
+  setTsField();
+});
+els.tsSlider.addEventListener("input", setTsField);
+els.tsPlay.addEventListener("click", tsPlay);
+els.tsStop.addEventListener("click", tsStop);
+els.tsSpeed.addEventListener("change", () => {
+  if (tsState.timer) { tsStop(); tsPlay(); }
+});
+
 let measureOn = false;
 let areaOn = false;
 
@@ -912,6 +933,8 @@ function onDatasetReady(ds, label) {
   }
   // Pre-populate pie field options for the new dataset
   populatePieFields();
+  // Detect time series
+  setupTimeSeriesPanel();
 
   const msg = `${label}: ${ds.rows.length}件 / ${ds.fields.length}列を読み込みました。`;
   const warn = ds.unmatched.length
@@ -1070,6 +1093,87 @@ function applyOutlierHighlight(values) {
 function onTableRowHover(id, isOn) {
   if (isOn) mapper.highlightById(id);
   else      mapper.clearHighlight();
+}
+
+// ----- Time series (連続表示モード) -----
+// Detect year-stamped columns. Group fields by their base name so that
+// "人口(2010)", "人口(2015)", "人口(2020)" share the same series.
+const YEAR_RE = /(\d{4})/;
+
+function detectTimeSeries(fields) {
+  const groups = new Map();  // base → [{ year, field }]
+  for (const f of fields) {
+    const m = f.match(YEAR_RE);
+    if (!m) continue;
+    const year = parseInt(m[1], 10);
+    if (year < 1800 || year > 2100) continue;
+    const base = f.replace(YEAR_RE, "").replace(/[（()_ -]+/g, "").trim() || "指標";
+    if (!groups.has(base)) groups.set(base, []);
+    groups.get(base).push({ year, field: f });
+  }
+  // Keep only groups with ≥2 time points
+  const result = [];
+  for (const [base, arr] of groups) {
+    if (arr.length < 2) continue;
+    arr.sort((a, b) => a.year - b.year);
+    result.push({ base, points: arr });
+  }
+  return result;
+}
+
+let tsState = { series: [], baseIdx: 0, timer: null };
+
+function setupTimeSeriesPanel() {
+  if (!state.dataset) { els.panelTs.hidden = true; return; }
+  tsState.series = detectTimeSeries(state.dataset.fields);
+  if (!tsState.series.length) { els.panelTs.hidden = true; return; }
+  els.panelTs.hidden = false;
+  els.tsBase.innerHTML = tsState.series.map((s, i) => `<option value="${i}">${s.base}</option>`).join("");
+  tsState.baseIdx = Math.min(tsState.baseIdx, tsState.series.length - 1);
+  els.tsBase.value = String(tsState.baseIdx);
+  const pts = tsState.series[tsState.baseIdx].points;
+  els.tsSlider.max = String(pts.length - 1);
+  els.tsSlider.value = "0";
+  updateTsLabel();
+}
+
+function updateTsLabel() {
+  const s = tsState.series[tsState.baseIdx];
+  if (!s) return;
+  const p = s.points[+els.tsSlider.value];
+  if (!p) return;
+  els.tsCurrent.textContent = `${p.year}年: ${p.field}`;
+}
+
+function setTsField() {
+  const s = tsState.series[tsState.baseIdx];
+  if (!s) return;
+  const p = s.points[+els.tsSlider.value];
+  if (!p) return;
+  state.field = p.field;
+  els.selectField.value = p.field;
+  updateTsLabel();
+  refresh();
+}
+
+function tsPlay() {
+  if (tsState.timer) clearInterval(tsState.timer);
+  const speed = parseInt(els.tsSpeed.value, 10);
+  els.tsPlay.hidden = true;
+  els.tsStop.hidden = false;
+  tsState.timer = setInterval(() => {
+    const max = +els.tsSlider.max;
+    let v = +els.tsSlider.value + 1;
+    if (v > max) v = 0;
+    els.tsSlider.value = String(v);
+    setTsField();
+  }, speed);
+}
+function tsStop() {
+  if (tsState.timer) clearInterval(tsState.timer);
+  tsState.timer = null;
+  els.tsPlay.hidden = false;
+  els.tsStop.hidden = true;
 }
 
 function renderPieLegend(container, fields, colors, title) {
