@@ -60,6 +60,7 @@ const els = {
   hintLatlng:       $("hint-latlng"),
   loadSample:   $("btn-load-sample"),
   csvFile:      $("csv-file"),
+  csvMerge:     $("csv-merge"),
   btnTemplate:  $("btn-download-template"),
   dataSummary:  $("data-summary"),
   panelField:   $("panel-field"),
@@ -654,6 +655,45 @@ els.csvFile.addEventListener("change", async (e) => {
     onDatasetReady(ds, file.name);
   } catch (err) {
     setSummary("CSV読み込み失敗: " + err.message, "error");
+  } finally {
+    e.target.value = "";
+  }
+});
+
+els.csvMerge.addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (!state.dataset) {
+    setSummary("先に基本データを読み込んでから追加CSVを使ってください", "warn");
+    e.target.value = ""; return;
+  }
+  try {
+    const incoming = await loadCsvFile(file, csvParseOpts());
+    const byKey = new Map();
+    for (const r of incoming.rows) byKey.set(r.key, r);
+    let merged = 0, unmatched = 0;
+    const newFields = [];
+    // De-duplicate field names — incoming overrides existing? No, append "_2" suffix
+    const fieldMap = {};
+    for (const f of incoming.fields) {
+      let n = f;
+      let k = 2;
+      while (state.dataset.fields.includes(n)) { n = `${f}_${k++}`; }
+      fieldMap[f] = n;
+      newFields.push(n);
+    }
+    state.dataset.fields.push(...newFields);
+    for (const row of state.dataset.rows) {
+      const hit = byKey.get(row.key);
+      if (!hit) { unmatched++; for (const f of newFields) row.values[f] = null; continue; }
+      merged++;
+      for (const f of incoming.fields) row.values[fieldMap[f]] = hit.values[f];
+    }
+    populateFieldSelects();
+    refresh();
+    setSummary(`「${file.name}」をマージ: ${newFields.length}列追加・${merged}行一致・${unmatched}行は値なし`, "success");
+  } catch (err) {
+    setSummary("マージ失敗: " + err.message, "error");
   } finally {
     e.target.value = "";
   }

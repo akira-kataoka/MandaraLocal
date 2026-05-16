@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=66" />
+  <link rel="stylesheet" href="css/style.css?v=67" />
 </head>
 <body>
   <header class="app-header">
@@ -115,6 +115,10 @@
         </div>
         <div class="form-row">
           <button id="btn-download-template" class="btn">テンプレートCSVをDL</button>
+        </div>
+        <div class="form-row">
+          <label for="csv-merge" class="btn btn-secondary file-label" title="現在のデータに別CSVの列を地域キーでマージ">＋ 追加CSV (マージ)</label>
+          <input type="file" id="csv-merge" accept=".csv,.txt" hidden />
         </div>
         <div class="form-row hint">
           1列目: 都道府県名 または 都道府県コード(1〜47)<br />
@@ -433,7 +437,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=66"></script>
+  <script type="module" src="js/main.js?v=67"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
