@@ -102,15 +102,58 @@ MANDARA 公式機能（https://ktgis.net/mandara/function/）を基準に
 - 🔵 **協調編集**（複数ユーザーで同時操作）
 - 🔵 **AI支援**（自然言語で「東京の人口を色分けして」）
 
-## 進行中の polish 系（凡例・テーブル・散布図）
+## 進行中の polish 系（凡例・テーブル・散布図・分析）
 
-- Cycle 195: 散布図オーバーレイ一括クリア
-- Cycle 196: ヒストグラム統計線に実値ラベル
-- Cycle 197: 散布図ラベルに Y/X 上位N件モード
-- Cycle 198: 凡例の小数点桁数指定
-- Cycle 199: 散布図 top-N の N をユーザー指定
+### 凡例 / 配色
+- Cycle 198: 凡例の小数点桁数指定 (auto / 0..3)
+- Cycle 202: 凡例カスタムカラー一括リセット
+- Cycle 203: 凡例単独を PNG 保存
+- Cycle 207: 凡例単独を SVG 保存（foreignObject + 計算スタイルinline）
+- Cycle 211: 凡例の縦/横レイアウト切替
+- Cycle 226: 横レイアウトでクラスカウント自動省略
+
+### テーブル
 - Cycle 200: テーブル列の表示/非表示ピッカー
 - Cycle 201: 列ピッカーで列順並べ替え
+- Cycle 208: 数値セル背景ヒートマップ（青→白→赤）
+- Cycle 209: 派生列を列ピッカーから削除
+- Cycle 215: 散布図ピン点をテーブル行で赤左ボーダー強調
+- Cycle 218: 表示中CSV（検索/ソート/列順/列表示反映）
+- Cycle 236: ピン左ボーダーが pin color に追従
+
+### 散布図
+- Cycle 195: 散布図オーバーレイ一括クリア
+- Cycle 197/199: ラベル top-N (Y/X) と N パラメータ化
+- Cycle 206: ラベル列指定（地域名以外）
+- Cycle 212/214/216: Shift+クリックでピン留め (リング/CSV出力/地図赤輪)
+- Cycle 219/220: シェイプ列指定 (5形状) + シェイプ凡例
+- Cycle 221/222/223: 系列別回帰線 + 比較表 + CSV出力
+- Cycle 224: Simpson's paradox 自動アラート
+- Cycle 227: SVG にも n / r / R² サブタイトル
+- Cycle 229: ラベル衝突回避モード切替 (auto/corner/overlap)
+- Cycle 231: ピン点ラベル赤太字
+- Cycle 233/234: 2群限定 — slope 差 t 検定 + Markdown/CSV連携
+- Cycle 235: ピン色をユーザー指定
+- Cycle 237: 外れ値を一括ピン
+- Cycle 238: brush 選択をピン化
+- Cycle 239: ピン留め点リストを結果Markdownに
+- Cycle 240: ピン情報をシーン共有URLに含める
+
+### ヒストグラム / boxplot
+- Cycle 196: 統計線 (μ/M/±σ) に実値ラベル
+- Cycle 204: bin別カウントを CSV (lo, hi, count, pct, cum_pct)
+- Cycle 205: boxplot 5数要約 CSV (グループ別対応)
+- Cycle 210: ヒストグラム累積 (CDF) モード
+- Cycle 228: boxplot PNG 保存
+
+### クロス集計
+- Cycle 213: 100%積み上げ棒グラフ表示モード
+- Cycle 217: 棒グラフ PNG/SVG 保存
+- Cycle 232: 結果Markdown に χ² / Cramér's V
+
+### シーン共有 / その他
+- Cycle 225: シーン共有 URL の QR 表示
+- Cycle 240: シーン共有 URL にピン留めID + ピン色を含める
 
 ## 取り組み方針
 

@@ -4588,6 +4588,11 @@ function snapshotCurrent() {
     legendFs: els.selectLegendFs?.value || "m",
     legendPrec: els.selectLegendPrec?.value || "auto",
     legendLayout: els.selectLegendLayout?.value || "vertical",
+    // Cycle 240: include scatter pin selection + color so recipients see the
+    // exact same pinned regions when opening a shared URL.
+    pinIds: (state.pinnedScatterIds instanceof Set && state.pinnedScatterIds.size)
+      ? [...state.pinnedScatterIds] : null,
+    pinColor: els.scatterPinColor?.value || null,
   };
 }
 let demoScenes = {}; // name → snapshot, loaded from data/scenes/index.json
@@ -4871,6 +4876,16 @@ function showQrModal(url, dataUrl) {
   els.rowDotUnit.hidden = state.mode !== "dot";
   els.rowManualBreaks.hidden = state.method !== "manual";
   if (state.field && els.selectField) els.selectField.value = state.field;
+  // Cycle 240: restore pin selection / color from shared URL before refresh
+  // so the first render already paints rings on the map.
+  if (snap.pinColor && /^#[0-9a-f]{6}$/i.test(snap.pinColor)) {
+    state.pinColor = snap.pinColor;
+    if (els.scatterPinColor) els.scatterPinColor.value = snap.pinColor;
+  }
+  if (Array.isArray(snap.pinIds) && snap.pinIds.length) {
+    state.pinnedScatterIds = new Set(snap.pinIds);
+    if (typeof syncScatterPinBtn === "function") syncScatterPinBtn();
+  }
   if (state.dataset) refresh();
   setSummary("URLから設定を復元しました", "success");
 })();
