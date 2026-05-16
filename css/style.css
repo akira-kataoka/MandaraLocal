@@ -558,6 +558,31 @@ body.dark .map-subtitle {
   border-color: #334155;
 }
 
+.cursor-coords {
+  position: absolute;
+  bottom: 22px;
+  right: 12px;
+  background: rgba(255,255,255,0.88);
+  color: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  z-index: 660;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+.cursor-coords:hover { background: rgba(255,255,255,1); }
+.cursor-coords.is-copied { background: #16a34a; color: #fff; border-color: #15803d; }
+body.dark .cursor-coords {
+  background: rgba(30,41,59,0.88); color: #f1f5f9; border-color: #f1f5f9;
+}
+body.dark .cursor-coords:hover { background: rgba(30,41,59,1); }
+
 .north-arrow {
   position: absolute;
   top: 56px;

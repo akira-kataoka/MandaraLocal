@@ -73,7 +73,9 @@ const els = {
   inputMapAuthor: $("input-map-author"),
   chkShowScale:  $("chk-show-scale"),
   chkShowNorth:  $("chk-show-north"),
+  chkShowCoords: $("chk-show-coords"),
   northArrow:    $("north-arrow"),
+  cursorCoords:  $("cursor-coords"),
   dataSummary:  $("data-summary"),
   panelField:   $("panel-field"),
   selectField:  $("select-field"),
@@ -859,6 +861,36 @@ els.chkShowNorth?.addEventListener("change", () => {
   if (els.northArrow) els.northArrow.hidden = !els.chkShowNorth.checked;
 });
 
+// Cursor coordinate readout: live lat/lng under the cursor.
+let _coordsEnabled = true;
+els.chkShowCoords?.addEventListener("change", () => {
+  _coordsEnabled = !!els.chkShowCoords.checked;
+  if (!_coordsEnabled && els.cursorCoords) els.cursorCoords.hidden = true;
+});
+mapper.map.on("mousemove", (e) => {
+  if (!_coordsEnabled || !els.cursorCoords) return;
+  const { lat, lng } = e.latlng;
+  els.cursorCoords.textContent = `${lat.toFixed(4)}°N  ${lng.toFixed(4)}°E`;
+  els.cursorCoords.hidden = false;
+});
+mapper.map.on("mouseout", () => {
+  if (els.cursorCoords) els.cursorCoords.hidden = true;
+});
+els.cursorCoords?.addEventListener("click", async () => {
+  const t = els.cursorCoords.textContent;
+  if (!t) return;
+  try {
+    await navigator.clipboard.writeText(t);
+    els.cursorCoords.classList.add("is-copied");
+    const orig = t;
+    els.cursorCoords.textContent = "コピー済み ✓";
+    setTimeout(() => {
+      els.cursorCoords.classList.remove("is-copied");
+      els.cursorCoords.textContent = orig;
+    }, 800);
+  } catch {}
+});
+
 els.inputMapTitle?.addEventListener("input", () => {
   if (!els.mapTitle) return;
   const t = (els.inputMapTitle.value || "").trim();
@@ -1439,6 +1471,7 @@ function snapshotCurrent() {
     scatterColorBy: els.scatterColorBy?.value || "",
     showScale: !!els.chkShowScale?.checked,
     showNorth: !!els.chkShowNorth?.checked,
+    showCoords: !!els.chkShowCoords?.checked,
     legendPos: els.selectLegendPos?.value || "br",
     legendFreeLeft: els.overlay?.style.left || "",
     legendFreeTop:  els.overlay?.style.top  || "",
@@ -1539,6 +1572,10 @@ els.selectScene.addEventListener("change", async () => {
   if (snap.showNorth !== undefined && els.chkShowNorth) {
     els.chkShowNorth.checked = !!snap.showNorth;
     els.chkShowNorth.dispatchEvent(new Event("change"));
+  }
+  if (snap.showCoords !== undefined && els.chkShowCoords) {
+    els.chkShowCoords.checked = !!snap.showCoords;
+    els.chkShowCoords.dispatchEvent(new Event("change"));
   }
   if (snap.legendPos !== undefined && els.selectLegendPos) {
     els.selectLegendPos.value = snap.legendPos;
