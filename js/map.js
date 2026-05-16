@@ -47,6 +47,17 @@ export class MandaraMap {
       { position: "topleft", collapsed: true }
     ).addTo(this.map);
 
+    // Cartographic essentials: scale bar (km only, metric).
+    this.scaleControl = L.control.scale({
+      imperial: false, metric: true, maxWidth: 140, position: "bottomleft",
+    }).addTo(this.map);
+
+    this.setScaleVisible = (on) => {
+      if (!this.scaleControl) return;
+      if (on) this.scaleControl.addTo(this.map);
+      else this.map.removeControl(this.scaleControl);
+    };
+
     this.tooltipEl = tooltipEl;
     this.layer = null;
     this._lookupFn = null;     // (code) -> {value, classIndex, color}

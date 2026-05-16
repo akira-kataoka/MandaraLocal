@@ -68,6 +68,9 @@ const els = {
   inputDataSource: $("input-data-source"),
   inputMapTitle: $("input-map-title"),
   mapTitle:      $("map-title"),
+  chkShowScale:  $("chk-show-scale"),
+  chkShowNorth:  $("chk-show-north"),
+  northArrow:    $("north-arrow"),
   dataSummary:  $("data-summary"),
   panelField:   $("panel-field"),
   selectField:  $("select-field"),
@@ -845,6 +848,14 @@ els.inputDataSource?.addEventListener("change", () => {
   if (state.dataset && state.field) refresh();
 });
 
+els.chkShowScale?.addEventListener("change", () => {
+  mapper.setScaleVisible?.(els.chkShowScale.checked);
+  if (mapperB) mapperB.setScaleVisible?.(els.chkShowScale.checked);
+});
+els.chkShowNorth?.addEventListener("change", () => {
+  if (els.northArrow) els.northArrow.hidden = !els.chkShowNorth.checked;
+});
+
 els.inputMapTitle?.addEventListener("input", () => {
   if (!els.mapTitle) return;
   const t = (els.inputMapTitle.value || "").trim();
@@ -1350,6 +1361,8 @@ function snapshotCurrent() {
     dataSource: els.inputDataSource?.value || "",
     mapTitle: els.inputMapTitle?.value || "",
     scatterColorBy: els.scatterColorBy?.value || "",
+    showScale: !!els.chkShowScale?.checked,
+    showNorth: !!els.chkShowNorth?.checked,
   };
 }
 let demoScenes = {}; // name → snapshot, loaded from data/scenes/index.json
@@ -1432,6 +1445,14 @@ els.selectScene.addEventListener("change", async () => {
   }
   if (snap.scatterColorBy !== undefined && els.scatterColorBy) {
     els.scatterColorBy.value = snap.scatterColorBy;
+  }
+  if (snap.showScale !== undefined && els.chkShowScale) {
+    els.chkShowScale.checked = !!snap.showScale;
+    els.chkShowScale.dispatchEvent(new Event("change"));
+  }
+  if (snap.showNorth !== undefined && els.chkShowNorth) {
+    els.chkShowNorth.checked = !!snap.showNorth;
+    els.chkShowNorth.dispatchEvent(new Event("change"));
   }
   // Apply visibility toggles
   els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both" || state.mode === "graduated");

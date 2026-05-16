@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=95" />
+  <link rel="stylesheet" href="css/style.css?v=96" />
 </head>
 <body>
   <header class="app-header">
@@ -351,6 +351,10 @@
             <option value="hide">非表示</option>
           </select>
         </div>
+        <div class="form-row inline">
+          <label><input type="checkbox" id="chk-show-scale" checked /> 縮尺バー</label>
+          <label style="margin-left:8px"><input type="checkbox" id="chk-show-north" checked /> 方位記号</label>
+        </div>
         <div id="legend-container"></div>
       </section>
 
@@ -497,6 +501,13 @@
         </div>
         <div id="tooltip" class="map-tooltip" hidden></div>
         <div id="map-title" class="map-title" hidden></div>
+        <div id="north-arrow" class="north-arrow" title="北">
+          <svg viewBox="0 0 32 40" width="32" height="40" aria-label="北矢印">
+            <polygon points="16,3 24,28 16,22 8,28" fill="#1e293b" stroke="#1e293b" stroke-width="1" stroke-linejoin="round"/>
+            <polygon points="16,3 24,28 16,22" fill="#ffffff" stroke="#1e293b" stroke-width="0.8"/>
+            <text x="16" y="38" text-anchor="middle" font-size="11" font-weight="700" fill="#1e293b" font-family="system-ui, sans-serif">N</text>
+          </svg>
+        </div>
         <div id="map-overlay" class="map-overlay" hidden>
           <div class="map-overlay-title" id="overlay-title"></div>
           <div class="map-overlay-legend" id="overlay-legend"></div>
@@ -539,7 +550,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=95"></script>
+  <script type="module" src="js/main.js?v=96"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
