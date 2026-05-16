@@ -3772,7 +3772,11 @@ function refreshSceneList() {
   const userNames = Object.keys(all).sort();
   if (userNames.length) {
     html += '<optgroup label="マイシーン">';
-    for (const n of userNames) html += `<option value="${escapeHtmlText(n)}">${escapeHtmlText(n)}</option>`;
+    for (const n of userNames) {
+      const desc = all[n]?.description || "";
+      const title = desc ? ` title="${escapeHtmlText(desc)}"` : "";
+      html += `<option value="${escapeHtmlText(n)}"${title}>${escapeHtmlText(n)}</option>`;
+    }
     html += '</optgroup>';
   }
   els.selectScene.innerHTML = html;
@@ -3794,11 +3798,16 @@ els.btnSceneSave.addEventListener("click", () => {
   const name = prompt("シーン名を入力 (上書きする場合は同名を指定)", "シーン1");
   if (!name) return;
   const all = loadScenes();
-  all[name] = snapshotCurrent();
+  // Preserve previous description on overwrite unless the user enters a new one.
+  const prevDesc = all[name]?.description || "";
+  const desc = prompt(`説明文（任意・後で見返す時のメモ）\n例: 2020年人口を Jenks 5階級・東京突出を強調`, prevDesc);
+  const snap = snapshotCurrent();
+  if (desc != null) snap.description = desc;
+  all[name] = snap;
   saveScenes(all);
   refreshSceneList();
   els.selectScene.value = name;
-  setSummary(`シーン「${name}」を保存しました`, "success");
+  setSummary(`シーン「${name}」を保存しました${desc ? `: ${desc}` : ""}`, "success");
 });
 els.selectScene.addEventListener("change", async () => {
   const name = els.selectScene.value;
@@ -3890,7 +3899,8 @@ els.selectScene.addEventListener("change", async () => {
   }
   if (state.field && els.selectField) els.selectField.value = state.field;
   if (state.dataset) refresh();
-  setSummary(`シーン「${name}」を復元しました`, "success");
+  const descTxt = snap.description ? ` — ${snap.description}` : "";
+  setSummary(`シーン「${name}」を復元しました${descTxt}`, "success");
 });
 els.btnSceneDelete.addEventListener("click", () => {
   const name = els.selectScene.value;
