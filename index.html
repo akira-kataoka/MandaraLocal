@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=145" />
+  <link rel="stylesheet" href="css/style.css?v=146" />
 </head>
 <body>
   <header class="app-header">
@@ -596,6 +596,7 @@
         </div>
         <div class="form-row">
           <button id="km-run" class="btn btn-primary">クラスタリングを実行</button>
+          <button id="km-elbow" class="btn">Elbow 分析 (K=2..8)</button>
           <button id="km-add" class="btn" disabled style="margin-left:auto">列として追加 → 地図化</button>
         </div>
         <div id="km-result" class="mr-result"></div>
@@ -704,7 +705,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=145"></script>
+  <script type="module" src="js/main.js?v=146"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

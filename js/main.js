@@ -195,6 +195,7 @@ const els = {
   kmXList:         $("km-x-list"),
   kmK:             $("km-k"),
   kmRun:           $("km-run"),
+  kmElbow:         $("km-elbow"),
   kmAdd:           $("km-add"),
   kmResult:        $("km-result"),
   panelMr:         $("panel-multireg"),
@@ -1836,12 +1837,10 @@ function populateKmSelectors(fields) {
   }
 }
 
-function runKmeansClustering() {
-  if (!state.dataset) return;
-  const xFields = [...els.kmXList.querySelectorAll("input:checked")].map(el => el.value);
-  if (xFields.length < 1) { setSummary("少なくとも 1 つの説明変数 X を選んでください", "warn"); return; }
-  const K = parseInt(els.kmK.value, 10) || 3;
-  // Complete-cases matrix (n × d)
+// Core k-means routine — returns { Z, n, d, assignments, centroids, iter, wss, keys }
+// or null if data is insufficient.
+function kmeansCore(xFields, K) {
+  if (!state.dataset || xFields.length < 1) return null;
   const points = [];
   const keys = [];
   for (const r of state.dataset.rows) {
@@ -1855,10 +1854,7 @@ function runKmeansClustering() {
     if (ok) { points.push(row); keys.push(r.key); }
   }
   const n = points.length;
-  if (n < K + 1) {
-    setSummary(`サンプル不足: n=${n}, K=${K} (n>K が必要)`, "warn"); return;
-  }
-  // Z-score standardise each column so different scales don't dominate.
+  if (n < K + 1) return null;
   const d = xFields.length;
   const mean = new Array(d).fill(0), sd = new Array(d).fill(0);
   for (const p of points) for (let j = 0; j < d; j++) mean[j] += p[j];
@@ -1866,7 +1862,6 @@ function runKmeansClustering() {
   for (const p of points) for (let j = 0; j < d; j++) sd[j] += (p[j] - mean[j]) ** 2;
   for (let j = 0; j < d; j++) sd[j] = Math.sqrt(sd[j] / n) || 1;
   const Z = points.map(p => p.map((v, j) => (v - mean[j]) / sd[j]));
-  // k-means++ seeding
   const centroids = [];
   centroids.push(Z[Math.floor(Math.random() * n)].slice());
   while (centroids.length < K) {
@@ -1877,12 +1872,10 @@ function runKmeansClustering() {
     while (idx < n - 1 && (r -= dists[idx]) > 0) idx++;
     centroids.push(Z[idx].slice());
   }
-  // Lloyd's algorithm
-  let assignments = new Array(n).fill(-1);
+  const assignments = new Array(n).fill(-1);
   let iter = 0;
   while (iter < 100) {
     let changed = false;
-    // Assign
     for (let i = 0; i < n; i++) {
       let bestK = 0, bestD = Infinity;
       for (let k = 0; k < K; k++) {
@@ -1892,7 +1885,6 @@ function runKmeansClustering() {
       if (assignments[i] !== bestK) { assignments[i] = bestK; changed = true; }
     }
     if (!changed) break;
-    // Update
     const sums = Array.from({ length: K }, () => new Array(d).fill(0));
     const counts = new Array(K).fill(0);
     for (let i = 0; i < n; i++) {
@@ -1905,12 +1897,76 @@ function runKmeansClustering() {
     }
     iter++;
   }
-  // Within-cluster sum of squares
   let wss = 0;
   for (let i = 0; i < n; i++) wss += euclidSq(Z[i], centroids[assignments[i]]);
-  state.kmResult = { K, xFields, n, iterations: iter, wss, keys, assignments };
+  return { Z, n, d, assignments, centroids, iter, wss, keys };
+}
+
+function runKmeansClustering() {
+  if (!state.dataset) return;
+  const xFields = [...els.kmXList.querySelectorAll("input:checked")].map(el => el.value);
+  if (xFields.length < 1) { setSummary("少なくとも 1 つの説明変数 X を選んでください", "warn"); return; }
+  const K = parseInt(els.kmK.value, 10) || 3;
+  const out = kmeansCore(xFields, K);
+  if (!out) { setSummary("サンプル不足、または有効データなし", "warn"); return; }
+  state.kmResult = { K, xFields, n: out.n, iterations: out.iter, wss: out.wss, keys: out.keys, assignments: out.assignments };
   renderKmResult(state.kmResult);
   if (els.kmAdd) els.kmAdd.disabled = false;
+}
+
+function runElbow() {
+  if (!state.dataset) return;
+  const xFields = [...els.kmXList.querySelectorAll("input:checked")].map(el => el.value);
+  if (xFields.length < 1) { setSummary("少なくとも 1 つの説明変数 X を選んでください", "warn"); return; }
+  const wssByK = [];
+  for (let K = 2; K <= 8; K++) {
+    const out = kmeansCore(xFields, K);
+    if (!out) break;
+    wssByK.push({ K, wss: out.wss });
+  }
+  if (wssByK.length < 3) { setSummary("Elbow 分析にはサンプル数が不足", "warn"); return; }
+  // Second-difference curvature heuristic for suggested K (interior points only)
+  let bestK = wssByK[0].K, bestCurve = -Infinity;
+  for (let i = 1; i < wssByK.length - 1; i++) {
+    const curve = wssByK[i - 1].wss - 2 * wssByK[i].wss + wssByK[i + 1].wss;
+    if (curve > bestCurve) { bestCurve = curve; bestK = wssByK[i].K; }
+  }
+  renderElbowChart(wssByK, bestK);
+  // Auto-select recommended K in the selector
+  if (els.kmK) els.kmK.value = String(bestK);
+  setSummary(`Elbow 分析: 推奨 K=${bestK}`, "success");
+}
+
+function renderElbowChart(wssByK, suggestedK) {
+  const W = 280, H = 140, PAD = { top: 8, right: 8, bottom: 22, left: 36 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+  const kMin = wssByK[0].K, kMax = wssByK[wssByK.length - 1].K;
+  const wMin = Math.min(...wssByK.map(p => p.wss));
+  const wMax = Math.max(...wssByK.map(p => p.wss));
+  const px = (k) => PAD.left + ((k - kMin) / (kMax - kMin || 1)) * innerW;
+  const py = (w) => PAD.top + innerH - ((w - wMin) / (wMax - wMin || 1)) * innerH;
+  let svg = `<div style="margin-top:6px;font-size:11px;font-weight:600">Elbow 分析: 推奨 K=${suggestedK}</div>`;
+  svg += `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="background:#fff;border:1px solid #e2e8f0">`;
+  // axes
+  svg += `<line x1="${PAD.left}" y1="${H - PAD.bottom}" x2="${W - PAD.right}" y2="${H - PAD.bottom}" stroke="#94a3b8"/>`;
+  svg += `<line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${H - PAD.bottom}" stroke="#94a3b8"/>`;
+  // polyline
+  const pts = wssByK.map(p => `${px(p.K)},${py(p.wss)}`).join(" ");
+  svg += `<polyline points="${pts}" fill="none" stroke="#1e3a8a" stroke-width="1.5"/>`;
+  // points + labels
+  for (const p of wssByK) {
+    const fill = p.K === suggestedK ? "#dc2626" : "#1e3a8a";
+    const r0 = p.K === suggestedK ? 4 : 2.5;
+    svg += `<circle cx="${px(p.K)}" cy="${py(p.wss)}" r="${r0}" fill="${fill}"/>`;
+    svg += `<text x="${px(p.K)}" y="${H - PAD.bottom + 12}" font-size="9" text-anchor="middle" fill="#475569">${p.K}</text>`;
+  }
+  svg += `<text x="${PAD.left - 4}" y="${py(wMin) + 3}" font-size="8" text-anchor="end" fill="#475569">${wMin.toFixed(1)}</text>`;
+  svg += `<text x="${PAD.left - 4}" y="${py(wMax) + 3}" font-size="8" text-anchor="end" fill="#475569">${wMax.toFixed(1)}</text>`;
+  svg += `<text x="${W/2}" y="${H - 6}" font-size="9" text-anchor="middle" fill="#475569">K (クラスタ数)</text>`;
+  svg += `<text x="4" y="${PAD.top + innerH/2}" font-size="9" fill="#475569">WSS</text>`;
+  svg += `</svg>`;
+  els.kmResult.innerHTML = (els.kmResult.innerHTML || "") + svg;
 }
 
 function euclidSq(a, b) {
@@ -1933,6 +1989,7 @@ function renderKmResult(r) {
 }
 
 els.kmRun?.addEventListener("click", runKmeansClustering);
+els.kmElbow?.addEventListener("click", runElbow);
 
 els.kmAdd?.addEventListener("click", () => {
   const r = state.kmResult;
