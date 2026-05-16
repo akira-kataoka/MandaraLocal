@@ -54,6 +54,9 @@ const els = {
   shapeFile:        $("shape-file"),
   rowShapeKey:      $("row-shape-keyfield"),
   shapeKeyField:    $("shape-keyfield"),
+  rowLatlngUpload:  $("row-latlng-upload"),
+  latlngFile:       $("latlng-file"),
+  hintLatlng:       $("hint-latlng"),
   loadSample:   $("btn-load-sample"),
   csvFile:      $("csv-file"),
   btnTemplate:  $("btn-download-template"),
@@ -177,6 +180,91 @@ async function getGeo(level) {
   }
   geoCache[level] = g;
   return g;
+}
+
+// ----- Lat/Lng CSV level (any custom point dataset) -----
+const LAT_PATTERNS = /^(lat|latitude|緯度|y)$/i;
+const LNG_PATTERNS = /^(lng|lon|long|longitude|経度|x)$/i;
+const NAME_PATTERNS = /^(name|名前|名称|地名|地点名|施設|store)$/i;
+
+async function enterLatLngMode() {
+  els.rowLatlngUpload.hidden = false;
+  els.hintLatlng.hidden = false;
+  els.hintLevel.innerHTML = `緯度経度を含む任意のCSVから点データを地図化します。<br/>
+    列名に「緯度/lat」「経度/lng」を含めれば自動認識、別途数値列があれば階級色塗り分け可能。`;
+  setSummary("「緯度経度CSV を開く」から任意のCSVを選択してください", "muted");
+}
+
+async function handleLatLngFile(file) {
+  setSummary(`CSV を解析中…  ${file.name}`, "muted");
+  try {
+    const text = await file.text();
+    const parsed = Papa.parse(text.replace(/^﻿/, "").replace(/\r\n?/g, "\n").trim(), {
+      header: true, skipEmptyLines: true,
+    });
+    if (!parsed.data || !parsed.data.length) throw new Error("空CSVです");
+    const headers = (parsed.meta.fields || []).map(h => h.trim());
+    const latCol = headers.find(h => LAT_PATTERNS.test(h));
+    const lngCol = headers.find(h => LNG_PATTERNS.test(h));
+    if (!latCol || !lngCol) {
+      throw new Error("緯度・経度の列が見つかりません（列名に lat/lng などを含めてください）");
+    }
+    const nameCol = headers.find(h => NAME_PATTERNS.test(h)) || headers[0];
+    // numeric fields = everything except lat/lng/name/text cols
+    const towns = [];
+    const numericFields = new Set();
+    parsed.data.forEach((r, i) => {
+      const lat = parseFloat(r[latCol]);
+      const lng = parseFloat(r[lngCol]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      const t = {
+        id: 2_000_000 + i,
+        town: String(r[nameCol] || `point-${i+1}`).trim(),
+        koaza: "",
+        lat, lng,
+        values: {},
+      };
+      for (const h of headers) {
+        if (h === latCol || h === lngCol || h === nameCol) continue;
+        const num = parseFloat(String(r[h]).replace(/,/g, ""));
+        if (Number.isFinite(num)) {
+          t.values[h] = num;
+          numericFields.add(h);
+        }
+      }
+      towns.push(t);
+    });
+    if (!towns.length) throw new Error("有効な緯度経度を含む行がありません");
+    state.chochoTowns = towns;
+    state.townIndex = buildTownIndex(towns);
+    // Build a synthetic dataset so CSV-based fields plug into the existing pipeline
+    const fields = [...numericFields];
+    state.dataset = {
+      level: "chocho",
+      fields,
+      rows: towns.map(t => ({ key: t.id, name: t.town, values: t.values })),
+      unmatched: [],
+    };
+    mapper.applyTownPlot(towns);
+    setSummary(`${file.name}: ${towns.length}点を地図化 (数値列 ${fields.length}列)`, "success");
+    if (fields.length) {
+      state.field = fields[0];
+      populateFieldSelects();
+      els.selectField.value = state.field;
+      els.panelField.hidden = false;
+      els.panelClass.hidden = false;
+      els.panelStats.hidden = false;
+      els.panelLegend.hidden = false;
+      els.panelTable.hidden = false;
+      if (fields.length >= 2) {
+        els.panelScatter.hidden = false;
+        populateScatterSelectors(fields);
+      }
+      refresh();
+    }
+  } catch (e) {
+    setSummary("緯度経度CSV読み込み失敗: " + e.message, "error");
+  }
 }
 
 // ----- Shapefile (user uploaded) level -----
@@ -321,6 +409,8 @@ async function applyLevel(level) {
   els.rowPrefFilter.hidden = true;
   els.rowShapeUpload.hidden = true;
   els.rowShapeKey.hidden = true;
+  els.rowLatlngUpload.hidden = true;
+  els.hintLatlng.hidden = true;
   if (els.mapSearch) els.mapSearch.hidden = true;
   if (els.searchSuggest) els.searchSuggest.hidden = true;
 
@@ -331,6 +421,10 @@ async function applyLevel(level) {
   if (level === "shape") {
     state.dataset = null;
     return enterShapeMode();
+  }
+  if (level === "latlng") {
+    state.dataset = null;
+    return enterLatLngMode();
   }
   try {
     const g = await getGeo(level);
@@ -415,6 +509,11 @@ els.selectChoMuni.addEventListener("change", () => {
 els.shapeFile.addEventListener("change", (e) => {
   const file = e.target.files?.[0];
   if (file) handleShapeFile(file);
+  e.target.value = "";
+});
+els.latlngFile.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  if (file) handleLatLngFile(file);
   e.target.value = "";
 });
 els.shapeKeyField.addEventListener("change", () => {

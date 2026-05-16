@@ -10,7 +10,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
 
-  <link rel="stylesheet" href="css/style.css?v=31" />
+  <link rel="stylesheet" href="css/style.css?v=32" />
 </head>
 <body>
   <header class="app-header">
@@ -36,6 +36,7 @@
             <option value="municipality">市町村 (1,742)</option>
             <option value="chocho">町丁目</option>
             <option value="shape">Shapefile</option>
+            <option value="latlng">緯度経度CSV</option>
           </select>
         </div>
         <div class="form-row" id="row-pref-filter" hidden>
@@ -63,6 +64,13 @@
         <div class="form-row" id="row-shape-keyfield" hidden>
           <label for="shape-keyfield">キー列</label>
           <select id="shape-keyfield"></select>
+        </div>
+        <div class="form-row" id="row-latlng-upload" hidden>
+          <label for="latlng-file" class="btn btn-secondary file-label">緯度経度CSV を開く</label>
+          <input type="file" id="latlng-file" accept=".csv,.txt" hidden />
+        </div>
+        <div class="form-row hint" id="hint-latlng" hidden>
+          列名に「緯度/lat/latitude」「経度/lng/longitude」を含めれば自動認識します。
         </div>
         <div class="form-row hint" id="hint-level"></div>
       </section>
@@ -251,6 +259,6 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=31"></script>
+  <script type="module" src="js/main.js?v=32"></script>
 </body>
 </html>
