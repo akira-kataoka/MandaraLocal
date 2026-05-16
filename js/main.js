@@ -2298,8 +2298,14 @@ function refresh() {
   if (state.level === "chocho") {
     mapper.applyTownPlot(state.chochoTowns, state.valueMap, state.breaks, state.colors, state.field);
     const naFlag = hasMissing(values);
-    renderLegend(els.legendBox, state.breaks, state.colors, { title: state.field, showNA: naFlag });
-    renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag });
+    const chochoCounts = new Array(state.colors.length).fill(0);
+    for (const v of values) {
+      if (!Number.isFinite(v)) continue;
+      const idx = classifyValue(v, state.breaks);
+      if (idx >= 0 && idx < chochoCounts.length) chochoCounts[idx]++;
+    }
+    renderLegend(els.legendBox, state.breaks, state.colors, { title: state.field, showNA: naFlag, classCounts: chochoCounts });
+    renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag, classCounts: chochoCounts });
     els.overlay.hidden = false;
     els.overlayTitle.textContent = state.field;
     els.overlayFooter.textContent = `MandaraNext ·${state.chochoPref}${state.chochoMuni} · ${new Date().toLocaleDateString("ja-JP")}`;
@@ -2377,8 +2383,15 @@ function refresh() {
   }
 
   const naFlag = hasMissing(values);
+  // Per-class counts: tally how many valid values fall into each break range.
+  const classCounts = new Array(state.colors.length).fill(0);
+  for (const v of values) {
+    if (!Number.isFinite(v)) continue;
+    const idx = classifyValue(v, state.breaks);
+    if (idx >= 0 && idx < classCounts.length) classCounts[idx]++;
+  }
   renderLegend(els.legendBox, state.breaks, state.colors, {
-    title: state.field, showNA: naFlag,
+    title: state.field, showNA: naFlag, classCounts,
     onClassHover: (idx, ev) => {
       if (ev.type === "mouseenter") mapper.highlightByClass(idx);
     },
@@ -2403,7 +2416,7 @@ function refresh() {
     },
   });
   els.legendBox.addEventListener("mouseleave", () => mapper.clearHighlight(), { once: true });
-  renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag });
+  renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag, classCounts });
   els.overlay.hidden = false;
   els.overlayTitle.textContent = state.field;
   const src = (els.inputDataSource?.value || "").trim();
@@ -2426,7 +2439,13 @@ function refresh() {
     if (mapperB) {
       mapperB.applyChoropleth(valueMapB, breaksB, colorsB, state.fieldB);
     }
-    renderLegend(els.overlayLegendB, breaksB, colorsB, { showNA: false });
+    const classCountsB = new Array(colorsB.length).fill(0);
+    for (const v of valuesB) {
+      if (!Number.isFinite(v)) continue;
+      const idx = classifyValue(v, breaksB);
+      if (idx >= 0 && idx < classCountsB.length) classCountsB[idx]++;
+    }
+    renderLegend(els.overlayLegendB, breaksB, colorsB, { showNA: false, classCounts: classCountsB });
     els.overlayB.hidden = false;
     els.overlayTitleB.textContent = state.fieldB;
   } else if (mapperB) {

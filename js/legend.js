@@ -80,6 +80,16 @@ export function renderLegend(container, breaks, colors, options = {}) {
     const label = document.createElement("span");
     const range = `${formatBreak(lo)} 〜 ${formatBreak(hi)}`;
     label.textContent = unit ? `${range} ${unit}` : range;
+    // Per-class count (MANDARA classic feature) — shows how data is distributed
+    // across the chosen classification. Helps spot empty or overstuffed classes.
+    if (options.classCounts && Number.isFinite(options.classCounts[i])) {
+      const c = document.createElement("small");
+      c.className = "legend-count";
+      c.textContent = ` (${options.classCounts[i]}件)`;
+      c.style.color = "var(--muted)";
+      c.style.marginLeft = "4px";
+      label.appendChild(c);
+    }
     if (typeof options.onBreakEdit === "function") {
       label.title = "ダブルクリックで上限値を編集";
       label.style.cursor = "text";
