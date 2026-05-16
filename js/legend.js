@@ -109,7 +109,9 @@ export function renderLegend(container, breaks, colors, options = {}) {
     label.textContent = unit ? `${range} ${unit}` : range;
     // Per-class count (MANDARA classic feature) — shows how data is distributed
     // across the chosen classification. Helps spot empty or overstuffed classes.
-    if (options.classCounts && Number.isFinite(options.classCounts[i])) {
+    // Cycle 226: skip the inline "(N件)" pill in horizontal layout so the row
+    // collapses to swatch + range only.
+    if (!horizontal && options.classCounts && Number.isFinite(options.classCounts[i])) {
       const c = document.createElement("small");
       c.className = "legend-count";
       c.textContent = ` (${options.classCounts[i]}件)`;
