@@ -1845,6 +1845,7 @@ els.btnScatterClearPins?.addEventListener("click", () => {
   state.pinnedScatterIds.clear();
   syncScatterPinBtn();
   drawScatter();
+  if (typeof refreshTable === "function") refreshTable();
   setSummary("散布図のピンを解除しました", "muted");
 });
 
@@ -5441,7 +5442,10 @@ function getTableRows() {
 // Cycle 208: shared opts builder so every renderTable call carries the heat
 // toggle, column visibility persistence, and any future per-table flags.
 function getTableOpts() {
-  return { heat: !!els.chkTableHeat?.checked };
+  return {
+    heat: !!els.chkTableHeat?.checked,
+    pinnedIds: state.pinnedScatterIds instanceof Set ? state.pinnedScatterIds : null,
+  };
 }
 els.chkTableHeat?.addEventListener("change", () => {
   if (state.dataset) refreshTable();
@@ -6535,6 +6539,8 @@ function onScatterClick(id, ev) {
     else state.pinnedScatterIds.add(id);
     syncScatterPinBtn();
     drawScatter();
+    // Cycle 215: keep the table's pin highlight in sync.
+    if (typeof refreshTable === "function") refreshTable();
     return;
   }
   if (state.level !== "chocho") {

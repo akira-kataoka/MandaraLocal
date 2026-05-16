@@ -26,6 +26,9 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
   // up-front so the body loop just does the linear interpolation.
   const heat = !!opts.heat;
   const heatRange = heat ? buildHeatRanges(rows, fields) : null;
+  // Cycle 215: highlight pinned-scatter rows (Set of row.key) so the user can
+  // see which table rows correspond to their on-plot pins.
+  const pinnedRows = opts.pinnedIds instanceof Set ? opts.pinnedIds : null;
 
   const table = document.createElement("table");
   // header
@@ -48,6 +51,12 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
   for (const r of display) {
     const tr = document.createElement("tr");
     tr.dataset.id = r.key;
+    if (pinnedRows && pinnedRows.has(r.key)) {
+      tr.classList.add("is-pinned");
+      // Red left border + soft tint; works with the heatmap because it sits
+      // on the row, not on individual cells.
+      tr.style.boxShadow = "inset 3px 0 0 #dc2626";
+    }
     if (onRowDelete) {
       const delTd = document.createElement("td");
       delTd.className = "row-del";
