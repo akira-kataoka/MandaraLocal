@@ -911,6 +911,64 @@ export class MandaraMap {
     if (this._bufferCleanup) this._bufferCleanup();
   }
 
+  /**
+   * Render the **Standard Deviation Ellipse (SDE)** for a set of points
+   * — analytical signature of the spatial distribution's direction and
+   * spread. MANDARA 「標準偏差楕円」相当。
+   *
+   * @param latlngs   array of [lat, lng] points (any point cloud)
+   * @returns         { center, semiMajor, semiMinor, rotationDeg }
+   *                  | null when there are <3 points
+   */
+  applyStandardDeviationEllipse(latlngs) {
+    if (this._sdeLayer) this._sdeLayer.clearLayers();
+    if (!this._sdeLayer) this._sdeLayer = L.layerGroup().addTo(this.map);
+    if (!latlngs || latlngs.length < 3) return null;
+
+    const params = computeSDE(latlngs);
+    if (!params) return null;
+
+    // Build an ellipse polygon (72 vertices) in degrees lon/lat space.
+    // The semi-axes are given in km — convert per local longitudinal factor.
+    const cosLat = Math.cos(params.cy * Math.PI / 180);
+    const kmToDegLat = 1 / 111.0;
+    const kmToDegLng = 1 / (111.0 * Math.max(0.000001, cosLat));
+    const sin = Math.sin(params.rotation), cos = Math.cos(params.rotation);
+    const ring = [];
+    for (let i = 0; i <= 72; i++) {
+      const t = (i / 72) * 2 * Math.PI;
+      const x = params.aKm * Math.cos(t);   // along major axis (km)
+      const y = params.bKm * Math.sin(t);   // along minor axis (km)
+      // rotate
+      const xr = x * cos - y * sin;
+      const yr = x * sin + y * cos;
+      ring.push([
+        params.cy + yr * kmToDegLat,
+        params.cx + xr * kmToDegLng,
+      ]);
+    }
+    const ellipse = L.polygon(ring, {
+      color: "#7c2d12", weight: 2, fillColor: "#fbbf24", fillOpacity: 0.18,
+      dashArray: "6 3", interactive: false,
+    });
+    ellipse.addTo(this._sdeLayer);
+    // mean centre
+    L.circleMarker([params.cy, params.cx], {
+      radius: 5, color: "#7c2d12", fillColor: "#dc2626", fillOpacity: 1, weight: 0,
+      interactive: false,
+    }).addTo(this._sdeLayer);
+    return {
+      center: [params.cy, params.cx],
+      semiMajorKm: params.aKm,
+      semiMinorKm: params.bKm,
+      rotationDeg: params.rotation * 180 / Math.PI,
+    };
+  }
+
+  clearSDE() {
+    if (this._sdeLayer) this._sdeLayer.clearLayers();
+  }
+
   getMapElement() { return this._mapEl; }
 }
 
@@ -1008,6 +1066,54 @@ function randomPointInPolygon(poly) {
     if (pointInPolygon([x, y], poly)) return [x, y];
   }
   return null;
+}
+
+/**
+ * Compute the Standard Deviation Ellipse parameters for a point cloud.
+ *
+ * Steps:
+ *   1) Convert each (lat, lng) to a local equirectangular km-coordinate
+ *      centred on the mean — flat-earth is fine at city/regional scales.
+ *   2) Compute the population covariance matrix [[sxx, sxy],[sxy, syy]].
+ *   3) Eigendecomposition (closed form for 2x2):
+ *        λ = (sxx + syy)/2 ± sqrt(((sxx - syy)/2)^2 + sxy^2)
+ *      Major axis = sqrt(λ_max), minor = sqrt(λ_min), rotation = angle
+ *      of the eigenvector for λ_max measured from east (x-axis).
+ *
+ * @returns { cx, cy, aKm, bKm, rotation }  (cx/cy in degrees, rotation in radians)
+ */
+function computeSDE(latlngs) {
+  const pts = latlngs.filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+  const n = pts.length;
+  if (n < 3) return null;
+  const meanLat = pts.reduce((s, p) => s + p[0], 0) / n;
+  const meanLng = pts.reduce((s, p) => s + p[1], 0) / n;
+  const cosLat = Math.cos(meanLat * Math.PI / 180);
+  // Project to km
+  const xs = pts.map(p => (p[1] - meanLng) * 111.0 * cosLat);
+  const ys = pts.map(p => (p[0] - meanLat) * 111.0);
+  let sxx = 0, syy = 0, sxy = 0;
+  for (let i = 0; i < n; i++) {
+    sxx += xs[i] * xs[i];
+    syy += ys[i] * ys[i];
+    sxy += xs[i] * ys[i];
+  }
+  sxx /= n; syy /= n; sxy /= n;
+  const half = (sxx + syy) / 2;
+  const diff = Math.sqrt(Math.max(0, ((sxx - syy) / 2) ** 2 + sxy * sxy));
+  const lMax = half + diff;
+  const lMin = Math.max(0, half - diff);
+  // Eigenvector of λ_max: solves (sxx - λ) x + sxy y = 0
+  let rot = 0;
+  if (sxy !== 0) rot = Math.atan2(lMax - sxx, sxy);
+  else if (sxx >= syy) rot = 0;
+  else rot = Math.PI / 2;
+  return {
+    cx: meanLng, cy: meanLat,
+    aKm: Math.sqrt(lMax),
+    bKm: Math.sqrt(lMin),
+    rotation: rot,
+  };
 }
 
 /**

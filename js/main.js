@@ -95,6 +95,8 @@ const els = {
   statsTable:   $("stats-table"),
   chkOutliers:  $("chk-outliers"),
   outlierList:  $("outlier-list"),
+  chkSde:       $("chk-sde"),
+  sdeInfo:      $("sde-info"),
   filterField:  $("filter-field"),
   filterOp:     $("filter-op"),
   filterValue:  $("filter-value"),
@@ -717,6 +719,7 @@ function updatePalettePreview() {
   }
 }
 els.chkOutliers.addEventListener("change", () => refresh());
+els.chkSde.addEventListener("change", () => refresh());
 els.filterOp.addEventListener("change", () => {
   els.rowFilterValue2.hidden = els.filterOp.value !== "between";
 });
@@ -1070,7 +1073,53 @@ function refresh() {
   // Outlier highlight
   applyOutlierHighlight(values);
 
+  // Standard deviation ellipse
+  applySdeDisplay();
+
   saveSettings(state);
+}
+
+function applySdeDisplay() {
+  if (!els.chkSde.checked) {
+    mapper.clearSDE();
+    els.sdeInfo.textContent = "";
+    return;
+  }
+  // Gather point cloud: prefer polygon-feature centroids; fall back to chocho towns.
+  const pts = [];
+  if (state.geojson?.features) {
+    for (const f of state.geojson.features) {
+      const id = f.properties?.id;
+      const v = state.valueMap?.get(id);
+      if (!Number.isFinite(v) || v <= 0) continue;   // weight by current value
+      // Use the polygon centroid (just take bbox centre for speed)
+      try {
+        const layer = mapper.layer;
+        if (layer) {
+          layer.eachLayer((lyr) => {
+            if (lyr.feature.properties.id === id) {
+              try { const c = lyr.getBounds().getCenter(); pts.push([c.lat, c.lng]); } catch {}
+            }
+          });
+        }
+      } catch {}
+    }
+  } else if (state.chochoTowns?.length) {
+    for (const t of state.chochoTowns) {
+      if (Number.isFinite(t.lat) && Number.isFinite(t.lng)) pts.push([t.lat, t.lng]);
+    }
+  }
+  if (pts.length < 3) {
+    mapper.clearSDE();
+    els.sdeInfo.textContent = "標準偏差楕円: 点が3つ未満で計算できません";
+    return;
+  }
+  const r = mapper.applyStandardDeviationEllipse(pts);
+  if (r) {
+    els.sdeInfo.innerHTML =
+      `中心: ${r.center[0].toFixed(3)}, ${r.center[1].toFixed(3)}<br/>` +
+      `長軸: ${r.semiMajorKm.toFixed(1)}km / 短軸: ${r.semiMinorKm.toFixed(1)}km / 方位角: ${r.rotationDeg.toFixed(1)}°`;
+  }
 }
 
 function applyOutlierHighlight(values) {

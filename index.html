@@ -10,7 +10,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
 
-  <link rel="stylesheet" href="css/style.css?v=40" />
+  <link rel="stylesheet" href="css/style.css?v=41" />
 </head>
 <body>
   <header class="app-header">
@@ -211,6 +211,10 @@
         <div class="form-row inline" style="margin-top:6px">
           <label><input type="checkbox" id="chk-outliers" /> 外れ値を地図で強調 (IQR×1.5)</label>
         </div>
+        <div class="form-row inline">
+          <label><input type="checkbox" id="chk-sde" /> 標準偏差楕円を表示</label>
+        </div>
+        <div id="sde-info" class="data-summary" style="font-size:11px"></div>
         <div id="outlier-list" class="outlier-list"></div>
         <details class="derived" style="margin-top:8px">
           <summary>属性検索 (条件で絞り込み)</summary>
@@ -337,6 +341,6 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=40"></script>
+  <script type="module" src="js/main.js?v=41"></script>
 </body>
 </html>
