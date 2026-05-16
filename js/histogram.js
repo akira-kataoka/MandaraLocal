@@ -212,6 +212,10 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
     // Cycle 196: show numeric value next to each label so users see the actual
     // μ / M / ±σ without hovering. Stagger Y per row to avoid overlap when the
     // four lines cluster, and flip anchor at right edge so text doesn't clip.
+    // Cycle 294: scale the μ/M/±σ labels with axisFontSize so they stay in
+    // visual sync with the rest of the chart.
+    const statFs = tickFs;
+    const statRowGap = statFs + 1;
     const addLine = (val, color, dash, prefix, row) => {
       if (val < min || val > max) return;
       const xpx = xAt(val);
@@ -225,8 +229,8 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
       const nearRight = xpx > W - PAD.right - 50;
       const lab = el("text", {
         x: nearRight ? xpx - 2 : xpx + 2,
-        y: PAD.top + 8 + row * 9,
-        "font-size": 9, "font-weight": 700, fill: color,
+        y: PAD.top + statFs + row * statRowGap,
+        "font-size": statFs, "font-weight": 700, fill: color,
         "text-anchor": nearRight ? "end" : "start",
       });
       lab.textContent = txt;
