@@ -4654,6 +4654,10 @@ function snapshotCurrent() {
     pinIds: (state.pinnedScatterIds instanceof Set && state.pinnedScatterIds.size)
       ? [...state.pinnedScatterIds] : null,
     pinColor: els.scatterPinColor?.value || null,
+    // Cycle 246: persist the analyst's starred-fields choice so URL/JSON
+    // recipients see the same ★ marks in their field picker.
+    starredFields: (state.starredFields instanceof Set && state.starredFields.size)
+      ? [...state.starredFields] : null,
   };
 }
 let demoScenes = {}; // name → snapshot, loaded from data/scenes/index.json
@@ -4956,6 +4960,10 @@ function showQrModal(url, dataUrl) {
   if (Array.isArray(snap.pinIds) && snap.pinIds.length) {
     state.pinnedScatterIds = new Set(snap.pinIds);
     if (typeof syncScatterPinBtn === "function") syncScatterPinBtn();
+  }
+  // Cycle 246: restore starred-field selection from the shared snapshot.
+  if (Array.isArray(snap.starredFields) && snap.starredFields.length) {
+    state.starredFields = new Set(snap.starredFields);
   }
   if (state.dataset) refresh();
   setSummary("URLから設定を復元しました", "success");
