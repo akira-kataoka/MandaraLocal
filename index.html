@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=248" />
+  <link rel="stylesheet" href="css/style.css?v=249" />
 </head>
 <body>
   <header class="app-header">
@@ -608,6 +608,7 @@
           <button id="btn-scatter-zoom-pins" class="btn" type="button" style="font-size:11px" hidden title="ピン留めした地域を全て含むように地図をズーム">🔍 ピンへズーム</button>
           <button id="btn-scatter-clear-pins" class="btn" type="button" style="font-size:11px" hidden title="ピン留めした点を全て解除（Shift+クリックで個別ピン留め）">📌 ピン解除 (0)</button>
           <button id="btn-scatter-pins-csv" class="btn" type="button" style="font-size:11px" hidden title="ピン留めした点の全フィールドをCSVで保存">📋 ピンCSV</button>
+          <button id="btn-scatter-pins-md" class="btn" type="button" style="font-size:11px" hidden title="ピン留めした点を Markdown 表でクリップボードへ">📋 ピンMD</button>
           <input id="scatter-pin-color" type="color" value="#dc2626" title="ピン留め時のリング・ラベル色" style="height:24px;width:32px;padding:0;border:1px solid var(--border);border-radius:3px;cursor:pointer" />
         </div>
         <div class="form-row inline">
@@ -898,7 +899,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=248"></script>
+  <script type="module" src="js/main.js?v=249"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

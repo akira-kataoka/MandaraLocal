@@ -224,6 +224,7 @@ const els = {
   btnScatterClearPins: $("btn-scatter-clear-pins"),
   btnScatterZoomPins: $("btn-scatter-zoom-pins"),
   btnScatterPinsCsv: $("btn-scatter-pins-csv"),
+  btnScatterPinsMd: $("btn-scatter-pins-md"),
   btnScatterPinOutliers: $("btn-scatter-pin-outliers"),
   btnScatterPinBrush: $("btn-scatter-pin-brush"),
   scatterPinColor: $("scatter-pin-color"),
@@ -7336,6 +7337,9 @@ function syncScatterPinBtn() {
   if (els.btnScatterPinsCsv) {
     els.btnScatterPinsCsv.hidden = count === 0;
   }
+  if (els.btnScatterPinsMd) {
+    els.btnScatterPinsMd.hidden = count === 0;
+  }
   if (els.btnScatterZoomPins) {
     els.btnScatterZoomPins.hidden = count === 0;
   }
@@ -7346,6 +7350,37 @@ els.btnScatterZoomPins?.addEventListener("click", () => {
   if (ok) setSummary(`ピン ${state.pinnedScatterIds.size} 件を含む範囲に地図をズームしました`, "success");
   else setSummary("ピン地物の座標が見つかりません", "warn");
 });
+// Cycle 249: copy a stand-alone Markdown table of pinned points so users can
+// paste them into Slack/notes without the full analysis report.
+els.btnScatterPinsMd?.addEventListener("click", async () => {
+  const pinned = state.pinnedScatterIds;
+  if (!(pinned instanceof Set) || !pinned.size || !state.dataset) {
+    setSummary("ピン留めされた点がありません", "warn"); return;
+  }
+  if (!navigator.clipboard?.writeText) {
+    setSummary("お使いのブラウザはクリップボード書込みに未対応です", "warn"); return;
+  }
+  const rows = state.dataset.rows.filter(r => pinned.has(r.key));
+  const xf = state.scatterStats?.xf;
+  const yf = state.scatterStats?.yf;
+  const lines = [];
+  lines.push(`# ピン留め地域 (${rows.length} 件)`);
+  if (xf && yf) {
+    lines.push(`| 地域 | ${xf} | ${yf} |`);
+    lines.push(`|---|---:|---:|`);
+    for (const r of rows) lines.push(`| ${r.name || ("#" + r.key)} | ${formatNum(r.values[xf])} | ${formatNum(r.values[yf])} |`);
+  } else {
+    for (const r of rows) lines.push(`- ${r.name || ("#" + r.key)}`);
+  }
+  const md = lines.join("\n");
+  try {
+    await navigator.clipboard.writeText(md);
+    setSummary(`ピン ${rows.length} 件を Markdown でコピーしました`, "success");
+  } catch (e) {
+    setSummary("コピー失敗: " + (e?.message || e), "error");
+  }
+});
+
 // Cycle 214: dump the pinned points (region + every field) to CSV. Mirrors
 // the BOM/quoting convention used by the other CSV exports.
 els.btnScatterPinsCsv?.addEventListener("click", () => {
