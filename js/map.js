@@ -315,33 +315,60 @@ export class MandaraMap {
 
     const group = L.featureGroup();
 
-    // === Voronoi pseudo-polygons (only when d3-delaunay is loaded & choropleth mode) ===
+    // === Voronoi pseudo-polygons, clipped to the convex hull of the points
+    //     so cells don't run across the entire bbox (looks much more natural). ===
     if (useClassifiedColor && typeof d3 !== "undefined" && d3.Delaunay && towns.length >= 3) {
       const pts = towns.filter(t => Number.isFinite(t.lat) && Number.isFinite(t.lng));
       const coords = pts.map(t => [t.lng, t.lat]);
       const xs = coords.map(p => p[0]), ys = coords.map(p => p[1]);
-      const pad = 0.005;
+      const pad = 0.01;
       const bbox = [Math.min(...xs) - pad, Math.min(...ys) - pad,
                     Math.max(...xs) + pad, Math.max(...ys) + pad];
       const delaunay = d3.Delaunay.from(coords);
       const voronoi  = delaunay.voronoi(bbox);
+
+      // Convex-hull ring of the points (closed)
+      let hullRing = null;
+      try {
+        const hullIdx = Array.from(delaunay.hull);
+        if (hullIdx.length >= 3) {
+          hullRing = hullIdx.map(i => coords[i]);
+          hullRing.push(hullRing[0]);
+        }
+      } catch (_) {}
+
+      const canClip = hullRing && typeof polygonClipping !== "undefined";
+
       pts.forEach((t, i) => {
         const cell = voronoi.cellPolygon(i);
         if (!cell) return;
+        let rings = [cell];
+        if (canClip) {
+          try {
+            const isect = polygonClipping.intersection([cell], [hullRing]);
+            if (!isect || !isect.length) return;
+            // Take only the outer rings of each resulting polygon
+            rings = isect.map(p => p[0]);
+          } catch (_) {
+            rings = [cell];
+          }
+        }
         const info = lookup(t.id);
         const fill = info?.color || "#dbeafe";
-        const latlngs = cell.map(([lng, lat]) => [lat, lng]);
-        const poly = L.polygon(latlngs, {
-          color: "#1e3a8a", weight: 0.5, opacity: 0.55,
-          fillColor: fill, fillOpacity: info?.v != null ? 0.65 : 0.25,
-        });
-        const valText = info?.v != null ? ` <span class="val">${formatNum(info.v)}</span>` : "";
-        const fieldText = fieldName ? `<br/><small>${fieldName}</small>` : "";
-        poly.bindTooltip(`${t.town}${t.koaza || ""}${valText}${fieldText}`, {
-          sticky: true, direction: "top", className: "chocho-tip",
-        });
-        poly.addTo(this.symbolLayer);
-        group.addLayer(poly);
+        for (const ring of rings) {
+          const latlngs = ring.map(([lng, lat]) => [lat, lng]);
+          const poly = L.polygon(latlngs, {
+            color: "#1e3a8a", weight: 0.5, opacity: 0.55,
+            fillColor: fill, fillOpacity: info?.v != null ? 0.65 : 0.3,
+          });
+          const valText = info?.v != null ? ` <span class="val">${formatNum(info.v)}</span>` : "";
+          const fieldText = fieldName ? `<br/><small>${fieldName}</small>` : "";
+          poly.bindTooltip(`${t.town}${t.koaza || ""}${valText}${fieldText}`, {
+            sticky: true, direction: "top", className: "chocho-tip",
+          });
+          poly.addTo(this.symbolLayer);
+          group.addLayer(poly);
+        }
       });
     }
 
