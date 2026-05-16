@@ -20,6 +20,8 @@ const state = {
   chochoMuni: "",        // chocho mode: current municipality name (jp)
   chochoTowns: [],       // [{ id, town, lat, lng, koaza }]
   townIndex: null,       // built when towns load
+  shapeGeo: null,        // user-uploaded Shapefile -> GeoJSON
+  shapeKey: null,        // property field name used as join key
   dataset: null,         // { rows, fields, unmatched, level }
   field: null,
   fieldB: null,
@@ -48,6 +50,10 @@ const els = {
   selectChoPref:    $("select-cho-pref"),
   rowChochoMuni:    $("row-chocho-muni"),
   selectChoMuni:    $("select-cho-muni"),
+  rowShapeUpload:   $("row-shape-upload"),
+  shapeFile:        $("shape-file"),
+  rowShapeKey:      $("row-shape-keyfield"),
+  shapeKeyField:    $("shape-keyfield"),
   loadSample:   $("btn-load-sample"),
   csvFile:      $("csv-file"),
   btnTemplate:  $("btn-download-template"),
@@ -173,6 +179,63 @@ async function getGeo(level) {
   return g;
 }
 
+// ----- Shapefile (user uploaded) level -----
+async function enterShapeMode() {
+  els.rowShapeUpload.hidden = false;
+  els.rowShapeKey.hidden = !!state.shapeGeo ? false : true;
+  if (state.shapeGeo) {
+    applyShapeRender();
+  } else {
+    setSummary("Shapefile (.shp+.dbf を1つの zip にまとめて) を選んで読み込んでください", "muted");
+    els.hintLevel.innerHTML = `任意の Shapefile (zip) を読み込んで主題図に利用できます。<br/>
+      <code>.shp</code> と <code>.dbf</code> を同じ名前で 1つの zip にまとめてアップロードしてください。`;
+  }
+}
+
+function applyShapeRender() {
+  if (!state.shapeGeo) return;
+  // attach a property called "id" (used elsewhere) based on the chosen key
+  const key = state.shapeKey || els.shapeKeyField.value;
+  state.shapeKey = key;
+  for (let i = 0; i < state.shapeGeo.features.length; i++) {
+    const p = state.shapeGeo.features[i].properties || {};
+    p.id = key && p[key] != null ? String(p[key]) : `shp-${i}`;
+    state.shapeGeo.features[i].properties = p;
+  }
+  state.geojson = state.shapeGeo;
+  mapper.setBaseGeo(state.shapeGeo, {
+    nameFor: (p) => key && p[key] != null ? String(p[key]) : `#${p.id}`,
+  });
+  setSummary(`Shapefile を読み込みました: ${state.shapeGeo.features.length} features`, "success");
+}
+
+async function handleShapeFile(file) {
+  if (typeof shp === "undefined") {
+    setSummary("shpjs ライブラリが読み込まれていません", "error"); return;
+  }
+  setSummary(`Shapefile を解析中…  ${file.name}`, "muted");
+  try {
+    const buf = await file.arrayBuffer();
+    const geo = await shp(buf);
+    // shpjs may return an array (one per layer) or a single FeatureCollection
+    const fc = Array.isArray(geo) ? geo[0] : geo;
+    if (!fc || !fc.features || !fc.features.length) {
+      throw new Error("有効なフィーチャが見つかりません");
+    }
+    state.shapeGeo = fc;
+    // pick field choices: every property key that's a string
+    const sample = fc.features[0].properties || {};
+    const keys = Object.keys(sample);
+    els.shapeKeyField.innerHTML = keys.map(k => `<option>${k}</option>`).join("");
+    state.shapeKey = keys[0];
+    els.shapeKeyField.value = state.shapeKey;
+    els.rowShapeKey.hidden = false;
+    applyShapeRender();
+  } catch (e) {
+    setSummary("Shapefile 読み込み失敗: " + e.message, "error");
+  }
+}
+
 // ----- Chocho (町丁目) level via Geolonia japanese-addresses -----
 const GEOLONIA_PREF_INDEX = "https://geolonia.github.io/japanese-addresses/api/ja.json";
 let geoloniaIndex = null;
@@ -204,7 +267,8 @@ async function enterChochoMode() {
   if (!state.chochoPref) {
     const idx = await getGeoloniaIndex();
     const prefNames = Object.keys(idx);
-    els.selectChoPref.innerHTML = prefNames.map(n => `<option>${n}</option>`).join("");
+    const prefList = document.getElementById("cho-pref-list");
+    prefList.innerHTML = prefNames.map(n => `<option value="${n}"></option>`).join("");
     state.chochoPref = prefNames[12] || prefNames[0];     // default to 東京都
     els.selectChoPref.value = state.chochoPref;
     populateChoMuni();
@@ -216,7 +280,8 @@ async function enterChochoMode() {
 
 function populateChoMuni() {
   const munis = geoloniaIndex[state.chochoPref] || [];
-  els.selectChoMuni.innerHTML = munis.map(m => `<option>${m}</option>`).join("");
+  const muniList = document.getElementById("cho-muni-list");
+  muniList.innerHTML = munis.map(m => `<option value="${m}"></option>`).join("");
   if (!state.chochoMuni || !munis.includes(state.chochoMuni)) {
     state.chochoMuni = munis[0] || "";
   }
@@ -254,12 +319,18 @@ async function applyLevel(level) {
   els.rowChocho.hidden = true;
   els.rowChochoMuni.hidden = true;
   els.rowPrefFilter.hidden = true;
+  els.rowShapeUpload.hidden = true;
+  els.rowShapeKey.hidden = true;
   if (els.mapSearch) els.mapSearch.hidden = true;
   if (els.searchSuggest) els.searchSuggest.hidden = true;
 
   if (level === "chocho") {
     state.dataset = null;
     return enterChochoMode();
+  }
+  if (level === "shape") {
+    state.dataset = null;
+    return enterShapeMode();
   }
   try {
     const g = await getGeo(level);
@@ -341,6 +412,15 @@ els.selectChoMuni.addEventListener("change", () => {
   state.chochoMuni = els.selectChoMuni.value;
   loadChochoTowns();
 });
+els.shapeFile.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  if (file) handleShapeFile(file);
+  e.target.value = "";
+});
+els.shapeKeyField.addEventListener("change", () => {
+  state.shapeKey = els.shapeKeyField.value;
+  applyShapeRender();
+});
 
 function populatePrefFilter(g) {
   const seen = new Map(); // code -> name
@@ -348,18 +428,28 @@ function populatePrefFilter(g) {
     const c = f.properties.pref_code;
     if (c && !seen.has(c)) seen.set(c, f.properties.pref_name);
   }
-  els.selectPrefFilter.innerHTML = '<option value="">全国（1,742件）</option>';
+  // datalist: list of prefecture names (and codes as suggestions)
+  const list = document.getElementById("pref-filter-list");
+  list.innerHTML = "";
+  // include the "all-Japan" empty option visually as a hint
   for (const code of [...seen.keys()].sort((a,b)=>a-b)) {
     const o = document.createElement("option");
-    o.value = String(code);
-    o.textContent = `${seen.get(code) || "#"+code}`;
-    els.selectPrefFilter.appendChild(o);
+    o.value = seen.get(code) || `#${code}`;
+    o.label = `${code}`;
+    list.appendChild(o);
   }
+  // store the name→code map on the element for the change handler
+  els.selectPrefFilter._codeOf = (val) => {
+    if (!val) return null;
+    for (const [c, n] of seen) if (n === val.trim()) return c;
+    const num = parseInt(val, 10);
+    return Number.isFinite(num) && seen.has(num) ? num : null;
+  };
 }
 
 function applyMunicipalityRender(g) {
-  const filterCode = els.selectPrefFilter.value
-    ? parseInt(els.selectPrefFilter.value, 10) : null;
+  const fn = els.selectPrefFilter._codeOf;
+  const filterCode = fn ? fn(els.selectPrefFilter.value) : null;
   const subset = filterCode == null ? g
     : { type: "FeatureCollection", features: g.features.filter(f => f.properties.pref_code === filterCode) };
   mapper.setBaseGeo(subset, {

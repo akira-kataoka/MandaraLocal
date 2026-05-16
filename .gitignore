@@ -13,3 +13,5 @@ dist/
 data/cities/japan_municipalities_raw.geojson
 data/cities/13.topojson
 data/cities/13.geojson
+data/_tmp/
+scripts/_unmatched_munis.json

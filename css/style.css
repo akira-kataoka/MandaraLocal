@@ -169,13 +169,29 @@ body.dark .panel h2 { color: #cbd5e1; border-bottom-color: #334155; }
 .palette-preview span { flex: 1; height: 100%; }
 
 .form-row select,
-.form-row input[type="number"] {
+.form-row input[type="number"],
+.form-row input[type="search"] {
   flex: 1;
+  min-width: 0;                     /* allow select to shrink inside flex */
+  max-width: 100%;
   padding: 5px 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 13px;
   background: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+/* The dropdown list itself can be wider than the closed select — let the
+   browser show the full text inside the popup */
+.form-row select option { white-space: normal; }
+
+/* Searchable combobox (input + datalist) keeps the same look. */
+.form-row .combobox {
+  flex: 1;
+  min-width: 0;
+  display: flex;
 }
 
 .btn {

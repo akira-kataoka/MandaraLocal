@@ -10,7 +10,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
 
-  <link rel="stylesheet" href="css/style.css?v=29" />
+  <link rel="stylesheet" href="css/style.css?v=30" />
 </head>
 <body>
   <header class="app-header">
@@ -32,24 +32,37 @@
         <div class="form-row">
           <label for="select-level">レベル</label>
           <select id="select-level">
-            <option value="prefecture">都道府県（47件）</option>
-            <option value="municipality">市町村（1,742件）</option>
-            <option value="chocho">町丁目（市区町村を選択）</option>
+            <option value="prefecture">都道府県 (47)</option>
+            <option value="municipality">市町村 (1,742)</option>
+            <option value="chocho">町丁目</option>
+            <option value="shape">Shapefile</option>
           </select>
         </div>
         <div class="form-row" id="row-pref-filter" hidden>
           <label for="select-pref-filter">対象</label>
-          <select id="select-pref-filter">
-            <option value="">全国</option>
-          </select>
+          <input id="select-pref-filter" type="search" list="pref-filter-list"
+                 placeholder="全国 / 検索 (例: 東京)" />
+          <datalist id="pref-filter-list">
+            <option value=""></option>
+          </datalist>
         </div>
         <div class="form-row" id="row-chocho" hidden>
           <label for="select-cho-pref">都道府県</label>
-          <select id="select-cho-pref"></select>
+          <input id="select-cho-pref" type="search" list="cho-pref-list" placeholder="例: 東京都" />
+          <datalist id="cho-pref-list"></datalist>
         </div>
         <div class="form-row" id="row-chocho-muni" hidden>
           <label for="select-cho-muni">市区町村</label>
-          <select id="select-cho-muni"></select>
+          <input id="select-cho-muni" type="search" list="cho-muni-list" placeholder="例: 新宿区" />
+          <datalist id="cho-muni-list"></datalist>
+        </div>
+        <div class="form-row" id="row-shape-upload" hidden>
+          <label for="shape-file" class="btn btn-secondary file-label">Shapefile zip を開く</label>
+          <input type="file" id="shape-file" accept=".zip,.shp" hidden />
+        </div>
+        <div class="form-row" id="row-shape-keyfield" hidden>
+          <label for="shape-keyfield">キー列</label>
+          <select id="shape-keyfield"></select>
         </div>
         <div class="form-row hint" id="hint-level"></div>
       </section>
@@ -233,8 +246,10 @@
   <script src="https://unpkg.com/chroma-js@2.4.2/chroma.min.js"></script>
   <script src="https://unpkg.com/html-to-image@1.11.11/dist/html-to-image.js"></script>
   <script src="https://unpkg.com/wanakana@5.3.1/wanakana.min.js"></script>
+  <script src="https://unpkg.com/d3-delaunay@6.0.4/dist/d3-delaunay.min.js"></script>
+  <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=29"></script>
+  <script type="module" src="js/main.js?v=30"></script>
 </body>
 </html>
