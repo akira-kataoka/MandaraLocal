@@ -207,6 +207,7 @@ const els = {
   scatterY:     $("scatter-y"),
   scatterColorBy: $("scatter-color-by"),
   scatterLabelBy: $("scatter-label-by"),
+  scatterShapeBy: $("scatter-shape-by"),
   scatterSizeBy:   $("scatter-size-by"),
   chkScatterStats: $("chk-scatter-stats"),
   chkScatterCi:    $("chk-scatter-ci"),
@@ -1880,6 +1881,7 @@ els.scatterY.addEventListener("change", drawScatter);
 els.scatterColorBy?.addEventListener("change", drawScatter);
 els.scatterSizeBy?.addEventListener("change", drawScatter);
 els.scatterLabelBy?.addEventListener("change", drawScatter);
+els.scatterShapeBy?.addEventListener("change", drawScatter);
 els.chkScatterStats?.addEventListener("change", drawScatter);
 els.chkScatterCi?.addEventListener("change", drawScatter);
 els.chkScatterPi?.addEventListener("change", drawScatter);
@@ -6440,6 +6442,18 @@ function populateScatterSelectors(fields) {
     }
     if (fields.includes(prev)) els.scatterLabelBy.value = prev;
   }
+  // Cycle 219: shape-by selector — bucket points into circle/square/triangle/
+  // diamond/cross by an arbitrary categorical column (max 4 distinct + "other").
+  if (els.scatterShapeBy) {
+    const prev = els.scatterShapeBy.value;
+    els.scatterShapeBy.innerHTML = '<option value="">— なし（○のみ）—</option>';
+    for (const f of fields) {
+      const o = document.createElement("option");
+      o.value = f; o.textContent = f;
+      els.scatterShapeBy.appendChild(o);
+    }
+    if (fields.includes(prev)) els.scatterShapeBy.value = prev;
+  }
   drawScatter();
 }
 
@@ -6546,6 +6560,30 @@ function drawScatter() {
       sizeLegend = { fieldName: sizeField, min: smn, max: smx };
     }
   }
+  // Cycle 219: build a categorical → shape function from the optional
+  // shape-by column. First 4 distinct categories get circle/square/
+  // triangle/diamond; further categories collapse to "cross".
+  let shapeFor = null;
+  const shapeByField = els.scatterShapeBy?.value || "";
+  if (shapeByField) {
+    const rowsByKey = new Map(state.dataset.rows.map(r => [r.key, r]));
+    const order = ["circle", "square", "triangle", "diamond"];
+    const map = new Map();
+    for (const r of state.dataset.rows) {
+      const v = r.values[shapeByField];
+      if (v == null || v === "") continue;
+      const k = String(v);
+      if (map.has(k)) continue;
+      map.set(k, order[map.size] || "cross");
+    }
+    shapeFor = (id) => {
+      const row = rowsByKey.get(id);
+      if (!row) return "circle";
+      const v = row.values[shapeByField];
+      if (v == null || v === "") return "circle";
+      return map.get(String(v)) || "circle";
+    };
+  }
   const scatterResult = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick, {
     logX: els.chkScatterLogX.checked,
     logY: els.chkScatterLogY.checked,
@@ -6559,6 +6597,7 @@ function drawScatter() {
     labels: els.scatterLabels?.value || "outliers",
     labelTopN: parseInt(els.scatterLabelN?.value || "10", 10) || 10,
     pinnedIds: state.pinnedScatterIds instanceof Set ? state.pinnedScatterIds : null,
+    shapeFor,
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
     onBrush: (ids) => {
       mapper.markOutliers(ids);

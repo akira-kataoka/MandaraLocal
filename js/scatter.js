@@ -106,14 +106,19 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     h = (h ^ (h >>> 13)) >>> 0;
     return ((h / 0xFFFFFFFF) * 2 - 1) * jitterPx;
   };
+  // Cycle 219: optional shape function for "shape-by category" plots.
+  const shapeFn = typeof opts.shapeFor === "function" ? opts.shapeFor : null;
   const pts = el("g");
   for (const [vx, vy, fid, nm] of pairs) {
     const r0 = sizeFn && fid != null ? sizeFn(fid) : 3;
     const jx = jitterPx && fid != null ? hashOffset(fid, 0) : 0;
     const jy = jitterPx && fid != null ? hashOffset(fid, 1) : 0;
-    const c = circle(px(vx) + jx, py(vy) + jy, r0, "point");
+    const cxp = px(vx) + jx, cyp = py(vy) + jy;
+    const shape = shapeFn && fid != null ? shapeFn(fid) : "circle";
+    const c = makeMarker(shape, cxp, cyp, r0);
     if (fid != null) c.setAttribute("data-id", String(fid));
     c.__baseR = r0;
+    c.__shape = shape;
     // Priority: categoryFor (when set) overrides map-class colorFor.
     let appliedColor = null;
     if (catMap && fid != null) {
@@ -140,12 +145,16 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     if (onHover && fid != null) {
       c.addEventListener("mouseenter", () => {
         c.classList.add("is-hot");
-        c.setAttribute("r", String(Math.max(5, r0 + 2)));
+        // Circle uses its native r-attribute; non-circle shapes just thicken
+        // the stroke since their geometry is fixed at build time.
+        if (shape === "circle") c.setAttribute("r", String(Math.max(5, r0 + 2)));
+        else c.style.strokeWidth = "1.8";
         onHover(fid, true);
       });
       c.addEventListener("mouseleave", () => {
         c.classList.remove("is-hot");
-        c.setAttribute("r", String(r0));
+        if (shape === "circle") c.setAttribute("r", String(r0));
+        else c.style.strokeWidth = "0.6";
         onHover(fid, false);
       });
       if (onSelect) {
@@ -849,6 +858,41 @@ function line(x1, y1, x2, y2) {
   return el("line", { x1, y1, x2, y2 });
 }
 function circle(cx, cy, r, cls) {
+  return el("circle", { cx, cy, r, class: cls });
+}
+// Cycle 219: build a marker of the requested shape centered at (cx,cy) with
+// "radius" r (square: half-side; cross: half-width). Returns an SVGElement
+// styled like the original circle marker so downstream code stays valid.
+function makeMarker(shape, cx, cy, r, cls = "point") {
+  if (!shape || shape === "circle") {
+    return el("circle", { cx, cy, r, class: cls });
+  }
+  if (shape === "square") {
+    return el("rect", { x: cx - r, y: cy - r, width: r * 2, height: r * 2, class: cls });
+  }
+  if (shape === "triangle") {
+    return el("polygon", {
+      class: cls,
+      points: `${cx},${cy - r} ${cx + r},${cy + r} ${cx - r},${cy + r}`,
+    });
+  }
+  if (shape === "diamond") {
+    return el("polygon", {
+      class: cls,
+      points: `${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}`,
+    });
+  }
+  if (shape === "cross") {
+    const a = r * 0.4, b = r;
+    return el("polygon", {
+      class: cls,
+      points:
+        `${cx - a},${cy - b} ${cx + a},${cy - b} ${cx + a},${cy - a} ` +
+        `${cx + b},${cy - a} ${cx + b},${cy + a} ${cx + a},${cy + a} ` +
+        `${cx + a},${cy + b} ${cx - a},${cy + b} ${cx - a},${cy + a} ` +
+        `${cx - b},${cy + a} ${cx - b},${cy - a} ${cx - a},${cy - a}`,
+    });
+  }
   return el("circle", { cx, cy, r, class: cls });
 }
 function text(x, y, t, anchor, extra = {}) {
