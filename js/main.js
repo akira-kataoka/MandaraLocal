@@ -4073,6 +4073,23 @@ function buildAnalysisMarkdown() {
     lines.push(`- HH=${r.catTally.HH}, LL=${r.catTally.LL}, HL=${r.catTally.HL}, LH=${r.catTally.LH}, NS=${r.catTally.NS}`);
     lines.push("");
   }
+  // Cycle 232: include the most recent crosstab χ² result so recipients see
+  // independence-test significance, not just the on-screen heatmap/bar.
+  if (state.crosstab && Number.isFinite(state.crosstab.chi2)) {
+    const ct = state.crosstab;
+    const sig = ct.pVal == null ? ""
+      : ct.pVal < 0.001 ? " ***"
+      : ct.pVal < 0.01 ? " **"
+      : ct.pVal < 0.05 ? " *" : "";
+    const pFmt = ct.pVal == null ? "—"
+      : ct.pVal < 0.001 ? "< 0.001"
+      : ct.pVal.toFixed(3);
+    lines.push(`## クロス集計 (${ct.rowF} × ${ct.colF})`);
+    lines.push(`- n=${ct.total}`);
+    lines.push(`- χ²(df=${ct.df}) = ${fmt(ct.chi2, 2)}, p = ${pFmt}${sig}`);
+    if (ct.cramerV != null) lines.push(`- Cramér's V = ${fmt(ct.cramerV)}`);
+    lines.push("");
+  }
   // Cycle 230: include the per-group regression table when present so
   // recipients see Simpson's paradox alongside the overall correlation.
   if (state.scatterGroupReg && state.scatterGroupReg.rows?.length) {
