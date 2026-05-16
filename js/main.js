@@ -1801,22 +1801,41 @@ function runCrossTab() {
     td.addEventListener("mouseenter", () => mapper.markOutliers(new Set(cellIds())));
     td.addEventListener("mouseleave", () => mapper.clearOutlierMarks());
     // Cycle 255: Shift+click on a crosstab cell bulk-pins its members.
-    td.addEventListener("click", (ev) => {
-      if (!ev.shiftKey) return;
-      ev.preventDefault();
-      const ids = cellIds();
-      if (!ids.length) { setSummary("該当セルに地域がありません", "warn"); return; }
-      if (!(state.pinnedScatterIds instanceof Set)) state.pinnedScatterIds = new Set();
-      let added = 0;
-      for (const id of ids) if (!state.pinnedScatterIds.has(id)) { state.pinnedScatterIds.add(id); added++; }
-      if (!added) { setSummary("該当セルは全件ピン済みでした", "muted"); return; }
-      syncScatterPinBtn();
-      drawScatter();
-      if (typeof refreshTable === "function") refreshTable();
-      mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
-      setSummary(`セル(${ri + 1},${ci + 1}) から ${added} 件を新規ピン留め（計 ${state.pinnedScatterIds.size} 件）`, "success");
-    });
+    td.addEventListener("click", (ev) => handleCtCellShiftClick(ev, ri, ci, cellIds));
   });
+  // Cycle 258: equivalent wiring for the bar-chart view (Cycle 213).
+  els.ctResult.querySelectorAll(".ct-bar-cell").forEach((rect) => {
+    const ri = parseInt(rect.getAttribute("data-row"), 10);
+    const ci = parseInt(rect.getAttribute("data-col"), 10);
+    const cellIds = () => {
+      const out = [];
+      for (let k = 0; k < state.dataset.rows.length; k++) {
+        const rv = rowVals[k], cv = colVals[k];
+        if (!Number.isFinite(rv) || !Number.isFinite(cv)) continue;
+        const r2 = clamp(classifyValue(rv, rowBreaks), 0, bins - 1);
+        const c2 = clamp(classifyValue(cv, colBreaks), 0, bins - 1);
+        if (r2 === ri && c2 === ci) out.push(state.dataset.rows[k].key);
+      }
+      return out;
+    };
+    rect.addEventListener("click", (ev) => handleCtCellShiftClick(ev, ri, ci, cellIds));
+  });
+}
+// Shared Shift+click handler for both crosstab views (Cycle 255/258).
+function handleCtCellShiftClick(ev, ri, ci, cellIdsFn) {
+  if (!ev.shiftKey) return;
+  ev.preventDefault();
+  const ids = cellIdsFn();
+  if (!ids.length) { setSummary("該当セルに地域がありません", "warn"); return; }
+  if (!(state.pinnedScatterIds instanceof Set)) state.pinnedScatterIds = new Set();
+  let added = 0;
+  for (const id of ids) if (!state.pinnedScatterIds.has(id)) { state.pinnedScatterIds.add(id); added++; }
+  if (!added) { setSummary("該当セルは全件ピン済みでした", "muted"); return; }
+  syncScatterPinBtn();
+  drawScatter();
+  if (typeof refreshTable === "function") refreshTable();
+  mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
+  setSummary(`セル(${ri + 1},${ci + 1}) から ${added} 件を新規ピン留め（計 ${state.pinnedScatterIds.size} 件）`, "success");
 }
 
 function escapeHtmlText(s) {
@@ -1860,7 +1879,7 @@ function buildCrosstabBarSvg(rowF, colF, rowBreaks, colBreaks, mat, rowTot, bins
       const w = innerW * cnt / rowTot[i];
       if (w > 0) {
         const pct = (cnt / rowTot[i] * 100).toFixed(1);
-        svg += `<rect x="${xCursor.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${rowH - 6}" fill="${colorAt(j)}"><title>${escapeHtmlText(label)} × ${escapeHtmlText(`${formatNum(colBreaks[j])}〜${formatNum(colBreaks[j+1])}`)}: ${cnt}件 (${pct}%)</title></rect>`;
+        svg += `<rect class="ct-bar-cell" data-row="${i}" data-col="${j}" x="${xCursor.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${rowH - 6}" fill="${colorAt(j)}" style="cursor:pointer"><title>${escapeHtmlText(label)} × ${escapeHtmlText(`${formatNum(colBreaks[j])}〜${formatNum(colBreaks[j+1])}`)}: ${cnt}件 (${pct}%) — Shift+クリックでピン</title></rect>`;
         if (w > 28) {
           svg += `<text x="${(xCursor + w / 2).toFixed(1)}" y="${y + 14}" text-anchor="middle" font-size="9" fill="#0f172a">${pct}%</text>`;
         }
@@ -4355,7 +4374,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "257"; // bumped each polish cycle (Cycle 257 baseline)
+const APP_VERSION = "258"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
