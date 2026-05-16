@@ -71,6 +71,7 @@ const els = {
   inputMapSubtitle: $("input-map-subtitle"),
   mapSubtitle:   $("map-subtitle"),
   inputMapAuthor: $("input-map-author"),
+  selectTitleAlign: $("select-title-align"),
   chkShowScale:  $("chk-show-scale"),
   chkShowNorth:  $("chk-show-north"),
   chkShowCoords: $("chk-show-coords"),
@@ -1002,6 +1003,16 @@ els.inputMapAuthor?.addEventListener("input", () => {
   if (state.dataset && state.field) refresh();
 });
 
+// Title / subtitle alignment (left / center / right). Applied via body class.
+function applyTitleAlign(v) {
+  document.body.classList.remove("title-align-c", "title-align-l", "title-align-r");
+  document.body.classList.add(`title-align-${v || "c"}`);
+}
+els.selectTitleAlign?.addEventListener("change", () => {
+  applyTitleAlign(els.selectTitleAlign.value);
+});
+applyTitleAlign("c");
+
 els.selectLegendPos?.addEventListener("change", () => {
   const pos = els.selectLegendPos.value;
   els.overlay.classList.remove("pos-br", "pos-bl", "pos-tr", "pos-tl", "pos-free");
@@ -1635,6 +1646,7 @@ function snapshotCurrent() {
     mapTitle: els.inputMapTitle?.value || "",
     mapSubtitle: els.inputMapSubtitle?.value || "",
     mapAuthor: els.inputMapAuthor?.value || "",
+    titleAlign: els.selectTitleAlign?.value || "c",
     scatterColorBy: els.scatterColorBy?.value || "",
     showScale: !!els.chkShowScale?.checked,
     showNorth: !!els.chkShowNorth?.checked,
@@ -1730,6 +1742,10 @@ els.selectScene.addEventListener("change", async () => {
   }
   if (snap.mapAuthor !== undefined && els.inputMapAuthor) {
     els.inputMapAuthor.value = snap.mapAuthor;
+  }
+  if (snap.titleAlign !== undefined && els.selectTitleAlign) {
+    els.selectTitleAlign.value = snap.titleAlign;
+    els.selectTitleAlign.dispatchEvent(new Event("change"));
   }
   if (snap.scatterColorBy !== undefined && els.scatterColorBy) {
     els.scatterColorBy.value = snap.scatterColorBy;

@@ -560,6 +560,21 @@ body.dark .map-subtitle {
   border-color: #334155;
 }
 
+/* Title / subtitle alignment overrides (Cycle 113). Default = center. */
+body.title-align-l .map-title,
+body.title-align-l .map-subtitle {
+  left: 12px;
+  right: auto;
+  transform: none;
+}
+body.title-align-r .map-title,
+body.title-align-r .map-subtitle {
+  /* Avoid overlapping the north arrow (32px wide @ right:12px → reserve 56px). */
+  left: auto;
+  right: 56px;
+  transform: none;
+}
+
 .minimap {
   position: absolute;
   bottom: 48px;

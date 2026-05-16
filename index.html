@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=112" />
+  <link rel="stylesheet" href="css/style.css?v=113" />
 </head>
 <body>
   <header class="app-header">
@@ -356,6 +356,14 @@
           <input id="input-map-author" type="text" placeholder="例: 山田太郎" />
         </div>
         <div class="form-row">
+          <label for="select-title-align">タイトル位置</label>
+          <select id="select-title-align">
+            <option value="c" selected>中央</option>
+            <option value="l">左寄せ</option>
+            <option value="r">右寄せ</option>
+          </select>
+        </div>
+        <div class="form-row">
           <label for="select-legend-pos">位置</label>
           <select id="select-legend-pos">
             <option value="br" selected>右下</option>
@@ -598,7 +606,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=112"></script>
+  <script type="module" src="js/main.js?v=113"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
