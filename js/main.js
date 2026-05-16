@@ -4355,8 +4355,8 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "256"; // bumped each polish cycle (Cycle 256 baseline)
-const APP_VERSION_NOTE = "Polish cycles 195-256 (5 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
+const APP_VERSION = "257"; // bumped each polish cycle (Cycle 257 baseline)
+const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
   const overlay = document.createElement("div");
@@ -7495,6 +7495,11 @@ function syncScatterPinBtn() {
     els.btnScatterClearPins.hidden = count === 0;
     els.btnScatterClearPins.textContent = `📌 ピン解除 (${count})`;
   }
+  // Cycle 257: bridge the header-level "📍 解除" button into the unified set.
+  if (els.btnClearPins) {
+    els.btnClearPins.hidden = count === 0;
+    els.btnClearPins.title = `${count}件のピンを全解除`;
+  }
   if (els.btnScatterPinsCsv) {
     els.btnScatterPinsCsv.hidden = count === 0;
   }
@@ -7594,13 +7599,23 @@ mapper.onFeatureShiftClick?.((id) => {
   mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
 });
 
-mapper.onPinChange((ids) => {
-  els.btnClearPins.hidden = ids.length === 0;
-  if (ids.length) {
-    setSummary(`📍 ピン留め ${ids.length}件 (Shift+クリックでON/OFF)`, "muted");
-  }
+// Cycle 257: header pin-clear button now operates on the unified pin set
+// instead of map._pinnedIds. The legacy onPinChange path stays unwired since
+// no surface populates _pinnedIds anymore (Cycle 254 routed map Shift+clicks
+// through state.pinnedScatterIds).
+els.btnClearPins.addEventListener("click", () => {
+  if (!(state.pinnedScatterIds instanceof Set) || !state.pinnedScatterIds.size) return;
+  state.pinnedScatterIds.clear();
+  state.lastBrushIds = null;
+  syncScatterPinBtn();
+  if (typeof syncBrushPinBtn === "function") syncBrushPinBtn();
+  drawScatter();
+  if (typeof refreshTable === "function") refreshTable();
+  mapper.clearPinned?.();
+  // Belt-and-suspenders: also clear the (probably empty) map internal set.
+  mapper.clearPins?.();
+  setSummary("ピン留めを全て解除しました", "muted");
 });
-els.btnClearPins.addEventListener("click", () => mapper.clearPins());
 
 // ----- PWA install banner -----
 let deferredInstallPrompt = null;
