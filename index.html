@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=129" />
+  <link rel="stylesheet" href="css/style.css?v=130" />
 </head>
 <body>
   <header class="app-header">
@@ -231,6 +231,7 @@
             <option value="hatch">ハッチ図（パターン塗り）</option>
             <option value="arrow">矢印図（値を方位°として回転）</option>
             <option value="bivariate">二変量階級区分図（X×Y を 9 色で）</option>
+            <option value="lisa">Local Moran's I（空間クラスター LISA）</option>
           </select>
         </div>
         <div class="form-row" id="row-symbol-size" hidden>
@@ -652,7 +653,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=129"></script>
+  <script type="module" src="js/main.js?v=130"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

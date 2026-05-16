@@ -2559,6 +2559,31 @@ function refresh() {
     return;
   }
 
+  // LISA mode (Cycle 130): spatial cluster categorization via Local Moran's I.
+  if (state.mode === "lisa") {
+    const out = runLisa();
+    if (!out) {
+      setSummary("LISA を計算できません（有効データが少ない or 重心が取得できない）", "warn");
+    } else {
+      mapper.applyColorMap(out.colorById, state.field);
+      renderLisaLegend(els.legendBox, out.globalI, out.n);
+      renderLisaLegend(els.overlayLegend, out.globalI, out.n);
+      els.overlay.hidden = false;
+      els.overlayTitle.textContent = `LISA: ${state.field}`;
+      const src = (els.inputDataSource?.value || "").trim();
+      const author = (els.inputMapAuthor?.value || "").trim();
+      const parts = [];
+      if (src) parts.push(`出典: ${src}`);
+      if (author) parts.push(`作成: ${author}`);
+      parts.push(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`);
+      els.overlayFooter.textContent = parts.join(" · ");
+      renderStats(values);
+      renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete);
+      saveSettings(state);
+      return;
+    }
+  }
+
   // choropleth coloring (or reset to neutral if "symbol" only)
   if (state.mode === "bivariate") {
     if (!state.fieldB) {
@@ -3619,6 +3644,89 @@ const BIVARIATE_PALETTE = [
   "#dfb0d6", "#a5add3", "#5698b9", // Y=mid
   "#be64ac", "#8c62aa", "#3b4994", // Y=high
 ];
+
+// Local Moran's I (LISA) — Cycle 130. 4-category cluster colors borrowed from
+// the GeoDa convention so output is interchangeable with academic LISA maps.
+const LISA_COLORS = { HH: "#d7191c", LL: "#2c7bb6", HL: "#fdae61", LH: "#abd9e9", NA: "#e5e7eb" };
+
+function runLisa() {
+  if (!state.geojson || !state.valueMap) return null;
+  const centroids = mapper.getCentroids ? mapper.getCentroids() : null;
+  if (!centroids) return null;
+  // Collect (id, centroid, value) for regions with valid value AND centroid
+  const items = [];
+  for (const [id, c] of centroids.entries()) {
+    const v = state.valueMap.get(id);
+    if (Number.isFinite(v)) items.push({ id, lat: c[0], lng: c[1], v });
+  }
+  const n = items.length;
+  if (n < 5) return null;
+  const mean = items.reduce((s, it) => s + it.v, 0) / n;
+  const std = Math.sqrt(items.reduce((s, it) => s + (it.v - mean) ** 2, 0) / n);
+  if (!(std > 0)) return null;
+  const z = items.map(it => (it.v - mean) / std);
+  // KNN-8 by centroid distance. n×n loop is fine for ~50–2000 regions.
+  const K = Math.min(8, n - 1);
+  const neighbors = items.map((it, i) => {
+    const dists = items.map((jt, j) => i === j ? Infinity : haversineDist(it.lat, it.lng, jt.lat, jt.lng));
+    const idx = dists.map((d, k) => [d, k]).sort((a, b) => a[0] - b[0]).slice(0, K).map(p => p[1]);
+    return idx;
+  });
+  // Local Moran's I_i = z_i × mean(z_neighbors). 4-quadrant classification.
+  const colorById = new Map();
+  let globalI = 0;
+  for (let i = 0; i < n; i++) {
+    const meanZnbr = neighbors[i].reduce((s, j) => s + z[j], 0) / neighbors[i].length;
+    const Ii = z[i] * meanZnbr;
+    globalI += Ii;
+    let cat;
+    if (z[i] >= 0 && meanZnbr >= 0) cat = "HH";
+    else if (z[i] <  0 && meanZnbr <  0) cat = "LL";
+    else if (z[i] >= 0 && meanZnbr <  0) cat = "HL";
+    else                                  cat = "LH";
+    colorById.set(items[i].id, LISA_COLORS[cat]);
+  }
+  globalI /= n;
+  return { colorById, globalI, n };
+}
+
+function haversineDist(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const toRad = (d) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function renderLisaLegend(container, globalI, n) {
+  container.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "font-size:11px;";
+  const head = document.createElement("div");
+  head.style.fontWeight = "600";
+  head.style.marginBottom = "4px";
+  head.textContent = `LISA クラスター (n=${n}, 全体 I=${globalI.toFixed(3)})`;
+  wrap.appendChild(head);
+  const items = [
+    ["HH", "ホットスポット（高値が高値に囲まれる）"],
+    ["LL", "コールドスポット（低値が低値に囲まれる）"],
+    ["HL", "高値の孤立（周囲は低値）"],
+    ["LH", "低値の孤立（周囲は高値）"],
+  ];
+  for (const [k, desc] of items) {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;align-items:center;gap:6px;padding:1px 0;";
+    const sw = document.createElement("span");
+    sw.style.cssText = `display:inline-block;width:14px;height:14px;background:${LISA_COLORS[k]};border:1px solid #cbd5e1;`;
+    row.appendChild(sw);
+    const lab = document.createElement("span");
+    lab.innerHTML = `<strong>${k}</strong> ${desc}`;
+    row.appendChild(lab);
+    wrap.appendChild(row);
+  }
+  container.appendChild(wrap);
+}
 
 function renderBivariateLegend(container, palette9, fieldX, fieldY) {
   container.innerHTML = "";

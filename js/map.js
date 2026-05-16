@@ -262,6 +262,33 @@ export class MandaraMap {
     });
   }
 
+  /**
+   * Direct color assignment by feature id (Cycle 130 LISA): no breaks/classify,
+   * just paint each polygon from a {id → color} map. Used for categorical
+   * spatial-analysis outputs.
+   */
+  applyColorMap(colorById, fieldName) {
+    if (!this.layer) return;
+    this._fieldName = fieldName || "";
+    this._lookupFn = (code) => {
+      const c = colorById.get(code);
+      return c ? { value: null, classIndex: -1, color: c } : { value: null, classIndex: -1, color: NA_COLOR };
+    };
+    this.layer.eachLayer((lyr) => {
+      const id = lyr.feature.properties.id;
+      lyr.setStyle({
+        weight: 0.6, color: "#475569",
+        fillColor: colorById.get(id) || NA_COLOR,
+        fillOpacity: 0.88,
+      });
+    });
+  }
+
+  // Expose the centroid cache for spatial-analysis features.
+  getCentroids() {
+    return this._centroidCache;
+  }
+
   resetColors() {
     if (!this.layer) return;
     this._lookupFn = null;
