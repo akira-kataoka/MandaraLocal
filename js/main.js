@@ -5239,6 +5239,11 @@ function drawScatter() {
         }
       } else if (groupY.size >= 3) {
         anovaResult = onewayAnova(groupY);
+        // Bonferroni-corrected pairwise Welch's t-tests when ANOVA is
+        // significant — Cycle 170 (post-hoc comparison).
+        if (anovaResult && anovaResult.pValue != null && anovaResult.pValue < 0.05) {
+          anovaResult.posthoc = bonferroniPairwise(groupY);
+        }
       }
     }
   }
@@ -5316,6 +5321,18 @@ function drawScatter() {
     const sig = av.pValue < 0.001 ? " ***" : av.pValue < 0.01 ? " **" : av.pValue < 0.05 ? " *" : "";
     const pFmt = av.pValue < 0.001 ? "< 0.001" : av.pValue.toFixed(3);
     welchInfo = ` · <small style="color:#1e3a8a">一元ANOVA (k=${av.k}, N=${av.N}): F(${av.df1}, ${av.df2})=${av.F.toFixed(2)}, p=${pFmt}${sig}, η²=${av.eta2.toFixed(3)}</small>`;
+    // Post-hoc Bonferroni-corrected pairwise comparisons (Cycle 170)
+    if (av.posthoc && av.posthoc.length) {
+      const sigPairs = av.posthoc.filter(p => p.sig);
+      const nsigPairs = av.posthoc.filter(p => !p.sig);
+      const fmtPair = (p) => `${escapeHtmlText(p.label1)} vs ${escapeHtmlText(p.label2)} (p<sub>adj</sub>=${p.pAdj < 0.001 ? "<0.001" : p.pAdj.toFixed(3)})${p.sig}`;
+      const shown = sigPairs.slice(0, 8).map(fmtPair).join("、 ");
+      const hidden = sigPairs.length > 8 ? `、…他${sigPairs.length - 8}件` : "";
+      const summary = sigPairs.length === 0
+        ? `<small style="color:#475569">事後検定（Bonferroni）: 有意ペアなし (${av.posthoc.length}ペア中)</small>`
+        : `<small style="color:#1e3a8a">事後検定（Bonferroni, ${sigPairs.length}/${av.posthoc.length} ペア有意）: ${shown}${hidden}</small>`;
+      welchInfo += ` <br/>${summary}`;
+    }
   }
   els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong>${ciTxt(rCI)} （${strength}${sign}の相関）${rhoTxt}${note} · 決定係数 R²=${r2}%${polyInfo}${welchInfo}`;
 }
@@ -5780,6 +5797,32 @@ function onewayAnova(groupMap) {
     F, df1, df2, pValue, eta2, k, N,
     groups: groups.map(g => ({ name: g.name, n: g.n, mean: g.mean })),
   };
+}
+
+// Bonferroni-corrected pairwise Welch's t-tests for post-hoc comparison
+// (Cycle 170). Returns an array of { label1, label2, t, df, p, pAdj, sig }.
+function bonferroniPairwise(groupMap) {
+  const entries = [...groupMap.entries()];
+  const K = entries.length;
+  if (K < 2) return [];
+  const numComparisons = K * (K - 1) / 2;
+  const results = [];
+  for (let i = 0; i < K; i++) {
+    for (let j = i + 1; j < K; j++) {
+      const w = welchTTest(entries[i][1], entries[j][1], entries[i][0], entries[j][0]);
+      if (!w) continue;
+      const pAdj = Math.min(1, w.pValue * numComparisons);
+      results.push({
+        label1: w.label1, label2: w.label2,
+        n1: w.n1, n2: w.n2, mean1: w.mean1, mean2: w.mean2,
+        t: w.t, df: w.df, p: w.pValue, pAdj,
+        sig: pAdj < 0.001 ? "***" : pAdj < 0.01 ? "**" : pAdj < 0.05 ? "*" : "",
+      });
+    }
+  }
+  // Sort: significant first (by pAdj asc), then non-significant
+  results.sort((a, b) => a.pAdj - b.pAdj);
+  return results;
 }
 
 // Student-t one-sided CDF for |t|: P(T <= |t|) using the incomplete beta function.
