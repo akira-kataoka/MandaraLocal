@@ -2161,7 +2161,8 @@ function drawScatter() {
   } else {
     const strength = Math.abs(r) >= 0.7 ? "強い" : Math.abs(r) >= 0.4 ? "中程度の" : "弱い";
     const sign = r >= 0 ? "正" : "負";
-    els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r = ${r.toFixed(3)}</strong> （${strength}${sign}の相関）`;
+    const r2 = (r * r * 100).toFixed(1);
+    els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong> （${strength}${sign}の相関）· 決定係数 R²=${r2}% (Yの分散のうちXで説明できる割合)`;
   }
 }
 

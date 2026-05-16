@@ -139,8 +139,10 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   // OLS regression line in the *scaled* coordinate system so it stays
   // visually straight even on log axes. Pearson r is still on raw values.
   const r = pearson(x, y);
+  let slope = null, intercept = null;
   if (Number.isFinite(r) && xMax !== xMin) {
-    const { slope, intercept } = ols(xs2, ys2);
+    const olsR = ols(xs2, ys2);
+    slope = olsR.slope; intercept = olsR.intercept;
     const lineEl = el("line", {
       x1: pxAt(xMin), y1: pyAt(slope * xMin + intercept),
       x2: pxAt(xMax), y2: pyAt(slope * xMax + intercept),
@@ -149,7 +151,29 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     svgEl.appendChild(lineEl);
   }
 
-  return { r, n: pairs.length };
+  // Regression equation text overlay (top-right corner of the chart)
+  if (Number.isFinite(r) && slope != null) {
+    const sym = (v) => {
+      if (Math.abs(v) >= 100) return v.toFixed(0);
+      if (Math.abs(v) >= 1)   return v.toFixed(2);
+      return v.toExponential(2);
+    };
+    const sign = intercept >= 0 ? "+" : "−";
+    const eq = logX || logY
+      ? `(log) y = ${sym(slope)}x ${sign} ${sym(Math.abs(intercept))}`
+      : `y = ${sym(slope)}x ${sign} ${sym(Math.abs(intercept))}`;
+    const r2 = r * r;
+    const eqEl = el("text", {
+      x: W - PAD.right - 4, y: PAD.top + 9,
+      "text-anchor": "end",
+      "font-family": "ui-monospace, monospace",
+      "font-size": 9, fill: "#dc2626", "font-weight": 600,
+    });
+    eqEl.textContent = `${eq}   R²=${r2.toFixed(3)}`;
+    svgEl.appendChild(eqEl);
+  }
+
+  return { r, n: pairs.length, slope, intercept, r2: Number.isFinite(r) ? r*r : null };
 }
 
 function pearson(xs, ys) {
