@@ -267,6 +267,8 @@ const els = {
   scatterCorr:  $("scatter-correlation"),
   scatterSvg:   $("scatter-svg"),
   scatterGroupReg: $("scatter-group-reg"),
+  rowGroupRegCsv: $("row-group-reg-csv"),
+  btnGroupRegCsv: $("btn-group-reg-csv"),
   tooltip:      $("tooltip"),
   mapSearch:      $("map-search"),
   searchInput:    $("search-input"),
@@ -6678,7 +6680,15 @@ function drawScatter() {
 function renderGroupRegressionTable(xf, yf, xs, ys, ids, categoryFor, enabled, overallSlope) {
   const host = els.scatterGroupReg;
   if (!host) return;
-  if (!enabled || !categoryFor) { host.hidden = true; host.innerHTML = ""; return; }
+  const setCsvVis = (visible) => {
+    if (els.rowGroupRegCsv) els.rowGroupRegCsv.hidden = !visible;
+  };
+  if (!enabled || !categoryFor) {
+    host.hidden = true; host.innerHTML = "";
+    state.scatterGroupReg = null;
+    setCsvVis(false);
+    return;
+  }
   // Bucket valid (x,y) pairs by category.
   const groups = new Map();
   for (let i = 0; i < ids.length; i++) {
@@ -6692,7 +6702,12 @@ function renderGroupRegressionTable(xf, yf, xs, ys, ids, categoryFor, enabled, o
     groups.get(key).xs.push(xv);
     groups.get(key).ys.push(yv);
   }
-  if (!groups.size) { host.hidden = true; host.innerHTML = ""; return; }
+  if (!groups.size) {
+    host.hidden = true; host.innerHTML = "";
+    state.scatterGroupReg = null;
+    setCsvVis(false);
+    return;
+  }
   // OLS per group + Pearson r for each.
   const olsLocal = (xa, ya) => {
     const n = xa.length;
@@ -6725,7 +6740,14 @@ function renderGroupRegressionTable(xf, yf, xs, ys, ids, categoryFor, enabled, o
       signFlip = true;
     }
   }
-  if (!rows.length) { host.hidden = true; host.innerHTML = ""; return; }
+  if (!rows.length) {
+    host.hidden = true; host.innerHTML = "";
+    state.scatterGroupReg = null;
+    setCsvVis(false);
+    return;
+  }
+  // Stash for CSV export.
+  state.scatterGroupReg = { xf, yf, rows, overallSlope, signFlip };
   let html = `<div style="margin-bottom:3px;font-weight:600">系列別回帰 (${escapeHtmlText(yf)} = a·${escapeHtmlText(xf)} + b)</div>`;
   html += `<table style="border-collapse:collapse;width:100%"><thead><tr style="background:#e2e8f0">` +
     `<th style="text-align:left;padding:2px 4px">カテゴリ</th>` +
@@ -6754,7 +6776,43 @@ function renderGroupRegressionTable(xf, yf, xs, ys, ids, categoryFor, enabled, o
   }
   host.innerHTML = html;
   host.hidden = false;
+  setCsvVis(true);
 }
+
+// Cycle 223: CSV export of the per-group regression table from state.scatterGroupReg.
+els.btnGroupRegCsv?.addEventListener("click", () => {
+  const gr = state.scatterGroupReg;
+  if (!gr || !gr.rows || !gr.rows.length) {
+    setSummary("系列別回帰テーブルがありません", "warn"); return;
+  }
+  const header = ["category", "n", "slope", "intercept", "r", "flip_vs_overall", "note"];
+  const esc = (c) => {
+    const s = String(c ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const body = gr.rows.map((row) => {
+    if (row.skip) {
+      return [row.cat, row.n, "", "", "", "", "n<3 skipped"];
+    }
+    const flip = Number.isFinite(gr.overallSlope) && Math.sign(gr.overallSlope) !== Math.sign(row.slope) ? "yes" : "no";
+    return [
+      row.cat, row.n,
+      row.slope.toFixed(6), row.intercept.toFixed(6),
+      row.r == null ? "" : row.r.toFixed(6),
+      flip, "",
+    ];
+  });
+  const csv = [header, ...body].map(line => line.map(esc).join(",")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const norm = (s) => String(s).replace(/[\s\\/:*?"<>|]+/g, "_");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `scatter_group_reg_${norm(gr.yf)}_vs_${norm(gr.xf)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`系列別回帰CSV: ${gr.rows.length} 行を保存${gr.signFlip ? "（符号逆転あり）" : ""}`, "success");
+});
 
 function onScatterHover(id, isHot) {
   if (isHot) mapper.highlightById(id);
