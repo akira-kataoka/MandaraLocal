@@ -152,6 +152,7 @@ const els = {
   selectLegendPos: $("select-legend-pos"),
   selectLegendFs:  $("select-legend-fs"),
   panelTable:   $("panel-table"),
+  tableSearch:  $("table-search"),
   panelHist:    $("panel-histogram"),
   histBins:     $("hist-bins"),
   chkHistOverlay: $("chk-hist-overlay"),
@@ -4504,7 +4505,7 @@ function refresh() {
       parts.push(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`);
       els.overlayFooter.textContent = parts.join(" · ");
       renderStats(values);
-      renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+      renderTable(els.tableWrap, getTableRows(), state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
       saveSettings(state);
       return;
     }
@@ -4533,7 +4534,7 @@ function refresh() {
       parts.push(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`);
       els.overlayFooter.textContent = parts.join(" · ");
       renderStats(values);
-      renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+      renderTable(els.tableWrap, getTableRows(), state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
       saveSettings(state);
       return;
     }
@@ -4676,7 +4677,7 @@ function refresh() {
   }
 
   // Data table — with inline editing
-  renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+  renderTable(els.tableWrap, getTableRows(), state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
 
   // Box plot
   if (els.boxplotSvg) {
@@ -4849,6 +4850,25 @@ function applyOutlierHighlight(values) {
     mapper.clearOutlierMarks();
   }
 }
+
+// Filtered rows for the data table (Cycle 182): respects the quick search
+// input above the table. Empty query → all rows.
+function getTableRows() {
+  if (!state.dataset) return [];
+  const q = (els.tableSearch?.value || "").trim().toLowerCase();
+  if (!q) return state.dataset.rows;
+  return state.dataset.rows.filter(r =>
+    String(r.name || "").toLowerCase().includes(q)
+    || String(r.key).toLowerCase().includes(q)
+  );
+}
+
+els.tableSearch?.addEventListener("input", () => {
+  // Re-render only the table, not the entire panel set.
+  if (state.dataset) {
+    renderTable(els.tableWrap, getTableRows(), state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+  }
+});
 
 function onTableRowHover(id, isOn) {
   if (isOn) mapper.highlightById(id);
