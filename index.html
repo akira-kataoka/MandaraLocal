@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=236" />
+  <link rel="stylesheet" href="css/style.css?v=237" />
 </head>
 <body>
   <header class="app-header">
@@ -601,6 +601,7 @@
         </div>
         <div class="form-row">
           <button id="btn-scatter-clear-overlays" class="btn" style="font-size:11px" title="統計オーバーレイ・参照線・ジッター・LOWESS などを全て解除">⛒ オーバーレイ一括クリア</button>
+          <button id="btn-scatter-pin-outliers" class="btn" type="button" style="font-size:11px" title="IQR fence を超える外れ値を一括ピン">📍 外れ値をピン</button>
           <button id="btn-scatter-clear-pins" class="btn" type="button" style="font-size:11px" hidden title="ピン留めした点を全て解除（Shift+クリックで個別ピン留め）">📌 ピン解除 (0)</button>
           <button id="btn-scatter-pins-csv" class="btn" type="button" style="font-size:11px" hidden title="ピン留めした点の全フィールドをCSVで保存">📋 ピンCSV</button>
           <input id="scatter-pin-color" type="color" value="#dc2626" title="ピン留め時のリング・ラベル色" style="height:24px;width:32px;padding:0;border:1px solid var(--border);border-radius:3px;cursor:pointer" />
@@ -893,7 +894,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=236"></script>
+  <script type="module" src="js/main.js?v=237"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

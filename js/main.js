@@ -223,6 +223,7 @@ const els = {
   scatterLabelPlace: $("scatter-label-place"),
   btnScatterClearPins: $("btn-scatter-clear-pins"),
   btnScatterPinsCsv: $("btn-scatter-pins-csv"),
+  btnScatterPinOutliers: $("btn-scatter-pin-outliers"),
   scatterPinColor: $("scatter-pin-color"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
@@ -1936,6 +1937,44 @@ els.chkScatterZero?.addEventListener("change", drawScatter);
 els.chkScatterJitter?.addEventListener("change", drawScatter);
 els.chkScatterLowess?.addEventListener("change", drawScatter);
 // Cycle 195: clear every scatter overlay toggle in one click.
+// Cycle 237: bulk-pin every point whose X or Y is outside the Tukey 1.5×IQR
+// fence. Adds to the existing pin set rather than replacing, so users can
+// stack manual pins + outlier pins.
+els.btnScatterPinOutliers?.addEventListener("click", () => {
+  if (!state.dataset || !els.scatterX?.value || !els.scatterY?.value) {
+    setSummary("散布図のX/Y列を選んでください", "warn"); return;
+  }
+  const xf = els.scatterX.value, yf = els.scatterY.value;
+  const pairs = state.dataset.rows
+    .map(r => ({ key: r.key, x: r.values[xf], y: r.values[yf] }))
+    .filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+  if (pairs.length < 4) { setSummary("外れ値判定には4件以上必要です", "warn"); return; }
+  const quantile = (arr, p) => {
+    const a = arr.slice().sort((u, w) => u - w);
+    const idx = (a.length - 1) * p;
+    const lo = Math.floor(idx), hi = Math.ceil(idx);
+    return lo === hi ? a[lo] : a[lo] + (a[hi] - a[lo]) * (idx - lo);
+  };
+  const xs = pairs.map(p => p.x), ys = pairs.map(p => p.y);
+  const xq1 = quantile(xs, 0.25), xq3 = quantile(xs, 0.75);
+  const yq1 = quantile(ys, 0.25), yq3 = quantile(ys, 0.75);
+  const xLo = xq1 - 1.5 * (xq3 - xq1), xHi = xq3 + 1.5 * (xq3 - xq1);
+  const yLo = yq1 - 1.5 * (yq3 - yq1), yHi = yq3 + 1.5 * (yq3 - yq1);
+  if (!(state.pinnedScatterIds instanceof Set)) state.pinnedScatterIds = new Set();
+  let added = 0;
+  for (const p of pairs) {
+    if (p.x < xLo || p.x > xHi || p.y < yLo || p.y > yHi) {
+      if (!state.pinnedScatterIds.has(p.key)) { state.pinnedScatterIds.add(p.key); added++; }
+    }
+  }
+  if (!added) { setSummary("追加すべき外れ値はありませんでした", "muted"); return; }
+  syncScatterPinBtn();
+  drawScatter();
+  if (typeof refreshTable === "function") refreshTable();
+  mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
+  setSummary(`外れ値 ${added} 件をピン留めしました（計 ${state.pinnedScatterIds.size} 件）`, "success");
+});
+
 els.btnScatterClearPins?.addEventListener("click", () => {
   if (!(state.pinnedScatterIds instanceof Set) || state.pinnedScatterIds.size === 0) return;
   state.pinnedScatterIds.clear();
