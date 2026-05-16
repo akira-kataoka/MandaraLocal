@@ -4233,6 +4233,46 @@ function buildAnalysisMarkdown() {
   return lines.join("\n");
 }
 
+// Cycle 241: convert the Markdown report to a plain-text form for tools
+// that don't render Markdown (Word, mail clients). Tables collapse to tab-
+// separated rows; bold/italic/quote markers are stripped.
+function markdownToPlainText(md) {
+  return md.split("\n").map(raw => {
+    let s = raw;
+    // Table separator rows like `|---|---:|---:|` → drop.
+    if (/^\s*\|\s*[:\-\s|]+\|\s*$/.test(s)) return null;
+    // Table data rows → tab-separated cell text.
+    if (/^\s*\|.*\|\s*$/.test(s)) {
+      return s.replace(/^\s*\|/, "").replace(/\|\s*$/, "")
+        .split("|").map(c => c.trim()).join("\t");
+    }
+    // Strip Markdown syntax in regular lines.
+    s = s.replace(/^\s*#+\s+/, "");
+    s = s.replace(/^\s*>\s*/, "");
+    s = s.replace(/\*\*([^*]+)\*\*/g, "$1");
+    s = s.replace(/_([^_]+)_/g, "$1");
+    s = s.replace(/`([^`]+)`/g, "$1");
+    s = s.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+    s = s.replace(/^---$/, "──────────");
+    return s;
+  }).filter(line => line !== null).join("\n");
+}
+
+els.btnCopyResultsTxt = document.getElementById("btn-copy-results-txt");
+els.btnCopyResultsTxt?.addEventListener("click", async () => {
+  const md = buildAnalysisMarkdown();
+  const txt = markdownToPlainText(md);
+  if (!navigator.clipboard?.writeText) {
+    setSummary("お使いのブラウザはクリップボード書込みに未対応です", "warn"); return;
+  }
+  try {
+    await navigator.clipboard.writeText(txt);
+    setSummary(`分析結果を平文でクリップボードにコピーしました（${txt.split("\n").length}行）`, "success");
+  } catch (e) {
+    setSummary("コピー失敗: " + e.message, "error");
+  }
+});
+
 els.btnCopyResults?.addEventListener("click", async () => {
   const md = buildAnalysisMarkdown();
   if (!navigator.clipboard?.writeText) {
