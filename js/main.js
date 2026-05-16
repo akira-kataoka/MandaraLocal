@@ -86,6 +86,7 @@ const els = {
   btnDerived:   $("btn-add-derived"),
   btnZscore:    $("btn-add-zscore"),
   btnMinMax:    $("btn-add-minmax"),
+  fieldList:    $("field-list"),
   selectMode:   $("select-mode"),
   rowSymbolSize:$("row-symbol-size"),
   inputMaxR:    $("input-maxr"),
@@ -2286,8 +2287,36 @@ function renderStats(values) {
   ).join("");
 }
 
+function renderFieldList() {
+  if (!els.fieldList) return;
+  if (!state.dataset || !state.dataset.fields.length) {
+    els.fieldList.innerHTML = ""; return;
+  }
+  els.fieldList.innerHTML = state.dataset.fields.map((f) =>
+    `<div class="fl-item"><span class="fl-name">${escapeHtmlText(f)}</span>` +
+    `<button data-f="${escapeHtmlText(f)}" title="この列を削除">×</button></div>`
+  ).join("");
+  els.fieldList.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => deleteField(btn.dataset.f));
+  });
+}
+
+function deleteField(field) {
+  if (!state.dataset) return;
+  if (!confirm(`列「${field}」を削除しますか？\n（派生列の参照元になっている場合は再計算されません）`)) return;
+  state.dataset.fields = state.dataset.fields.filter(f => f !== field);
+  for (const r of state.dataset.rows) delete r.values[field];
+  if (state.field === field) state.field = state.dataset.fields[0] || null;
+  if (state.fieldB === field) state.fieldB = state.dataset.fields[1] || state.dataset.fields[0] || null;
+  populateFieldSelects();
+  if (state.field) els.selectField.value = state.field;
+  refresh();
+  setSummary(`列「${field}」を削除しました`, "success");
+}
+
 function populateFieldSelects() {
   const fields = state.dataset?.fields || [];
+  renderFieldList();
   for (const sel of [els.selectField, els.selectFieldB, els.derivedA, els.derivedB, els.filterField, els.ctRow, els.ctCol]) {
     const prev = sel.value;
     sel.innerHTML = "";
