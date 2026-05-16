@@ -65,6 +65,7 @@ const els = {
   csvMerge:     $("csv-merge"),
   btnTemplate:  $("btn-download-template"),
   btnPaste:     $("btn-paste"),
+  inputDataSource: $("input-data-source"),
   dataSummary:  $("data-summary"),
   panelField:   $("panel-field"),
   selectField:  $("select-field"),
@@ -837,6 +838,10 @@ function updatePalettePreview() {
   }
 }
 els.chkOutliers.addEventListener("change", () => refresh());
+els.inputDataSource?.addEventListener("change", () => {
+  if (state.dataset && state.field) refresh();
+});
+
 els.selectLegendPos?.addEventListener("change", () => {
   const pos = els.selectLegendPos.value;
   els.overlay.classList.remove("pos-br", "pos-bl", "pos-tr", "pos-tl");
@@ -1326,6 +1331,7 @@ function snapshotCurrent() {
     prefFilter: els.selectPrefFilter?.value || "",
     manualBreaks: els.inputManualBreaks?.value || "",
     pieFields: [...(els.selectPieFields?.selectedOptions || [])].map(o => o.value),
+    dataSource: els.inputDataSource?.value || "",
   };
 }
 let demoScenes = {}; // name → snapshot, loaded from data/scenes/index.json
@@ -1401,6 +1407,7 @@ els.selectScene.addEventListener("change", async () => {
   if (snap.compare !== undefined) els.chkCompare.checked = !!snap.compare;
   if (snap.manualBreaks !== undefined) els.inputManualBreaks.value = snap.manualBreaks;
   if (snap.prefFilter !== undefined && els.selectPrefFilter) els.selectPrefFilter.value = snap.prefFilter;
+  if (snap.dataSource !== undefined && els.inputDataSource) els.inputDataSource.value = snap.dataSource;
   // Apply visibility toggles
   els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both" || state.mode === "graduated");
   els.rowDotUnit.hidden = state.mode !== "dot";
@@ -2010,7 +2017,8 @@ function refresh() {
   renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag });
   els.overlay.hidden = false;
   els.overlayTitle.textContent = state.field;
-  els.overlayFooter.textContent = `MandaraNext ·${new Date().toLocaleDateString("ja-JP")}`;
+  const src = (els.inputDataSource?.value || "").trim();
+  els.overlayFooter.textContent = (src ? `出典: ${src} · ` : "") + `MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`;
 
   renderStats(values);
 
