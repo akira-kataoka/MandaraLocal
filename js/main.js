@@ -1146,6 +1146,15 @@ function exportCrossTabCsv() {
     lines.push([rowLabel, ...ct.matrix[i].map(String), String(ct.rowTot[i])].map(csvEscape).join(","));
   }
   lines.push(["合計", ...ct.colTot.map(String), String(ct.total)].map(csvEscape).join(","));
+  // Chi-square statistics block (Cycle 119)
+  if (ct.chi2 != null) {
+    lines.push("");
+    lines.push(["統計量", "値"].map(csvEscape).join(","));
+    lines.push(["χ²", ct.chi2.toFixed(4)].map(csvEscape).join(","));
+    lines.push(["自由度 (df)", String(ct.df)].map(csvEscape).join(","));
+    lines.push(["p値", ct.pVal == null ? "" : ct.pVal.toFixed(6)].map(csvEscape).join(","));
+    lines.push(["Cramér's V", ct.cramerV == null ? "" : ct.cramerV.toFixed(4)].map(csvEscape).join(","));
+  }
   const csv = "﻿" + lines.join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -1228,9 +1237,36 @@ function runCrossTab() {
   html += `<tr><th class="total">合計</th>`;
   for (let j = 0; j < bins; j++) html += `<td class="total">${colTot[j]}</td>`;
   html += `<td class="total">${total}</td></tr></tbody></table>`;
+
+  // Chi-square test of independence + Cramér's V (Cycle 119)
+  let chi2 = 0, lowExpectedCells = 0;
+  for (let i = 0; i < bins; i++) {
+    for (let j = 0; j < bins; j++) {
+      const e = (rowTot[i] * colTot[j]) / Math.max(1, total);
+      if (e > 0) {
+        const d = mat[i][j] - e;
+        chi2 += (d * d) / e;
+      }
+      if (e < 5) lowExpectedCells++;
+    }
+  }
+  const df = (bins - 1) * (bins - 1);
+  const pVal = (df > 0 && total > 0) ? chiSquareSurvival(chi2, df) : null;
+  const cramerV = (total > 0 && bins > 1) ? Math.sqrt(chi2 / (total * (bins - 1))) : null;
+  const sig = pVal == null ? "" : (pVal < 0.001 ? " ***" : pVal < 0.01 ? " **" : pVal < 0.05 ? " *" : "");
+  const lowPct = (lowExpectedCells / (bins * bins)) * 100;
+  const warn = lowPct > 20
+    ? `<div style="color:#b45309;font-size:11px;margin-top:4px">⚠ 期待度数 &lt; 5 のセルが ${lowPct.toFixed(0)}% あり、χ²検定の信頼性が低下します</div>`
+    : "";
+  const pFmt = pVal == null ? "—" : (pVal < 0.001 ? "&lt; 0.001" : pVal.toFixed(3));
+  html += `<div class="ct-chi2" style="margin-top:6px;padding:6px 8px;background:#f1f5f9;border-radius:4px;font-size:11px;font-family:ui-monospace,monospace">` +
+    `χ²(df=${df}) = <strong>${chi2.toFixed(2)}</strong>, p = <strong>${pFmt}</strong>${sig}, ` +
+    `Cramér's V = <strong>${cramerV == null ? "—" : cramerV.toFixed(3)}</strong>` +
+    `</div>` + warn;
+
   els.ctResult.innerHTML = html;
-  // Stash the result for CSV export (Cycle 116)
-  state.crosstab = { rowF, colF, rowBreaks, colBreaks, matrix: mat, rowTot, colTot, total };
+  // Stash the result for CSV export (Cycle 116 + Cycle 119 statistics)
+  state.crosstab = { rowF, colF, rowBreaks, colBreaks, matrix: mat, rowTot, colTot, total, chi2, df, pVal, cramerV };
   if (els.ctExport) els.ctExport.disabled = false;
 
   // Wire cell hover for map cross-highlight
@@ -3290,3 +3326,59 @@ function hasMissing(values) {
   return values.some(v => v == null || !Number.isFinite(v));
 }
 function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
+
+// Chi-square survival function P(X > x) for df degrees of freedom.
+// Uses the regularized upper incomplete gamma function Q(df/2, x/2) via a
+// continued-fraction expansion (Numerical Recipes algorithm, sufficient for
+// p-values we display to 3 decimal places).
+function chiSquareSurvival(x, df) {
+  if (!(x > 0) || !(df > 0)) return 1;
+  const a = df / 2;
+  const xHalf = x / 2;
+  if (xHalf < a + 1) {
+    // Series expansion for P(a, x), then survival = 1 - P.
+    let ap = a, sum = 1 / a, term = 1 / a;
+    for (let n = 1; n < 200; n++) {
+      ap++; term *= xHalf / ap; sum += term;
+      if (Math.abs(term) < Math.abs(sum) * 1e-10) break;
+    }
+    const lnP = -xHalf + a * Math.log(xHalf) - logGamma(a);
+    return Math.max(0, Math.min(1, 1 - sum * Math.exp(lnP)));
+  } else {
+    // Continued fraction for Q(a, x).
+    let b = xHalf + 1 - a;
+    let c = 1 / 1e-30;
+    let d = 1 / b;
+    let h = d;
+    for (let i = 1; i < 200; i++) {
+      const an = -i * (i - a);
+      b += 2;
+      d = an * d + b; if (Math.abs(d) < 1e-30) d = 1e-30;
+      c = b + an / c; if (Math.abs(c) < 1e-30) c = 1e-30;
+      d = 1 / d;
+      const delta = d * c;
+      h *= delta;
+      if (Math.abs(delta - 1) < 1e-10) break;
+    }
+    const lnQ = -xHalf + a * Math.log(xHalf) - logGamma(a);
+    return Math.max(0, Math.min(1, h * Math.exp(lnQ)));
+  }
+}
+
+// Lanczos approximation to ln(Γ(z)).
+function logGamma(z) {
+  const g = 7;
+  const c = [
+    0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+    771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
+  ];
+  if (z < 0.5) {
+    return Math.log(Math.PI / Math.sin(Math.PI * z)) - logGamma(1 - z);
+  }
+  z -= 1;
+  let x = c[0];
+  for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+  const t = z + g + 0.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
