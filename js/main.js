@@ -128,6 +128,7 @@ const els = {
   filterResult: $("filter-result"),
   panelLegend:  $("panel-legend"),
   legendBox:    $("legend-container"),
+  selectLegendPos: $("select-legend-pos"),
   panelTable:   $("panel-table"),
   panelHist:    $("panel-histogram"),
   histBins:     $("hist-bins"),
@@ -836,6 +837,16 @@ function updatePalettePreview() {
   }
 }
 els.chkOutliers.addEventListener("change", () => refresh());
+els.selectLegendPos?.addEventListener("change", () => {
+  const pos = els.selectLegendPos.value;
+  els.overlay.classList.remove("pos-br", "pos-bl", "pos-tr", "pos-tl");
+  if (pos === "hide") {
+    els.overlay.hidden = true;
+  } else {
+    els.overlay.classList.add(`pos-${pos}`);
+    els.overlay.hidden = false;
+  }
+});
 els.chkSde.addEventListener("change", () => refresh());
 els.filterOp.addEventListener("change", () => {
   els.rowFilterValue2.hidden = els.filterOp.value !== "between";

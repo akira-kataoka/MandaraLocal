@@ -542,6 +542,10 @@ body.dark .feature-detail .fd-head { background: #0f172a; }
 body.dark .feature-detail .fd-head strong { color: #f1f5f9; }
 body.dark .feature-detail td { border-bottom-color: #334155; }
 
+.map-overlay.pos-br { bottom: 22px; right: 12px; top: auto; left: auto; }
+.map-overlay.pos-bl { bottom: 22px; left: 12px;  top: auto; right: auto; }
+.map-overlay.pos-tr { top: 12px;    right: 12px; bottom: auto; left: auto; }
+.map-overlay.pos-tl { top: 12px;    left: 60px;  bottom: auto; right: auto; }
 .map-overlay {
   position: absolute;
   bottom: 22px;

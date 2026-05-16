@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=91" />
+  <link rel="stylesheet" href="css/style.css?v=92" />
 </head>
 <body>
   <header class="app-header">
@@ -333,6 +333,16 @@
 
       <section class="panel" id="panel-legend" hidden>
         <h2>5. 凡例</h2>
+        <div class="form-row">
+          <label for="select-legend-pos">位置</label>
+          <select id="select-legend-pos">
+            <option value="br" selected>右下</option>
+            <option value="bl">左下</option>
+            <option value="tr">右上</option>
+            <option value="tl">左上</option>
+            <option value="hide">非表示</option>
+          </select>
+        </div>
         <div id="legend-container"></div>
       </section>
 
@@ -516,7 +526,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=91"></script>
+  <script type="module" src="js/main.js?v=92"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
