@@ -5406,7 +5406,8 @@ function renderFieldList() {
     } else {
       tip += "  ·  数値データなし";
     }
-    return `<div class="fl-item" title="${escapeHtmlText(tip)}"><span class="fl-name">${escapeHtmlText(f)}</span>` +
+    const isCurrent = (state.field === f) ? " is-current" : "";
+    return `<div class="fl-item${isCurrent}" title="${escapeHtmlText(tip)}"><span class="fl-name" data-pick="${escapeHtmlText(f)}">${escapeHtmlText(f)}</span>` +
       `<button class="${starClass}" data-star="${escapeHtmlText(f)}" title="お気に入り（選択肢の上部に表示）">${star}</button>` +
       `<button data-rename="${escapeHtmlText(f)}" title="列名を変更">✎</button>` +
       `<button data-f="${escapeHtmlText(f)}" title="この列を削除">×</button></div>`;
@@ -5419,6 +5420,16 @@ function renderFieldList() {
   });
   els.fieldList.querySelectorAll("button[data-star]").forEach(btn => {
     btn.addEventListener("click", () => toggleStarField(btn.dataset.star));
+  });
+  // Quick switch on field name click (Cycle 186)
+  els.fieldList.querySelectorAll("[data-pick]").forEach(sp => {
+    sp.addEventListener("click", () => {
+      const f = sp.dataset.pick;
+      if (state.field === f) return;
+      state.field = f;
+      if (els.selectField) els.selectField.value = f;
+      refresh();
+    });
   });
 }
 

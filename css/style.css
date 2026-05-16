@@ -258,7 +258,13 @@ details.derived[open] summary { font-weight: 600; }
 }
 .field-list .fl-item:hover { background: #f1f5f9; }
 body.dark .field-list .fl-item:hover { background: #1e3a8a; }
-.field-list .fl-name { flex: 1; }
+.field-list .fl-name { flex: 1; cursor: pointer; }
+.field-list .fl-name:hover { text-decoration: underline; color: #1e3a8a; }
+.field-list .fl-item.is-current { background: #dbeafe; }
+.field-list .fl-item.is-current .fl-name { font-weight: 700; color: #1e3a8a; }
+body.dark .field-list .fl-item.is-current { background: #1e3a8a; }
+body.dark .field-list .fl-item.is-current .fl-name { color: #dbeafe; }
+body.dark .field-list .fl-name:hover { color: #93c5fd; }
 .field-list button {
   background: none; border: 0; cursor: pointer;
   color: #b91c1c; font-size: 14px; line-height: 1; padding: 0 6px;
