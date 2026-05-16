@@ -184,12 +184,18 @@ export function normalizeToPrefCode(raw) {
 export async function loadCsvFile(file, opts = {}) {
   const name = (file.name || "").toLowerCase();
   if ((name.endsWith(".xlsx") || name.endsWith(".xls")) && typeof XLSX !== "undefined") {
-    // Excel: convert first sheet to CSV and feed to the standard parser
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
-    const firstSheet = wb.Sheets[wb.SheetNames[0]];
-    if (!firstSheet) throw new Error("Excel: シートが見つかりません");
-    const csv = XLSX.utils.sheet_to_csv(firstSheet);
+    const sheetNames = wb.SheetNames || [];
+    if (!sheetNames.length) throw new Error("Excel: シートが見つかりません");
+    let chosen = sheetNames[0];
+    if (sheetNames.length > 1) {
+      const list = sheetNames.map((n, i) => `${i + 1}. ${n}`).join("\n");
+      const picked = window.prompt(`複数シートを検出しました。読み込むシート番号 (1〜${sheetNames.length}):\n${list}`, "1");
+      const idx = (parseInt(picked, 10) || 1) - 1;
+      if (idx >= 0 && idx < sheetNames.length) chosen = sheetNames[idx];
+    }
+    const csv = XLSX.utils.sheet_to_csv(wb.Sheets[chosen]);
     return parseCsvText(csv, opts);
   }
   const text = await file.text();
