@@ -4639,19 +4639,29 @@ let demoScenes = {}; // name → snapshot, loaded from data/scenes/index.json
 function refreshSceneList() {
   const all = loadScenes();
   let html = '<option value="">— シーン —</option>';
+  // Cycle 242: append "📌N" badge to scene labels carrying pin selections.
+  const pinBadge = (snap) => {
+    const n = Array.isArray(snap?.pinIds) ? snap.pinIds.length : 0;
+    return n ? ` 📌${n}` : "";
+  };
   const demoNames = Object.keys(demoScenes);
   if (demoNames.length) {
     html += '<optgroup label="サンプル">';
-    for (const n of demoNames) html += `<option value="demo:${escapeHtmlText(n)}">${escapeHtmlText(n)}</option>`;
+    for (const n of demoNames) {
+      const badge = pinBadge(demoScenes[n]);
+      html += `<option value="demo:${escapeHtmlText(n)}">${escapeHtmlText(n)}${badge}</option>`;
+    }
     html += '</optgroup>';
   }
   const userNames = Object.keys(all).sort();
   if (userNames.length) {
     html += '<optgroup label="マイシーン">';
     for (const n of userNames) {
-      const desc = all[n]?.description || "";
+      const entry = all[n];
+      const desc = entry?.description || "";
       const title = desc ? ` title="${escapeHtmlText(desc)}"` : "";
-      html += `<option value="${escapeHtmlText(n)}"${title}>${escapeHtmlText(n)}</option>`;
+      const badge = pinBadge(entry?.snapshot || entry);
+      html += `<option value="${escapeHtmlText(n)}"${title}>${escapeHtmlText(n)}${badge}</option>`;
     }
     html += '</optgroup>';
   }
