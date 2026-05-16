@@ -138,28 +138,36 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
 
   // Outlier labels: tag points whose value is outside Tukey 1.5×IQR fences
   // on either axis. Helps reading dense plots without hovering.
-  if (names) {
-    const quantile = (arr, p) => {
-      const a = arr.slice().sort((u,w)=>u-w);
-      const idx = (a.length - 1) * p;
-      const lo = Math.floor(idx), hi = Math.ceil(idx);
-      return lo === hi ? a[lo] : a[lo] + (a[hi]-a[lo]) * (idx - lo);
-    };
-    const xq1 = quantile(x, 0.25), xq3 = quantile(x, 0.75);
-    const yq1 = quantile(y, 0.25), yq3 = quantile(y, 0.75);
-    const xLo = xq1 - 1.5 * (xq3 - xq1), xHi = xq3 + 1.5 * (xq3 - xq1);
-    const yLo = yq1 - 1.5 * (yq3 - yq1), yHi = yq3 + 1.5 * (yq3 - yq1);
+  // Label mode: "outliers" (default, Tukey IQR), "all", or "none".
+  const labelMode = opts.labels === "all" || opts.labels === "none" ? opts.labels : "outliers";
+  if (names && labelMode !== "none") {
+    let xLo, xHi, yLo, yHi;
+    if (labelMode === "outliers") {
+      const quantile = (arr, p) => {
+        const a = arr.slice().sort((u,w)=>u-w);
+        const idx = (a.length - 1) * p;
+        const lo = Math.floor(idx), hi = Math.ceil(idx);
+        return lo === hi ? a[lo] : a[lo] + (a[hi]-a[lo]) * (idx - lo);
+      };
+      const xq1 = quantile(x, 0.25), xq3 = quantile(x, 0.75);
+      const yq1 = quantile(y, 0.25), yq3 = quantile(y, 0.75);
+      xLo = xq1 - 1.5 * (xq3 - xq1); xHi = xq3 + 1.5 * (xq3 - xq1);
+      yLo = yq1 - 1.5 * (yq3 - yq1); yHi = yq3 + 1.5 * (yq3 - yq1);
+    }
     const labels = el("g", { class: "scatter-labels" });
     for (const [vx, vy, fid, nm] of pairs) {
       if (!nm) continue;
-      const isOutlier = vx < xLo || vx > xHi || vy < yLo || vy > yHi;
-      if (!isOutlier) continue;
+      if (labelMode === "outliers") {
+        const isOutlier = vx < xLo || vx > xHi || vy < yLo || vy > yHi;
+        if (!isOutlier) continue;
+      }
       const tx = pxAt(sx(vx)) + 5;
       const ty = pyAt(sy(vy)) - 5;
       const lbl = el("text", { x: tx, y: ty });
-      lbl.setAttribute("font-size", "9");
-      lbl.setAttribute("fill", "#1e293b");
-      lbl.setAttribute("font-weight", "600");
+      // "all" mode uses smaller font + lighter color to reduce visual noise
+      lbl.setAttribute("font-size", labelMode === "all" ? "8" : "9");
+      lbl.setAttribute("fill", labelMode === "all" ? "#475569" : "#1e293b");
+      lbl.setAttribute("font-weight", labelMode === "all" ? "500" : "600");
       lbl.textContent = nm;
       labels.appendChild(lbl);
     }

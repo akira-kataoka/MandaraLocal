@@ -184,6 +184,7 @@ const els = {
   scatterColorBy: $("scatter-color-by"),
   chkScatterStats: $("chk-scatter-stats"),
   chkScatterCi:    $("chk-scatter-ci"),
+  scatterLabels:   $("scatter-labels"),
   chkScatterLogX: $("chk-scatter-logx"),
   chkScatterLogY: $("chk-scatter-logy"),
   scatterCorr:  $("scatter-correlation"),
@@ -1316,6 +1317,7 @@ els.scatterY.addEventListener("change", drawScatter);
 els.scatterColorBy?.addEventListener("change", drawScatter);
 els.chkScatterStats?.addEventListener("change", drawScatter);
 els.chkScatterCi?.addEventListener("change", drawScatter);
+els.scatterLabels?.addEventListener("change", drawScatter);
 els.chkScatterLogX.addEventListener("change", drawScatter);
 els.chkScatterLogY.addEventListener("change", drawScatter);
 els.scatterSwap?.addEventListener("click", () => {
@@ -3111,6 +3113,7 @@ function drawScatter() {
     logY: els.chkScatterLogY.checked,
     statsOverlay: !!els.chkScatterStats?.checked,
     regCI: !!els.chkScatterCi?.checked,
+    labels: els.scatterLabels?.value || "outliers",
   }, colorFor, names, categoryFor);
   if (r == null) {
     els.scatterCorr.textContent = `n=${n} — 相関係数を計算できません`;
