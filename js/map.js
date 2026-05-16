@@ -8,6 +8,19 @@ import { formatNum, extractUnit } from "./stats.js";
 const NA_COLOR = "#e5e7eb"; // grey for missing values
 const HOVER_OUTLINE = "#111827";
 
+// First index k such that arr[k] >= v (assumes ascending). Returns arr.length
+// when v is greater than every element. Used for percentile lookup in the
+// hover tooltip (Cycle 154).
+function lowerBound(arr, v) {
+  let lo = 0, hi = arr.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid] < v) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
 const MAP_INIT_CENTER = [37.5, 137.5];
 const MAP_INIT_ZOOM = 5;
 
@@ -174,17 +187,31 @@ export class MandaraMap {
     const code = feature.properties.id;
     const name = this._nameFor(feature.properties);
     let valueText = "";
+    let rankText = "";  // percentile + class info (Cycle 154)
     if (this._lookupFn) {
       const info = this._lookupFn(code);
       const unit = extractUnit(this._fieldName);
       if (info && info.value != null) {
         valueText = ` <span class="val">${formatNum(info.value)}${unit ? " " + escapeHtml(unit) : ""}</span>`;
+        // Percentile + class rank
+        if (this._sortedValues && this._sortedValues.length > 0) {
+          const n = this._sortedValues.length;
+          let pos = lowerBound(this._sortedValues, info.value);
+          while (pos < n && this._sortedValues[pos] === info.value) pos++;
+          const pct = (pos / n) * 100;
+          const topPct = (100 - pct).toFixed(1);
+          const classNum = info.classIndex >= 0 ? info.classIndex + 1 : null;
+          const classStr = classNum && this._classCount
+            ? ` · 第${classNum}/${this._classCount}階級`
+            : "";
+          rankText = `<br/><small style="color:#475569">上位 ${topPct}%${classStr}</small>`;
+        }
       } else {
         valueText = ` <span class="val">—</span>`;
       }
     }
     const fieldText = this._fieldName ? `<br/><small>${escapeHtml(this._fieldName)}</small>` : "";
-    this.tooltipEl.innerHTML = `<strong>${escapeHtml(name)}</strong>${valueText}${fieldText}`;
+    this.tooltipEl.innerHTML = `<strong>${escapeHtml(name)}</strong>${valueText}${fieldText}${rankText}`;
     this.tooltipEl.hidden = false;
 
     const rect = this._mapEl.getBoundingClientRect();
@@ -207,6 +234,11 @@ export class MandaraMap {
   applyChoropleth(valueMap, breaks, colors, fieldName) {
     if (!this.layer) return;
     this._fieldName = fieldName || "";
+    // Precompute the sorted-value array so the tooltip can show percentile
+    // rank without re-sorting on every hover (Cycle 154).
+    const allValues = [...valueMap.values()].filter(v => Number.isFinite(v)).sort((a, b) => a - b);
+    this._sortedValues = allValues;
+    this._classCount = colors.length;
     this._lookupFn = (code) => {
       const v = valueMap.get(code);
       if (v == null || !Number.isFinite(v)) {
