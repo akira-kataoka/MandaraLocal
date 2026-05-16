@@ -4370,6 +4370,14 @@ window.addEventListener("keydown", (e) => {
     if (k === "m") { e.preventDefault(); els.btnCopyResults?.click(); }
     else if (k === "t") { e.preventDefault(); els.btnCopyResultsTxt?.click(); }
   }
+  // Cycle 266: Shift+P zooms the map to fit all pinned features.
+  if (!inField && e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === "P" || e.key === "p")) {
+    if (state.pinnedScatterIds?.size) {
+      e.preventDefault();
+      els.btnScatterZoomPins?.click();
+    }
+    return;
+  }
   // Cycle 250: "?" / Shift+/ opens the help modal.
   if (!inField && (e.key === "?" || (e.shiftKey && e.key === "/"))) {
     e.preventDefault();
@@ -4390,7 +4398,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "265"; // bumped each polish cycle
+const APP_VERSION = "266"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -4417,6 +4425,7 @@ function showHelpModal() {
       <code>?</code><span>このヘルプを表示</span>
       <code>Esc</code><span>ヘルプ / QR モーダルを閉じる</span>
       <code>Shift+Esc</code><span>ピン留めを全解除</span>
+      <code>Shift+P</code><span>ピン留め地域に地図をズーム</span>
       <code>Z</code><span>Zen モード切替（サイドバー隠して地図全画面）</span>
 
       <strong>散布図</strong><span></span>
