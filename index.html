@@ -10,7 +10,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
 
-  <link rel="stylesheet" href="css/style.css?v=36" />
+  <link rel="stylesheet" href="css/style.css?v=37" />
 </head>
 <body>
   <header class="app-header">
@@ -144,6 +144,7 @@
             <option value="both">塗り分け+円 を重ね合わせ</option>
             <option value="dot">ドット分布図</option>
             <option value="label">ラベル表示（値を地図上に）</option>
+            <option value="pie">円グラフ（複数列を比較）</option>
           </select>
         </div>
         <div class="form-row" id="row-symbol-size" hidden>
@@ -153,6 +154,17 @@
         <div class="form-row" id="row-dot-unit" hidden>
           <label for="input-dotunit">1ドット = </label>
           <input type="number" id="input-dotunit" min="1" value="10000" />
+        </div>
+        <div class="form-row" id="row-pie" hidden>
+          <label for="select-pie-fields">構成列</label>
+          <select id="select-pie-fields" multiple size="4" style="min-height:80px"></select>
+        </div>
+        <div class="form-row hint" id="hint-pie" hidden>
+          Ctrl/Cmd+クリックで複数選択 (2〜6列推奨)
+        </div>
+        <div class="form-row" id="row-pie-size" hidden>
+          <label for="input-pie-radius">円グラフ半径(px)</label>
+          <input type="number" id="input-pie-radius" min="10" max="40" value="18" />
         </div>
       </section>
 
@@ -294,6 +306,6 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=36"></script>
+  <script type="module" src="js/main.js?v=37"></script>
 </body>
 </html>

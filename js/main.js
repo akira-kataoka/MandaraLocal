@@ -80,6 +80,11 @@ const els = {
   inputMaxR:    $("input-maxr"),
   rowDotUnit:   $("row-dot-unit"),
   inputDotUnit: $("input-dotunit"),
+  rowPie:       $("row-pie"),
+  selectPieFields: $("select-pie-fields"),
+  hintPie:      $("hint-pie"),
+  rowPieSize:   $("row-pie-size"),
+  inputPieRadius: $("input-pie-radius"),
   panelClass:   $("panel-class"),
   selectMethod: $("select-method"),
   inputClasses: $("input-classes"),
@@ -637,8 +642,31 @@ els.selectMode.addEventListener("change", () => {
   state.mode = els.selectMode.value;
   els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both");
   els.rowDotUnit.hidden = state.mode !== "dot";
+  const pieOn = state.mode === "pie";
+  els.rowPie.hidden = !pieOn;
+  els.hintPie.hidden = !pieOn;
+  els.rowPieSize.hidden = !pieOn;
+  if (pieOn) populatePieFields();
   refresh();
 });
+els.selectPieFields.addEventListener("change", () => refresh());
+els.inputPieRadius.addEventListener("change", () => refresh());
+
+function populatePieFields() {
+  const fields = state.dataset?.fields || [];
+  const prev = new Set([...els.selectPieFields.selectedOptions].map(o => o.value));
+  els.selectPieFields.innerHTML = "";
+  for (const f of fields) {
+    const o = document.createElement("option");
+    o.value = f; o.textContent = f;
+    if (prev.has(f)) o.selected = true;
+    els.selectPieFields.appendChild(o);
+  }
+  // default: pick first 2 numeric fields if nothing selected
+  if (!prev.size && fields.length >= 2) {
+    [...els.selectPieFields.options].slice(0, Math.min(3, fields.length)).forEach(o => o.selected = true);
+  }
+}
 els.inputDotUnit.addEventListener("change", () => refresh());
 els.inputMaxR.addEventListener("change", () => {
   const n = clamp(parseInt(els.inputMaxR.value || "32", 10), 8, 80);
@@ -882,6 +910,8 @@ function onDatasetReady(ds, label) {
   } else {
     els.panelScatter.hidden = true;
   }
+  // Pre-populate pie field options for the new dataset
+  populatePieFields();
 
   const msg = `${label}: ${ds.rows.length}件 / ${ds.fields.length}列を読み込みました。`;
   const warn = ds.unmatched.length
@@ -936,6 +966,15 @@ function refresh() {
     mapper.applyDotDensity(state.geojson, state.valueMap, unit);
   } else if (state.mode === "label") {
     mapper.applyLabels(state.valueMap, state.field);
+  } else if (state.mode === "pie") {
+    const selected = [...els.selectPieFields.selectedOptions].map(o => o.value);
+    const radius = Math.max(8, parseInt(els.inputPieRadius.value || "18", 10));
+    // Match palette to slice colors (recompute for the selected count)
+    const pieColors = getPalette(state.palette, Math.max(2, selected.length), state.reverse);
+    mapper.applyPieCharts(state.dataset, selected, pieColors, { radiusPx: radius });
+    // Re-render legend with the pie series colors instead of break ranges
+    renderPieLegend(els.legendBox, selected, pieColors, "円グラフ構成");
+    renderPieLegend(els.overlayLegend, selected, pieColors);
   } else {
     mapper.clearSymbols();
   }
@@ -1031,6 +1070,27 @@ function applyOutlierHighlight(values) {
 function onTableRowHover(id, isOn) {
   if (isOn) mapper.highlightById(id);
   else      mapper.clearHighlight();
+}
+
+function renderPieLegend(container, fields, colors, title) {
+  container.innerHTML = "";
+  if (title) {
+    const t = document.createElement("div");
+    t.style.cssText = "font-weight:600;margin-bottom:4px";
+    t.textContent = title;
+    container.appendChild(t);
+  }
+  fields.forEach((f, i) => {
+    const row = document.createElement("div");
+    row.className = "legend-row";
+    const sw = document.createElement("span");
+    sw.className = "legend-swatch";
+    sw.style.background = colors[i] || "#94a3b8";
+    const label = document.createElement("span");
+    label.textContent = f;
+    row.appendChild(sw); row.appendChild(label);
+    container.appendChild(row);
+  });
 }
 
 function renderStats(values) {

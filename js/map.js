@@ -232,6 +232,78 @@ export class MandaraMap {
   }
 
   /**
+   * Render a small pie chart at each feature centroid.
+   * MANDARA 「円グラフモード」相当。
+   *
+   * @param dataset   { rows, fields }  -- whole dataset with rows.key=feature id
+   * @param fields    array of column names to include (2..n recommended)
+   * @param colors    array same length as fields (one color per slice)
+   * @param opts      { radiusPx } default 18
+   */
+  applyPieCharts(dataset, fields, colors, opts = {}) {
+    this.symbolLayer.clearLayers();
+    if (!this.layer || !dataset || !fields?.length) return;
+    const R = opts.radiusPx ?? 18;
+    // Build a id → row lookup
+    const byId = new Map();
+    for (const r of dataset.rows) byId.set(r.key, r);
+
+    this.layer.eachLayer((lyr) => {
+      const f = lyr.feature;
+      const row = byId.get(f.properties.id);
+      if (!row) return;
+      let lat, lng;
+      try {
+        const c = lyr.getBounds().getCenter();
+        lat = c.lat; lng = c.lng;
+      } catch { return; }
+      // Collect positive values per field
+      const vals = fields.map(fn => {
+        const v = row.values[fn];
+        return Number.isFinite(v) && v > 0 ? v : 0;
+      });
+      const total = vals.reduce((a, b) => a + b, 0);
+      if (total <= 0) return;
+
+      // Build SVG pie slices
+      const cx = R, cy = R, sz = R * 2;
+      let acc = 0;
+      const paths = [];
+      const tipLines = [];
+      vals.forEach((v, i) => {
+        if (v <= 0) return;
+        const pct = v / total;
+        const a0 = acc * 2 * Math.PI;
+        acc += pct;
+        const a1 = acc * 2 * Math.PI;
+        const x0 = cx + R * Math.sin(a0), y0 = cy - R * Math.cos(a0);
+        const x1 = cx + R * Math.sin(a1), y1 = cy - R * Math.cos(a1);
+        const large = pct > 0.5 ? 1 : 0;
+        // Full circle as single slice — draw a circle to avoid an arc bug
+        const d = vals.filter(x => x > 0).length === 1
+          ? `M${cx-R},${cy} A${R},${R} 0 1,1 ${cx+R},${cy} A${R},${R} 0 1,1 ${cx-R},${cy}Z`
+          : `M${cx},${cy} L${x0.toFixed(2)},${y0.toFixed(2)} A${R},${R} 0 ${large},1 ${x1.toFixed(2)},${y1.toFixed(2)} Z`;
+        paths.push(`<path d="${d}" fill="${colors[i] || "#94a3b8"}" stroke="#1e293b" stroke-width="0.5"/>`);
+        tipLines.push(`${escapeHtml(fields[i])}: ${formatNum(v)} (${(pct*100).toFixed(1)}%)`);
+      });
+
+      const html = `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">${paths.join("")}</svg>`;
+      const icon = L.divIcon({
+        className: "pie-icon",
+        html,
+        iconSize: [sz, sz],
+        iconAnchor: [R, R],
+      });
+      const name = this._nameFor(f.properties);
+      const m = L.marker([lat, lng], { icon, interactive: true });
+      m.bindTooltip(`<strong>${escapeHtml(name)}</strong><br/>${tipLines.join("<br/>")}<br/><small>合計: ${formatNum(total)}</small>`, {
+        sticky: true, direction: "top", className: "chocho-tip",
+      });
+      m.addTo(this.symbolLayer);
+    });
+  }
+
+  /**
    * Render text labels at each feature centroid: "name\nvalue".
    * Inspired by MANDARA's 「文字モード / ラベル表示モード」.
    *
