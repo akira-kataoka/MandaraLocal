@@ -1616,6 +1616,18 @@ function runMultipleRegression() {
   // 95% CI of coefficients (Cycle 141, normal approximation).
   const ciLo = coeffs.map((c, i) => c - 1.96 * se[i]);
   const ciHi = coeffs.map((c, i) => c + 1.96 * se[i]);
+  // Standardized coefficients β* (Cycle 151) — β_i × (sd_x_i / sd_y).
+  const sdY = (() => {
+    const my2 = y.reduce((s, v) => s + v, 0) / y.length;
+    return Math.sqrt(y.reduce((s, v) => s + (v - my2) ** 2, 0) / Math.max(1, y.length - 1));
+  })();
+  const stdCoeffs = coeffs.map((c, i) => {
+    if (i === 0) return null;  // intercept has no standardized form
+    const col = X.map(row => row[i]);
+    const mx = col.reduce((s, v) => s + v, 0) / col.length;
+    const sdX = Math.sqrt(col.reduce((s, v) => s + (v - mx) ** 2, 0) / Math.max(1, col.length - 1));
+    return sdY > 0 ? c * (sdX / sdY) : null;
+  });
   // VIF (Variance Inflation Factor) for each X (skip intercept at index 0).
   // VIF_i = 1 / (1 - R²_i) where R²_i comes from regressing X_i on the others.
   const vif = new Array(p).fill(null); // intercept stays null
@@ -1642,7 +1654,7 @@ function runMultipleRegression() {
     }
   }
   state.mrResult = {
-    yField, xFields, coeffs, se, tStats, pValues, ciLo, ciHi, vif,
+    yField, xFields, coeffs, se, tStats, pValues, ciLo, ciHi, vif, stdCoeffs,
     n, p, R2, adjR2, F, pF, dfModel, dfResid, residualSE: Math.sqrt(sigma2),
     labels: ["(Intercept)", ...xFields],
     fitted: yhat, residuals, keys,
@@ -1662,8 +1674,14 @@ function renderMrResult(r) {
     if (v >= 5)  return `<span style="color:#d97706" title="多重共線性が中程度">${txt}</span>`;
     return txt;
   };
+  const stdBetaCell = (b) => {
+    if (b == null) return "—";
+    const txt = b.toFixed(3);
+    if (Math.abs(b) >= 0.3) return `<strong style="color:#1e3a8a">${txt}</strong>`;
+    return txt;
+  };
   let html = "<table><thead><tr>" +
-    "<th>変数</th><th>係数</th><th>SE</th><th>95%CI</th><th>t</th><th>p</th><th>VIF</th>" +
+    "<th>変数</th><th>係数</th><th>標準化β</th><th>SE</th><th>95%CI</th><th>t</th><th>p</th><th>VIF</th>" +
     "</tr></thead><tbody>";
   r.labels.forEach((lbl, i) => {
     const sig = r.pValues[i] != null && r.pValues[i] < 0.05;
@@ -1673,6 +1691,7 @@ function renderMrResult(r) {
     html += `<tr class="${sig ? "is-sig" : ""}">` +
       `<td>${escapeHtmlText(lbl)}</td>` +
       `<td class="num">${fmt(r.coeffs[i], 6)}</td>` +
+      `<td class="num">${stdBetaCell(r.stdCoeffs?.[i])}</td>` +
       `<td class="num">${fmt(r.se[i], 6)}</td>` +
       `<td class="num" style="font-size:10px">${ci}</td>` +
       `<td class="num">${fmt(r.tStats[i], 2)}</td>` +
@@ -2409,10 +2428,12 @@ els.mrCsv?.addEventListener("click", () => {
   const r = state.mrResult;
   if (!r) { setSummary("先に「回帰を計算」してください", "warn"); return; }
   const fmt = (v, d = 6) => (v == null || !Number.isFinite(v)) ? "" : v.toFixed(d);
-  const lines = [["変数", "係数", "SE", "95%CI 下", "95%CI 上", "t", "p", "VIF"].map(csvEscape).join(",")];
+  const lines = [["変数", "係数", "標準化β", "SE", "95%CI 下", "95%CI 上", "t", "p", "VIF"].map(csvEscape).join(",")];
   r.labels.forEach((lbl, i) => {
     lines.push([
-      lbl, fmt(r.coeffs[i]), fmt(r.se[i]),
+      lbl, fmt(r.coeffs[i]),
+      r.stdCoeffs?.[i] == null ? "" : r.stdCoeffs[i].toFixed(4),
+      fmt(r.se[i]),
       fmt(r.ciLo?.[i]), fmt(r.ciHi?.[i]),
       fmt(r.tStats[i], 4), fmt(r.pValues[i], 6),
       r.vif?.[i] == null ? "" : r.vif[i].toFixed(4),
