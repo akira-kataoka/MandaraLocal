@@ -215,12 +215,34 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
         svgEl.appendChild(band);
       }
     }
-    const lineEl = el("line", {
-      x1: pxAt(xMin), y1: pyAt(slope * xMin + intercept),
-      x2: pxAt(xMax), y2: pyAt(slope * xMax + intercept),
-      class: "regline",
-    });
-    svgEl.appendChild(lineEl);
+    // Polynomial regression curve (Cycle 127). Degree 1 keeps the existing
+    // straight line; 2/3 draws a smooth polyline sampled across the x range.
+    const degree = Math.max(1, Math.min(3, opts.degree | 0 || 1));
+    if (degree === 1) {
+      const lineEl = el("line", {
+        x1: pxAt(xMin), y1: pyAt(slope * xMin + intercept),
+        x2: pxAt(xMax), y2: pyAt(slope * xMax + intercept),
+        class: "regline",
+      });
+      svgEl.appendChild(lineEl);
+    } else {
+      const polyCoeffs = polyfit(xs2, ys2, degree);
+      if (polyCoeffs) {
+        const STEPS = 60;
+        const pts = [];
+        for (let i = 0; i <= STEPS; i++) {
+          const xv = xMin + (i / STEPS) * (xMax - xMin);
+          pts.push(`${pxAt(xv).toFixed(1)},${pyAt(polyEval(polyCoeffs, xv)).toFixed(1)}`);
+        }
+        const poly = el("polyline", {
+          points: pts.join(" "),
+          fill: "none", stroke: "#dc2626", "stroke-width": 1.4, class: "regline",
+        });
+        svgEl.appendChild(poly);
+        // Stash for the equation overlay below.
+        svgEl.__polyCoeffs = polyCoeffs;
+      }
+    }
   }
 
   // Regression equation text overlay (top-right corner of the chart)
@@ -230,18 +252,45 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       if (Math.abs(v) >= 1)   return v.toFixed(2);
       return v.toExponential(2);
     };
-    const sign = intercept >= 0 ? "+" : "−";
-    const eq = logX || logY
-      ? `(log) y = ${sym(slope)}x ${sign} ${sym(Math.abs(intercept))}`
-      : `y = ${sym(slope)}x ${sign} ${sym(Math.abs(intercept))}`;
-    const r2 = r * r;
+    let eq;
+    let r2;
+    const polyCoeffs = svgEl.__polyCoeffs;
+    if (polyCoeffs && polyCoeffs.length > 2) {
+      // Show poly equation y = c0 + c1·x + c2·x² (+ c3·x³)
+      const terms = polyCoeffs.map((c, i) => {
+        const abs = sym(Math.abs(c));
+        const x = i === 0 ? "" : i === 1 ? "x" : `x${["", "", "²", "³"][i]}`;
+        return { sign: c >= 0 ? "+" : "−", abs, x };
+      });
+      eq = terms.map((t, i) => i === 0
+        ? `${t.sign === "−" ? "−" : ""}${t.abs}${t.x}`
+        : ` ${t.sign} ${t.abs}${t.x}`
+      ).join("");
+      eq = `y = ${eq}`;
+      // Compute R² from polynomial residuals
+      let sse = 0, sst = 0;
+      const my = ys2.reduce((a, b) => a + b, 0) / ys2.length;
+      for (let i = 0; i < xs2.length; i++) {
+        const yhat = polyEval(polyCoeffs, xs2[i]);
+        sse += (ys2[i] - yhat) ** 2;
+        sst += (ys2[i] - my) ** 2;
+      }
+      r2 = sst > 0 ? 1 - sse / sst : null;
+      delete svgEl.__polyCoeffs;
+    } else {
+      const sign = intercept >= 0 ? "+" : "−";
+      eq = logX || logY
+        ? `(log) y = ${sym(slope)}x ${sign} ${sym(Math.abs(intercept))}`
+        : `y = ${sym(slope)}x ${sign} ${sym(Math.abs(intercept))}`;
+      r2 = r * r;
+    }
     const eqEl = el("text", {
       x: W - PAD.right - 4, y: PAD.top + 9,
       "text-anchor": "end",
       "font-family": "ui-monospace, monospace",
       "font-size": 9, fill: "#dc2626", "font-weight": 600,
     });
-    eqEl.textContent = `${eq}   R²=${r2.toFixed(3)}`;
+    eqEl.textContent = r2 == null ? eq : `${eq}   R²=${r2.toFixed(3)}`;
     svgEl.appendChild(eqEl);
   }
 
@@ -395,6 +444,56 @@ function ols(xs, ys) {
   }
   const slope = den === 0 ? 0 : num / den;
   return { slope, intercept: my - slope * mx };
+}
+
+// Polynomial regression of arbitrary degree d (1..3 in our UI). Returns
+// coefficients [c0, c1, ..., cd] where ŷ = c0 + c1·x + c2·x² + ... Solves the
+// normal equations (X'X) β = X'y via Gaussian elimination with partial pivoting.
+export function polyfit(xs, ys, d) {
+  const n = xs.length;
+  if (n < d + 1) return null;
+  const m = d + 1;
+  // moments[k] = Σ x^k for k = 0..2d
+  const mom = new Array(2 * d + 1).fill(0);
+  for (let i = 0; i < n; i++) {
+    let xp = 1;
+    for (let k = 0; k <= 2 * d; k++) { mom[k] += xp; xp *= xs[i]; }
+  }
+  // rhs[k] = Σ y·x^k for k = 0..d
+  const rhs = new Array(m).fill(0);
+  for (let i = 0; i < n; i++) {
+    let xp = 1;
+    for (let k = 0; k < m; k++) { rhs[k] += ys[i] * xp; xp *= xs[i]; }
+  }
+  // Build augmented matrix [X'X | X'y]
+  const A = Array.from({ length: m }, (_, i) =>
+    Array.from({ length: m + 1 }, (_, j) => j < m ? mom[i + j] : rhs[i])
+  );
+  // Gaussian elimination with partial pivoting
+  for (let i = 0; i < m; i++) {
+    let pivot = i;
+    for (let r = i + 1; r < m; r++) if (Math.abs(A[r][i]) > Math.abs(A[pivot][i])) pivot = r;
+    if (pivot !== i) { [A[i], A[pivot]] = [A[pivot], A[i]]; }
+    if (Math.abs(A[i][i]) < 1e-12) return null;
+    for (let r = i + 1; r < m; r++) {
+      const f = A[r][i] / A[i][i];
+      for (let c = i; c <= m; c++) A[r][c] -= f * A[i][c];
+    }
+  }
+  // Back substitution
+  const coeffs = new Array(m).fill(0);
+  for (let i = m - 1; i >= 0; i--) {
+    let s = A[i][m];
+    for (let j = i + 1; j < m; j++) s -= A[i][j] * coeffs[j];
+    coeffs[i] = s / A[i][i];
+  }
+  return coeffs;
+}
+function polyEval(coeffs, x) {
+  // Horner's method
+  let r = 0;
+  for (let i = coeffs.length - 1; i >= 0; i--) r = r * x + coeffs[i];
+  return r;
 }
 
 function ticks(min, max, count) {

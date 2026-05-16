@@ -187,6 +187,7 @@ const els = {
   chkScatterStats: $("chk-scatter-stats"),
   chkScatterCi:    $("chk-scatter-ci"),
   scatterLabels:   $("scatter-labels"),
+  scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
   panelCorrMatrix: $("panel-corrmatrix"),
   corrRun:         $("corr-run"),
@@ -1361,6 +1362,7 @@ els.scatterColorBy?.addEventListener("change", drawScatter);
 els.chkScatterStats?.addEventListener("change", drawScatter);
 els.chkScatterCi?.addEventListener("change", drawScatter);
 els.scatterLabels?.addEventListener("change", drawScatter);
+els.scatterDegree?.addEventListener("change", drawScatter);
 els.chkScatterLogX.addEventListener("change", drawScatter);
 els.chkScatterLogY.addEventListener("change", drawScatter);
 els.scatterSwap?.addEventListener("click", () => {
@@ -3371,6 +3373,7 @@ function drawScatter() {
     statsOverlay: !!els.chkScatterStats?.checked,
     regCI: !!els.chkScatterCi?.checked,
     labels: els.scatterLabels?.value || "outliers",
+    degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
   }, colorFor, names, categoryFor);
   const { r, rho, rCI, rhoCI, n, slope, intercept, r2 } = scatterResult;
   state.scatterStats = {
