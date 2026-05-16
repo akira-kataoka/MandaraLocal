@@ -382,6 +382,15 @@ body.dark .ct-result td.total { background: #78350f; }
 .table-wrap th.sort-asc::after { content: " ▲"; color: var(--accent); }
 .table-wrap th.sort-desc::after { content: " ▼"; color: var(--accent); }
 .table-wrap tbody tr:hover { background: #fef3c7; cursor: pointer; }
+.table-wrap td.row-del { padding: 0 2px; width: 18px; text-align: center; }
+.table-wrap .row-del-btn {
+  background: none; border: 0; cursor: pointer;
+  color: #cbd5e1; font-size: 14px; line-height: 1; padding: 0 2px;
+  visibility: hidden;
+}
+.table-wrap tbody tr:hover .row-del-btn { visibility: visible; }
+.table-wrap .row-del-btn:hover { color: #fff; background: #dc2626; border-radius: 3px; }
+body.dark .table-wrap .row-del-btn { color: #475569; }
 .table-wrap td.num { text-align: right; }
 
 #scatter-svg {

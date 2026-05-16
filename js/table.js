@@ -18,7 +18,7 @@ export function getSortState() {
  * @param fields    dataset.fields
  * @param onRowHover (id, isOn) -> void
  */
-export function renderTable(container, rows, fields, onRowHover, onCellEdit = null) {
+export function renderTable(container, rows, fields, onRowHover, onCellEdit = null, onRowDelete = null) {
   container.innerHTML = "";
   if (!rows.length || !fields.length) return;
 
@@ -26,6 +26,11 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
   // header
   const thead = document.createElement("thead");
   const hr = document.createElement("tr");
+  if (onRowDelete) {
+    const blank = document.createElement("th");
+    blank.style.width = "20px";
+    hr.appendChild(blank);
+  }
   hr.appendChild(th("地域", "name"));
   for (const f of fields) hr.appendChild(th(f, f, true));
   thead.appendChild(hr); table.appendChild(thead);
@@ -38,6 +43,22 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
   for (const r of display) {
     const tr = document.createElement("tr");
     tr.dataset.id = r.key;
+    if (onRowDelete) {
+      const delTd = document.createElement("td");
+      delTd.className = "row-del";
+      const btn = document.createElement("button");
+      btn.textContent = "×";
+      btn.title = "この行を削除";
+      btn.className = "row-del-btn";
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (confirm(`「${r.name || "#" + r.key}」を削除しますか？\n（データセットから除外されます。再読込で元に戻ります）`)) {
+          onRowDelete(r.key);
+        }
+      });
+      delTd.appendChild(btn);
+      tr.appendChild(delTd);
+    }
     const nameTd = document.createElement("td");
     nameTd.textContent = r.name || "#" + r.key;
     tr.appendChild(nameTd);
@@ -93,9 +114,10 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
     container.appendChild(note);
   }
 
-  // mark active sort column
+  // mark active sort column (column 0 may be the delete handle when onRowDelete is set)
   if (sortState.field) {
-    const idx = sortState.field === "name" ? 0 : fields.indexOf(sortState.field) + 1;
+    const offset = onRowDelete ? 1 : 0;
+    const idx = sortState.field === "name" ? offset : fields.indexOf(sortState.field) + 1 + offset;
     const ths = thead.querySelectorAll("th");
     if (ths[idx]) ths[idx].classList.add(sortState.asc ? "sort-asc" : "sort-desc");
   }
@@ -106,7 +128,7 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
     el.addEventListener("click", () => {
       if (sortState.field === key) sortState.asc = !sortState.asc;
       else { sortState.field = key; sortState.asc = numeric ? false : true; }
-      renderTable(container, rows, fields, onRowHover);
+      renderTable(container, rows, fields, onRowHover, onCellEdit, onRowDelete);
     });
     if (numeric) el.style.textAlign = "right";
     return el;

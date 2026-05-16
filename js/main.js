@@ -2472,7 +2472,7 @@ function refresh() {
   }
 
   // Data table — with inline editing
-  renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit);
+  renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete);
 
   // Box plot
   if (els.boxplotSvg) renderBoxplot(els.boxplotSvg, values, state.field);
@@ -2609,6 +2609,17 @@ function onCellEdit(id, field, newValue) {
   if (!row) return;
   row.values[field] = newValue;
   setSummary(`${row.name || "#"+id} の「${field}」を ${newValue == null ? "—" : newValue} に更新`, "success");
+  refresh();
+}
+
+function onRowDelete(id) {
+  if (!state.dataset) return;
+  const idx = state.dataset.rows.findIndex(r => r.key === id);
+  if (idx < 0) return;
+  const removed = state.dataset.rows.splice(idx, 1)[0];
+  // Keep any active filter consistent with the new dataset.
+  if (state.filteredKeys instanceof Set) state.filteredKeys.delete(id);
+  setSummary(`「${removed?.name || "#"+id}」を削除しました（残り ${state.dataset.rows.length}件）`, "success");
   refresh();
 }
 
