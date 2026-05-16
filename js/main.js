@@ -145,6 +145,7 @@ const els = {
   panelTable:   $("panel-table"),
   panelHist:    $("panel-histogram"),
   histBins:     $("hist-bins"),
+  chkHistOverlay: $("chk-hist-overlay"),
   panelBox:     $("panel-boxplot"),
   boxplotSvg:   $("boxplot-svg"),
   histSvg:      $("histogram-svg"),
@@ -1091,6 +1092,7 @@ function renderFilterStack() {
 }
 els.ctRun.addEventListener("click", runCrossTab);
 els.histBins.addEventListener("change", () => { refresh(); });
+els.chkHistOverlay?.addEventListener("change", () => { refresh(); });
 
 async function svgToPng(svg, filename) {
   try {
@@ -2381,7 +2383,7 @@ function refresh() {
         if (x >= lo && (isLastBin ? x <= hi : x < hi)) hits.add(r.key);
       }
       mapper.markOutliers(hits);
-    });
+    }, { overlay: els.chkHistOverlay?.checked !== false });
   }
 
   // Outlier highlight

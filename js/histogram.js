@@ -14,7 +14,7 @@ const PAD = { top: 10, right: 12, bottom: 24, left: 36 };
  * @param bins    bin count (default 10, clamped 3..30)
  * @returns { n, binCount, max }
  */
-export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = null) {
+export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = null, opts = {}) {
   svgEl.innerHTML = "";
   const v = values.filter(x => Number.isFinite(x));
   const n = v.length;
@@ -92,6 +92,41 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
     bars.appendChild(rect);
   });
   svgEl.appendChild(bars);
+
+  // Statistical overlay: mean (solid red), median (dashed blue), ±1σ (dotted grey).
+  if (opts.overlay !== false) {
+    const mean = v.reduce((a, b) => a + b, 0) / n;
+    const sorted = v.slice().sort((a, b) => a - b);
+    const median = n % 2 === 0
+      ? (sorted[n/2 - 1] + sorted[n/2]) / 2
+      : sorted[Math.floor(n/2)];
+    const variance = v.reduce((a, b) => a + (b - mean) * (b - mean), 0) / n;
+    const sd = Math.sqrt(variance);
+    const xAt = (val) => PAD.left + ((val - min) / (max - min)) * innerW;
+    const overlay = el("g", { class: "hist-stat-overlay" });
+    const addLine = (val, color, dash, labelStr) => {
+      if (val < min || val > max) return;
+      const xpx = xAt(val);
+      const ln = el("line", {
+        x1: xpx, y1: PAD.top, x2: xpx, y2: H - PAD.bottom,
+        stroke: color, "stroke-width": 1.2,
+      });
+      if (dash) ln.setAttribute("stroke-dasharray", dash);
+      overlay.appendChild(ln);
+      const lab = el("text", {
+        x: xpx + 2, y: PAD.top + 8,
+        "font-size": 9, "font-weight": 700, fill: color,
+      });
+      lab.textContent = labelStr;
+      overlay.appendChild(lab);
+    };
+    addLine(mean,       "#dc2626", "",       "μ");
+    addLine(median,     "#2563eb", "3,2",    "M");
+    addLine(mean - sd,  "#64748b", "1,2",    "-σ");
+    addLine(mean + sd,  "#64748b", "1,2",    "+σ");
+    svgEl.appendChild(overlay);
+    return { n, binCount: k, max: maxCount, mean, median, sd };
+  }
 
   return { n, binCount: k, max: maxCount };
 }
