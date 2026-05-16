@@ -1511,6 +1511,7 @@ function runMultipleRegression() {
   // Build design matrix (with intercept column) for complete cases only.
   const X = [];
   const y = [];
+  const keys = [];
   for (const r of state.dataset.rows) {
     const yv = r.values[yField];
     if (!Number.isFinite(yv)) continue;
@@ -1522,7 +1523,7 @@ function runMultipleRegression() {
       row.push(v);
     }
     if (!ok) continue;
-    X.push(row); y.push(yv);
+    X.push(row); y.push(yv); keys.push(r.key);
   }
   const n = y.length, p = xFields.length + 1;
   if (n <= p) { setSummary(`サンプル不足: n=${n}, p=${p} (n>p が必要)`, "warn"); return; }
@@ -1585,7 +1586,7 @@ function runMultipleRegression() {
     yField, xFields, coeffs, se, tStats, pValues, ciLo, ciHi, vif,
     n, p, R2, adjR2, F, pF, dfModel, dfResid, residualSE: Math.sqrt(sigma2),
     labels: ["(Intercept)", ...xFields],
-    fitted: yhat, residuals,
+    fitted: yhat, residuals, keys,
   };
   renderMrResult(state.mrResult);
   if (els.mrCsv) els.mrCsv.disabled = false;
@@ -1632,9 +1633,42 @@ function renderMrResult(r) {
   // Q-Q plot (Cycle 143) — visual normality check of residuals.
   html += `<div style="margin-top:6px;font-size:11px;font-weight:600">Q-Q プロット (残差の正規性)</div>`;
   html += `<svg id="mr-qq-svg" width="280" height="140" viewBox="0 0 280 140" style="background:#fff;border:1px solid #e2e8f0"></svg>`;
+  // Map projection of fitted / residuals (Cycle 144)
+  html += `<div class="form-row" style="margin-top:6px">` +
+    `<button id="mr-add-pred" class="btn" type="button">予測値を列に追加</button>` +
+    `<button id="mr-add-resid" class="btn" type="button" style="margin-left:6px">残差を列に追加</button>` +
+    `</div>`;
   els.mrResult.innerHTML = html;
   renderResidualPlot(r);
   renderQQPlot(r);
+  els.mrResult.querySelector("#mr-add-pred")?.addEventListener("click", () => addMrToDataset("fitted"));
+  els.mrResult.querySelector("#mr-add-resid")?.addEventListener("click", () => addMrToDataset("residuals"));
+}
+
+function addMrToDataset(kind) {
+  const r = state.mrResult;
+  if (!r || !state.dataset) return;
+  const suffix = kind === "fitted" ? "予測" : "残差";
+  const colName = `${r.yField}_${suffix}`;
+  let finalName = colName;
+  let suffixNum = 2;
+  while (state.dataset.fields.includes(finalName)) {
+    finalName = `${colName}_${suffixNum++}`;
+  }
+  // Map row.key → value
+  const valMap = new Map();
+  const arr = kind === "fitted" ? r.fitted : r.residuals;
+  for (let i = 0; i < r.keys.length; i++) valMap.set(r.keys[i], arr[i]);
+  for (const row of state.dataset.rows) {
+    row.values[finalName] = valMap.has(row.key) ? valMap.get(row.key) : null;
+  }
+  state.dataset.fields.push(finalName);
+  populateFieldSelects();
+  if (state.dataset.fields.length >= 2) populateScatterSelectors(state.dataset.fields);
+  state.field = finalName;
+  els.selectField.value = finalName;
+  refresh();
+  setSummary(`列「${finalName}」を追加して地図に表示しました`, "success");
 }
 
 // Acklam's rational approximation for the standard normal inverse CDF
