@@ -223,6 +223,7 @@ const els = {
   scatterLabelPlace: $("scatter-label-place"),
   btnScatterClearPins: $("btn-scatter-clear-pins"),
   btnScatterPinsCsv: $("btn-scatter-pins-csv"),
+  scatterPinColor: $("scatter-pin-color"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
   scatterDataCsv:  $("scatter-data-csv"),
@@ -1133,6 +1134,10 @@ els.selectLegendFs?.addEventListener("change", () => {
 applyLegendFs(state.legendFs || "m");
 // Sync reset-color button visibility on initial load (restores from prior session).
 setTimeout(() => { try { syncResetColorBtn(); } catch {} }, 0);
+// Cycle 235: restore previously chosen pin color from settings.
+if (els.scatterPinColor && state.pinColor && /^#[0-9a-f]{6}$/i.test(state.pinColor)) {
+  els.scatterPinColor.value = state.pinColor;
+}
 if (els.selectLegendFs && state.legendFs) els.selectLegendFs.value = state.legendFs;
 
 // Cycle 198: legend break-value precision (auto / 0..3 decimals).
@@ -1916,6 +1921,11 @@ els.scatterLabelBy?.addEventListener("change", drawScatter);
 els.scatterShapeBy?.addEventListener("change", drawScatter);
 els.chkScatterRegGroup?.addEventListener("change", drawScatter);
 els.chkScatterStatsTitle?.addEventListener("change", drawScatter);
+els.scatterPinColor?.addEventListener("input", () => {
+  state.pinColor = els.scatterPinColor.value;
+  saveSettings(state);
+  drawScatter();
+});
 els.chkScatterStats?.addEventListener("change", drawScatter);
 els.chkScatterCi?.addEventListener("change", drawScatter);
 els.chkScatterPi?.addEventListener("change", drawScatter);
@@ -5564,7 +5574,7 @@ function refresh() {
   // Cycle 216: re-render scatter pins on the map after a fresh choropleth
   // pass, since applyChoropleth rebuilds the polygon layer.
   if (state.pinnedScatterIds?.size) {
-    mapper.markPinned(state.pinnedScatterIds);
+    mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
   } else {
     mapper.clearPinned?.();
   }
@@ -6739,6 +6749,7 @@ function drawScatter() {
     labelTopN: parseInt(els.scatterLabelN?.value || "10", 10) || 10,
     labelPlace: els.scatterLabelPlace?.value || "auto",
     pinnedIds: state.pinnedScatterIds instanceof Set ? state.pinnedScatterIds : null,
+    pinColor: els.scatterPinColor?.value || "#dc2626",
     shapeFor,
     shapeLegend,
     regressionByGroup: !!els.chkScatterRegGroup?.checked,
@@ -7065,7 +7076,7 @@ function onScatterClick(id, ev) {
     // Cycle 215: keep the table's pin highlight in sync.
     if (typeof refreshTable === "function") refreshTable();
     // Cycle 216: render the pin rings on the map too.
-    mapper.markPinned(state.pinnedScatterIds);
+    mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
     return;
   }
   if (state.level !== "chocho") {

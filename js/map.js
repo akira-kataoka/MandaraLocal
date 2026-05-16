@@ -1026,11 +1026,12 @@ export class MandaraMap {
    * Cycle 216: render persistent ring markers for pinned features (or town
    * points in chocho mode). Always works off the layer's bounds-center.
    */
-  markPinned(idSet) {
+  markPinned(idSet, color) {
     this.pinLayer.clearLayers();
     if (!idSet || !idSet.size) return;
+    const stroke = (typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color)) ? color : "#dc2626";
     const drawRing = (latlng) => L.circleMarker(latlng, {
-      radius: 9, color: "#dc2626", weight: 2.5,
+      radius: 9, color: stroke, weight: 2.5,
       fill: false, dashArray: "3 2",
       interactive: false,
     }).addTo(this.pinLayer);

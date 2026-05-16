@@ -252,6 +252,9 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   // Cycle 212: pinned points are always labelled, regardless of labelMode,
   // and decorated with a small ring so the user sees what's pinned at a glance.
   const pinned = opts.pinnedIds instanceof Set ? opts.pinnedIds : null;
+  // Cycle 235: pin ring + bold label color is user-configurable (default red).
+  const pinColor = typeof opts.pinColor === "string" && /^#[0-9a-f]{6}$/i.test(opts.pinColor)
+    ? opts.pinColor : "#dc2626";
   if (names && (labelMode !== "none" || (pinned && pinned.size))) {
     let xLo, xHi, yLo, yHi;
     if (labelMode === "outliers") {
@@ -312,7 +315,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     for (const [cx, cy] of pinRings) {
       const ring = el("circle", {
         cx: cx.toFixed(1), cy: cy.toFixed(1), r: 6,
-        fill: "none", stroke: "#dc2626", "stroke-width": "1.5",
+        fill: "none", stroke: pinColor, "stroke-width": "1.5",
         "stroke-dasharray": "2,1.5", "pointer-events": "none",
       });
       labels.appendChild(ring);
@@ -342,7 +345,8 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       lbl.setAttribute("font-size", String(fontSize));
       // Cycle 231: pinned labels are painted red and slightly bolder so they
       // pop out of the default neutral palette in exported images.
-      lbl.setAttribute("fill", isPinned ? "#dc2626" : fillColor);
+      // Cycle 235: ring & label share the user-chosen pinColor.
+      lbl.setAttribute("fill", isPinned ? pinColor : fillColor);
       lbl.setAttribute("font-weight", isPinned ? "700" : fontWeight);
       lbl.textContent = nm;
       labels.appendChild(lbl);
