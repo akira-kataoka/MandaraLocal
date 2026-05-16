@@ -312,6 +312,57 @@ export class MandaraMap {
     this._hatchDefsAdded = true;
   }
 
+  /**
+   * Rotated-symbol map: treat the value as a **direction in degrees**
+   * (0=N, 90=E, 180=S, 270=W) and draw an arrow at each feature
+   * centroid pointing that way. Used for wind direction, movement,
+   * flow, etc.  MANDARA 「記号の回転モード」相当。
+   *
+   * @param valueMap Map<id, number|null>  -- degrees (0..360)
+   * @param fieldName   used for tooltip
+   * @param opts.size  default 22 px
+   */
+  applyRotationSymbols(valueMap, fieldName, opts = {}) {
+    this.symbolLayer.clearLayers();
+    if (!valueMap) return;
+    const size = opts.size ?? 22;
+
+    for (const [code, v] of valueMap.entries()) {
+      if (!Number.isFinite(v)) continue;
+      const deg = ((v % 360) + 360) % 360;
+      const c = this._centroidCache.get(code);
+      if (!c) continue;
+      const html =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24"` +
+        ` style="transform:rotate(${deg}deg);overflow:visible">` +
+        `<path d="M12 2 L12 22 M12 2 L7 8 M12 2 L17 8" stroke="#1e3a8a" stroke-width="2.2"` +
+        ` stroke-linecap="round" stroke-linejoin="round" fill="none"/>` +
+        `</svg>`;
+      const icon = L.divIcon({
+        className: "arrow-icon",
+        html,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+      });
+      const m = L.marker(c, { icon, interactive: true });
+      const name = this._nameForId(code);
+      m.bindTooltip(`${name}<br/><strong>${deg.toFixed(0)}°</strong>` + (fieldName ? `<br/><small>${fieldName}</small>` : ""), {
+        sticky: true, direction: "top",
+      });
+      m.addTo(this.symbolLayer);
+    }
+  }
+
+  _nameForId(code) {
+    // Try to recover the feature name via polygon layer
+    if (!this.layer) return "#" + code;
+    let name = "#" + code;
+    this.layer.eachLayer((lyr) => {
+      if (lyr.feature.properties.id === code) name = this._nameFor(lyr.feature.properties);
+    });
+    return name;
+  }
+
   applyCartogram(valueMap, breaks, colors) {
     this.symbolLayer.clearLayers();
     if (!this.layer || !valueMap) return;
