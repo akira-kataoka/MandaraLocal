@@ -4445,7 +4445,12 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "283"; // bumped each polish cycle
+const APP_VERSION = "284"; // bumped each polish cycle
+// Cycle 284: surface the version in the header h1 badge.
+(() => {
+  const b = document.getElementById("app-version-badge");
+  if (b) b.textContent = `v${APP_VERSION}`;
+})();
 const APP_VERSION_NOTE = "Polish cycles 195-280: ピン留め 6 surface × 5 export × 番号体系 + 系列別回帰 + Markdown/CSV/SVG/PNG/QR";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
