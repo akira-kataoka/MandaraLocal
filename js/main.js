@@ -2687,13 +2687,20 @@ function renderRanking() {
 function renderDataQuality() {
   if (!els.dataQuality || !state.dataset) return;
   const total = state.dataset.rows.length;
+  // Duplicate-key detection (occurs after merges or hand-edited CSVs)
+  const keyCounts = new Map();
+  for (const r of state.dataset.rows) keyCounts.set(r.key, (keyCounts.get(r.key) || 0) + 1);
+  const dupKeys = [...keyCounts.entries()].filter(([, c]) => c > 1);
   const lines = state.dataset.fields.map((f) => {
-    let n = 0, missing = 0;
+    let n = 0, missing = 0, hasZero = false;
     let mn = Infinity, mx = -Infinity;
+    const vals = [];
     for (const r of state.dataset.rows) {
       const v = r.values[f];
       if (Number.isFinite(v)) {
-        n++; if (v < mn) mn = v; if (v > mx) mx = v;
+        n++; vals.push(v);
+        if (v < mn) mn = v; if (v > mx) mx = v;
+        if (v === 0) hasZero = true;
       } else missing++;
     }
     const missingPct = (missing / total) * 100;
@@ -2701,13 +2708,50 @@ function renderDataQuality() {
       missingPct >= 50 ? "🟥" :
       missingPct >= 20 ? "🟧" :
       missingPct > 0  ? "🟨" : "🟩";
-    return `<tr><td>${flag}</td><td>${escapeHtmlText(f)}</td><td>${n}件</td><td>${missing}件 (${missingPct.toFixed(0)}%)</td></tr>`;
+    // IQR outlier count (Tukey 1.5×IQR)
+    let outliers = 0;
+    if (vals.length >= 4) {
+      const sorted = vals.slice().sort((a, b) => a - b);
+      const q = (p) => {
+        const idx = (sorted.length - 1) * p;
+        const lo = Math.floor(idx), hi = Math.ceil(idx);
+        return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+      };
+      const q1 = q(0.25), q3 = q(0.75);
+      const iqr = q3 - q1;
+      const wLo = q1 - 1.5 * iqr, wHi = q3 + 1.5 * iqr;
+      for (const x of vals) if (x < wLo || x > wHi) outliers++;
+    }
+    const outlierPct = vals.length ? (outliers / vals.length) * 100 : 0;
+    const outlierFlag = outlierPct >= 10
+      ? `<span style="color:#dc2626;font-weight:700" title="外れ値 10%以上 — 分類選択に注意">⚠️</span>`
+      : "";
+    const zeroFlag = hasZero
+      ? `<span title="0 を含む — 派生比率列で 0除算リスク" style="color:#d97706">÷0</span>`
+      : "";
+    const range = (mn === Infinity)
+      ? "—"
+      : `${formatNum(mn)} 〜 ${formatNum(mx)}`;
+    return `<tr>` +
+      `<td>${flag}</td>` +
+      `<td>${escapeHtmlText(f)} ${zeroFlag}</td>` +
+      `<td style="text-align:right">${n}</td>` +
+      `<td style="text-align:right">${missing}<small style="color:var(--muted)"> (${missingPct.toFixed(0)}%)</small></td>` +
+      `<td style="font-family:ui-monospace,monospace;font-size:10px;white-space:nowrap">${range}</td>` +
+      `<td style="text-align:right">${outliers}${outlierFlag}</td>` +
+      `</tr>`;
   });
+  let banner = "";
+  if (dupKeys.length) {
+    const sample = dupKeys.slice(0, 3).map(([k, c]) => `${k}×${c}`).join(", ");
+    banner = `<div style="background:#fef3c7;border:1px solid #fcd34d;color:#92400e;padding:4px 6px;border-radius:4px;margin-bottom:4px;font-size:11px">🔁 重複キー ${dupKeys.length}件 (例: ${sample})</div>`;
+  }
   els.dataQuality.innerHTML =
+    banner +
     `<table style="font-size:11px;border-collapse:collapse;width:100%">` +
-    `<thead><tr><th></th><th style="text-align:left">列</th><th>有効</th><th>欠損</th></tr></thead>` +
+    `<thead><tr><th></th><th style="text-align:left">列</th><th>有効</th><th>欠損</th><th>値域</th><th>外れ値</th></tr></thead>` +
     `<tbody>${lines.join("")}</tbody></table>` +
-    `<div style="margin-top:4px;color:var(--muted)">🟩 0% / 🟨 〜20% / 🟧 20-50% / 🟥 50%以上欠損</div>`;
+    `<div style="margin-top:4px;color:var(--muted);font-size:10px">🟩 0% / 🟨 〜20% / 🟧 20-50% / 🟥 50%以上欠損  ·  外れ値 = IQR 1.5×外（Tukey）  ·  ÷0 = 値に 0 含む</div>`;
 }
 
 function renderPieLegend(container, fields, colors, title) {
