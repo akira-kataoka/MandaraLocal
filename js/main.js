@@ -1794,6 +1794,9 @@ function renderMrResult(r) {
     (r.F != null ? `, F(${r.dfModel},${r.dfResid})=${fmt(r.F, 2)}, p=${pFmt(r.pF)}` : "") +
     `, 残差SE=${fmt(r.residualSE, 3)}` +
     `</div>`;
+  // Forest plot (Cycle 183) — coefficient point estimates with 95% CI bars.
+  // Standardized β is preferred when scales differ widely; default to it.
+  html += buildForestPlot(r);
   // Residual plot (Cycle 142) — diagnostic for model adequacy.
   html += `<div style="margin-top:6px;font-size:11px;font-weight:600">残差プロット (Residuals vs Fitted)</div>`;
   html += `<svg id="mr-residual-svg" width="280" height="140" viewBox="0 0 280 140" style="background:#fff;border:1px solid #e2e8f0"></svg>`;
@@ -1915,6 +1918,83 @@ function renderQQPlot(r) {
     svg.appendChild(make("line", { x1: x, y1: H - PAD.bottom, x2: x, y2: H - PAD.bottom + 2, stroke: "#94a3b8" }));
     lbl(x, H - PAD.bottom + 12, String(t));
   }
+}
+
+// Forest plot of regression coefficients (Cycle 183). Uses standardized β
+// when available so variables on different scales remain comparable.
+function buildForestPlot(r) {
+  if (!r || !r.labels || r.labels.length < 2) return "";
+  // Skip the intercept (huge magnitude breaks the scale).
+  const items = [];
+  for (let i = 1; i < r.labels.length; i++) {
+    const useStd = r.stdCoeffs?.[i] != null;
+    const val = useStd ? r.stdCoeffs[i] : r.coeffs[i];
+    if (val == null) continue;
+    // CI is in raw coefficient units; if we're plotting standardized β,
+    // approximate the CI half-width by multiplying by the same scale factor.
+    let ciLo = r.ciLo?.[i], ciHi = r.ciHi?.[i];
+    if (useStd && ciLo != null && ciHi != null) {
+      const scale = (r.stdCoeffs[i] / r.coeffs[i]) || 0;
+      ciLo = ciLo * scale;
+      ciHi = ciHi * scale;
+    }
+    items.push({
+      label: r.labels[i],
+      val, ciLo, ciHi,
+      sig: r.pValues?.[i] != null && r.pValues[i] < 0.05,
+      useStd,
+    });
+  }
+  if (items.length === 0) return "";
+  const usingStd = items.every(it => it.useStd);
+  const all = [];
+  for (const it of items) {
+    all.push(it.val);
+    if (it.ciLo != null) all.push(it.ciLo);
+    if (it.ciHi != null) all.push(it.ciHi);
+  }
+  let xMin = Math.min(...all, 0);
+  let xMax = Math.max(...all, 0);
+  if (xMin === xMax) { xMin -= 1; xMax += 1; }
+  const pad = (xMax - xMin) * 0.08;
+  xMin -= pad; xMax += pad;
+  const W = 320, rowH = 22;
+  const H = items.length * rowH + 28;
+  const PAD = { top: 8, right: 8, bottom: 22, left: 110 };
+  const innerW = W - PAD.left - PAD.right;
+  const xAt = (v) => PAD.left + ((v - xMin) / (xMax - xMin)) * innerW;
+  let svg = `<div style="margin-top:6px;font-size:11px;font-weight:600">フォレストプロット ${usingStd ? "(標準化β)" : "(係数)"}</div>`;
+  svg += `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="background:#fff;border:1px solid #e2e8f0">`;
+  // Frame
+  svg += `<rect x="${PAD.left}" y="${PAD.top}" width="${innerW}" height="${H - PAD.top - PAD.bottom}" fill="none" stroke="#cbd5e1"/>`;
+  // Zero reference line
+  const zX = xAt(0);
+  svg += `<line x1="${zX.toFixed(1)}" y1="${PAD.top}" x2="${zX.toFixed(1)}" y2="${H - PAD.bottom}" stroke="#94a3b8" stroke-dasharray="3,2"/>`;
+  // Each row
+  items.forEach((it, i) => {
+    const y = PAD.top + i * rowH + rowH / 2;
+    const color = it.sig ? "#1e3a8a" : "#94a3b8";
+    const labelColor = it.sig ? "#1e293b" : "#475569";
+    // CI bar
+    if (it.ciLo != null && it.ciHi != null) {
+      svg += `<line x1="${xAt(it.ciLo).toFixed(1)}" y1="${y}" x2="${xAt(it.ciHi).toFixed(1)}" y2="${y}" stroke="${color}" stroke-width="1.5"/>`;
+      svg += `<line x1="${xAt(it.ciLo).toFixed(1)}" y1="${y - 4}" x2="${xAt(it.ciLo).toFixed(1)}" y2="${y + 4}" stroke="${color}" stroke-width="1.5"/>`;
+      svg += `<line x1="${xAt(it.ciHi).toFixed(1)}" y1="${y - 4}" x2="${xAt(it.ciHi).toFixed(1)}" y2="${y + 4}" stroke="${color}" stroke-width="1.5"/>`;
+    }
+    // Point estimate
+    svg += `<circle cx="${xAt(it.val).toFixed(1)}" cy="${y}" r="3" fill="${color}"/>`;
+    // Label
+    const nm = it.label.length > 14 ? it.label.slice(0, 13) + "…" : it.label;
+    svg += `<text x="${PAD.left - 4}" y="${y + 3}" font-size="10" font-weight="${it.sig ? 700 : 500}" text-anchor="end" fill="${labelColor}">${escapeHtmlText(nm)}</text>`;
+  });
+  // X axis ticks
+  for (const t of [xMin, 0, xMax]) {
+    const x = xAt(t);
+    svg += `<line x1="${x.toFixed(1)}" y1="${H - PAD.bottom}" x2="${x.toFixed(1)}" y2="${H - PAD.bottom + 3}" stroke="#475569"/>`;
+    svg += `<text x="${x.toFixed(1)}" y="${H - PAD.bottom + 12}" font-size="9" text-anchor="middle" fill="#475569">${t === 0 ? "0" : t.toFixed(2)}</text>`;
+  }
+  svg += `</svg>`;
+  return svg;
 }
 
 function renderResidualPlot(r) {
