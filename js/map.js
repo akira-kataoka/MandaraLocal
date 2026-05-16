@@ -969,6 +969,67 @@ export class MandaraMap {
     if (this._sdeLayer) this._sdeLayer.clearLayers();
   }
 
+  /**
+   * Draw Japanese Standard Regional Mesh polygons (JIS X 0410) over the
+   * current map viewport.  Levels:
+   *   1 - primary mesh    (1deg × 40min ≈ 80km)
+   *   2 - secondary mesh  (1/8 of level1 ≈ 10km)
+   *   3 - tertiary mesh   (1/10 of level2 ≈ 1km)
+   * MANDARA 「メッシュオブジェクトの作成」相当。
+   */
+  applyMeshOverlay(level = 2) {
+    if (this._meshLayer) this._meshLayer.clearLayers();
+    if (!this._meshLayer) this._meshLayer = L.layerGroup().addTo(this.map);
+    const bounds = this.map.getBounds();
+    let n = 0;
+    const minLat = Math.max(20, bounds.getSouth());
+    const maxLat = Math.min(46, bounds.getNorth());
+    const minLng = Math.max(122, bounds.getWest());
+    const maxLng = Math.min(154, bounds.getEast());
+    if (level === 1) {
+      // 緯度40分 × 経度1度
+      const dLat = 40 / 60;
+      for (let lat = Math.floor(minLat * 1.5) / 1.5; lat <= maxLat + dLat; lat += dLat) {
+        for (let lng = Math.floor(minLng); lng <= maxLng + 1; lng += 1) {
+          if (lat + dLat < minLat || lat > maxLat || lng + 1 < minLng || lng > maxLng) continue;
+          const code = meshCode(lat + 0.001, lng + 0.001, 1);
+          n += addMeshCell(this._meshLayer, lat, lng, lat + dLat, lng + 1, code, "#1d4ed8", 0.6);
+        }
+      }
+    } else if (level === 2) {
+      // 5分 × 7.5分
+      const dLat = 5 / 60, dLng = 7.5 / 60;
+      const startLat = Math.floor(minLat / dLat) * dLat;
+      const startLng = Math.floor(minLng / dLng) * dLng;
+      for (let lat = startLat; lat <= maxLat + dLat; lat += dLat) {
+        for (let lng = startLng; lng <= maxLng + dLng; lng += dLng) {
+          if (n > 2000) break;
+          if (lat + dLat < minLat || lat > maxLat || lng + dLng < minLng || lng > maxLng) continue;
+          const code = meshCode(lat + 0.001, lng + 0.001, 2);
+          n += addMeshCell(this._meshLayer, lat, lng, lat + dLat, lng + dLng, code, "#16a34a", 0.5);
+        }
+      }
+    } else if (level === 3) {
+      // 30秒 × 45秒
+      const dLat = 30 / 3600, dLng = 45 / 3600;
+      const startLat = Math.floor(minLat / dLat) * dLat;
+      const startLng = Math.floor(minLng / dLng) * dLng;
+      for (let lat = startLat; lat <= maxLat + dLat; lat += dLat) {
+        for (let lng = startLng; lng <= maxLng + dLng; lng += dLng) {
+          if (n > 5000) break;  // safety cap — too many cells crashes the map
+          if (lat + dLat < minLat || lat > maxLat || lng + dLng < minLng || lng > maxLng) continue;
+          const code = meshCode(lat + 0.0001, lng + 0.0001, 3);
+          n += addMeshCell(this._meshLayer, lat, lng, lat + dLat, lng + dLng, code, "#ea580c", 0.35);
+        }
+      }
+    }
+    return n;
+  }
+
+  clearMeshOverlay() {
+    if (this._meshLayer) this._meshLayer.clearLayers();
+  }
+
   getMapElement() { return this._mapEl; }
 }
 
@@ -1066,6 +1127,43 @@ function randomPointInPolygon(poly) {
     if (pointInPolygon([x, y], poly)) return [x, y];
   }
   return null;
+}
+
+/**
+ * Compute the JIS X 0410 Japan Standard Regional Mesh code at a given
+ * (lat, lng) and level (1=primary 80km, 2=secondary 10km, 3=tertiary 1km).
+ * Returns the integer code as a string (4/6/8 digits).
+ */
+function meshCode(lat, lng, level) {
+  // primary (1次)
+  const p1 = Math.floor(lat * 1.5);                 // 緯度の0.40度単位 → ×1.5
+  const p2 = Math.floor(lng) - 100;                 // 経度の整数部 - 100
+  const code1 = `${p1}${String(p2).padStart(2, "0")}`;
+  if (level === 1) return code1;
+  // secondary (2次)
+  const rLat = lat * 1.5 - p1;            // 0..1
+  const rLng = lng - (p2 + 100);          // 0..1
+  const s1 = Math.min(7, Math.floor(rLat * 8));
+  const s2 = Math.min(7, Math.floor(rLng * 8));
+  const code2 = `${code1}${s1}${s2}`;
+  if (level === 2) return code2;
+  // tertiary (3次)
+  const r2Lat = rLat * 8 - s1;
+  const r2Lng = rLng * 8 - s2;
+  const t1 = Math.min(9, Math.floor(r2Lat * 10));
+  const t2 = Math.min(9, Math.floor(r2Lng * 10));
+  return `${code2}${t1}${t2}`;
+}
+
+function addMeshCell(layer, lat0, lng0, lat1, lng1, code, color, opacity) {
+  const ring = [[lat0, lng0], [lat0, lng1], [lat1, lng1], [lat1, lng0]];
+  const rect = L.rectangle([[lat0, lng0], [lat1, lng1]], {
+    color, weight: 1, opacity, fillOpacity: 0.05, fillColor: color,
+  });
+  rect.bindTooltip(`メッシュコード ${code}<br/><small>${lat0.toFixed(3)},${lng0.toFixed(3)} 〜 ${lat1.toFixed(3)},${lng1.toFixed(3)}</small>`,
+    { sticky: true, direction: "top", className: "chocho-tip" });
+  rect.addTo(layer);
+  return 1;
 }
 
 /**

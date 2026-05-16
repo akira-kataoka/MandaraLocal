@@ -136,6 +136,8 @@ const els = {
   btnArea:      $("btn-area"),
   btnBuffer:    $("btn-buffer"),
   inputBufferKm:$("input-buffer-km"),
+  btnMesh:      $("btn-mesh"),
+  selectMeshLevel: $("select-mesh-level"),
   btnTheme:     $("btn-theme"),
 };
 
@@ -837,6 +839,27 @@ els.btnBuffer.addEventListener("click", () => toggleBuffer(!bufferOn));
 els.inputBufferKm.addEventListener("change", () => {
   if (bufferOn) { toggleBuffer(false); toggleBuffer(true); }
 });
+
+let meshOn = false;
+function refreshMesh() {
+  if (!meshOn) return;
+  const lvl = parseInt(els.selectMeshLevel.value, 10) || 2;
+  const n = mapper.applyMeshOverlay(lvl);
+  setSummary(`地域メッシュ Lv${lvl}: ${n} セルを描画 (現在表示範囲のみ)`, "success");
+}
+els.btnMesh.addEventListener("click", () => {
+  meshOn = !meshOn;
+  if (meshOn) {
+    els.btnMesh.classList.add("btn-primary");
+    refreshMesh();
+    mapper.map.on("moveend zoomend", refreshMesh);
+  } else {
+    els.btnMesh.classList.remove("btn-primary");
+    mapper.clearMeshOverlay();
+    mapper.map.off("moveend zoomend", refreshMesh);
+  }
+});
+els.selectMeshLevel.addEventListener("change", () => meshOn && refreshMesh());
 
 function toggleTheme() {
   const next = document.body.classList.toggle("dark");
