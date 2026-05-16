@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=216" />
+  <link rel="stylesheet" href="css/style.css?v=217" />
 </head>
 <body>
   <header class="app-header">
@@ -557,6 +557,8 @@
         <div class="form-row">
           <button id="ct-run" class="btn btn-primary">集計</button>
           <button id="ct-export" class="btn" disabled style="margin-left:auto">CSV出力</button>
+          <button id="ct-bar-png" class="btn" type="button" disabled style="font-size:11px;padding:2px 8px" title="100%積み上げ棒（表示中の場合）をPNG保存">📊 PNG</button>
+          <button id="ct-bar-svg" class="btn" type="button" disabled style="font-size:11px;padding:2px 8px" title="100%積み上げ棒（表示中の場合）をSVG保存">SVG</button>
         </div>
         <div id="ct-result" class="ct-result"></div>
       </section>
@@ -867,7 +869,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=216"></script>
+  <script type="module" src="js/main.js?v=217"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

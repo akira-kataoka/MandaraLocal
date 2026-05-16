@@ -184,6 +184,8 @@ const els = {
   ctRun:        $("ct-run"),
   ctView:       $("ct-view"),
   ctExport:     $("ct-export"),
+  ctBarPng:     $("ct-bar-png"),
+  ctBarSvg:     $("ct-bar-svg"),
   ctResult:     $("ct-result"),
   tableWrap:    $("table-wrap"),
   panelTs:      $("panel-timeseries"),
@@ -1394,6 +1396,47 @@ els.ctView?.addEventListener("change", () => {
 });
 els.ctExport?.addEventListener("click", exportCrossTabCsv);
 
+// Cycle 217: PNG/SVG download of the rendered crosstab stacked-bar chart.
+// Reuses the SVG already in #ct-result (no re-rendering needed).
+function _ctBarSafeName() {
+  const r = state.crosstab?.rowF || "row";
+  const c = state.crosstab?.colF || "col";
+  const norm = (s) => String(s).replace(/[\s\\/:*?"<>|]+/g, "_");
+  return `crosstab_${norm(r)}_x_${norm(c)}`;
+}
+els.ctBarSvg?.addEventListener("click", () => {
+  const svgEl = els.ctResult?.querySelector("svg");
+  if (!svgEl) { setSummary("棒グラフ表示中のみ保存できます", "warn"); return; }
+  const xml = new XMLSerializer().serializeToString(svgEl);
+  const doc = `<?xml version="1.0" encoding="UTF-8"?>\n${xml}`;
+  const blob = new Blob([doc], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `${_ctBarSafeName()}_bar.svg`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary("棒グラフを SVG で保存しました", "success");
+});
+els.ctBarPng?.addEventListener("click", async () => {
+  const svgEl = els.ctResult?.querySelector("svg");
+  if (!svgEl) { setSummary("棒グラフ表示中のみ保存できます", "warn"); return; }
+  if (typeof htmlToImage === "undefined") { setSummary("htmlToImage の読み込みに失敗しました", "error"); return; }
+  setSummary("棒グラフPNGを生成中…", "muted");
+  try {
+    const dpi = parseInt(els.selectExportDpi?.value || "2", 10) || 2;
+    const dataUrl = await htmlToImage.toPng(svgEl, {
+      pixelRatio: dpi, backgroundColor: "#ffffff",
+    });
+    const a = document.createElement("a");
+    a.href = dataUrl; a.download = `${_ctBarSafeName()}_bar.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setSummary("棒グラフを PNG で保存しました", "success");
+  } catch (e) {
+    console.error(e);
+    setSummary("棒グラフPNGの生成に失敗: " + (e?.message || e), "error");
+  }
+});
+
 function exportCrossTabCsv() {
   const ct = state.crosstab;
   if (!ct) { setSummary("まず「集計」ボタンで集計を実行してください", "warn"); return; }
@@ -1689,6 +1732,10 @@ function runCrossTab() {
   // Stash the result for CSV export (Cycle 116 + Cycle 119 statistics)
   state.crosstab = { rowF, colF, rowBreaks, colBreaks, matrix: mat, rowTot, colTot, total, chi2, df, pVal, cramerV };
   if (els.ctExport) els.ctExport.disabled = false;
+  // Cycle 217: enable bar-image exports only in bar view.
+  const isBar = view === "bar";
+  if (els.ctBarPng) els.ctBarPng.disabled = !isBar;
+  if (els.ctBarSvg) els.ctBarSvg.disabled = !isBar;
 
   // Wire cell hover for map cross-highlight
   els.ctResult.querySelectorAll(".ct-cell").forEach((td) => {
