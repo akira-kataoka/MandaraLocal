@@ -13,7 +13,7 @@ import { loadSettings, saveSettings } from "./settings.js";
 import { renderScatter } from "./scatter.js";
 import { renderHistogram } from "./histogram.js";
 import { renderBoxplot } from "./boxplot.js";
-import { renderTable } from "./table.js";
+import { renderTable, getSortState } from "./table.js";
 
 // ----- State -----
 const state = {
@@ -1227,13 +1227,15 @@ function applyAttributeFilter() {
     if (acc) matched.add(r.key);
   }
   mapper.markOutliers(matched);
-  els.filterResult.textContent = `${conds.length}条件 → 一致: ${matched.size}件 / 全${state.dataset.rows.length}件`;
+  state.filteredKeys = matched;
+  els.filterResult.textContent = `${conds.length}条件 → 一致: ${matched.size}件 / 全${state.dataset.rows.length}件（CSVエクスポート時にフィルタ反映）`;
   els.filterResult.className = "data-summary success";
 }
 
 function clearAttributeFilter() {
   mapper.clearOutlierMarks();
   filterStack.length = 0;
+  state.filteredKeys = null;
   renderFilterStack();
   els.filterResult.textContent = "";
 }
@@ -2006,18 +2008,48 @@ function toggleTheme() {
 function exportCurrentCsv() {
   if (!state.dataset) { setSummary("先にデータを読み込んでください", "warn"); return; }
   const f = state.dataset.fields;
+  // Apply attribute filter (Set of keys) if active
+  let rowsRaw = state.dataset.rows;
+  const total = rowsRaw.length;
+  let filtered = false;
+  if (state.filteredKeys instanceof Set && state.filteredKeys.size > 0) {
+    rowsRaw = rowsRaw.filter(r => state.filteredKeys.has(r.key));
+    filtered = true;
+  }
+  // Apply table sort if user has clicked a column header
+  const sort = getSortState();
+  let sorted = false;
+  if (sort.field) {
+    const dir = sort.asc ? 1 : -1;
+    const isName = sort.field === "name";
+    rowsRaw = rowsRaw.slice().sort((a, b) => {
+      const va = isName ? (a.name || "") : a.values[sort.field];
+      const vb = isName ? (b.name || "") : b.values[sort.field];
+      if (va == null && vb == null) return 0;
+      if (va == null) return 1;
+      if (vb == null) return -1;
+      if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
+      return String(va).localeCompare(String(vb), "ja") * dir;
+    });
+    sorted = true;
+  }
   const header = ["地域", ...f];
-  const rows = state.dataset.rows.map(r => [r.name || ("#"+r.key), ...f.map(k => r.values[k] ?? "")]);
+  const rows = rowsRaw.map(r => [r.name || ("#"+r.key), ...f.map(k => r.values[k] ?? "")]);
   const csv = [header.map(csvEscape).join(",")]
     .concat(rows.map(r => r.map(csvEscape).join(","))).join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
+  const suffix = [filtered ? "filtered" : null, sorted ? "sorted" : null].filter(Boolean).join("_");
   a.href = url;
-  a.download = `mandara_data_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `mandara_data${suffix ? "_" + suffix : ""}_${new Date().toISOString().slice(0,10)}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  setSummary(`データを ${a.download} としてダウンロードしました（${rows.length}行 / ${f.length}列）`, "success");
+  const tagParts = [];
+  if (filtered) tagParts.push(`フィルタ適用 ${rows.length}/${total}行`);
+  if (sorted) tagParts.push(`ソート: ${sort.field === "name" ? "地域" : sort.field}${sort.asc ? "↑" : "↓"}`);
+  const tag = tagParts.length ? `（${tagParts.join(" · ")}）` : "";
+  setSummary(`データを ${a.download} としてダウンロードしました（${rows.length}行 / ${f.length}列）${tag}`, "success");
 }
 
 function downloadTemplate() {
@@ -2078,6 +2110,7 @@ els.btnSvg.addEventListener("click", () => {
 // ----- Handlers -----
 function onDatasetReady(ds, label) {
   state.dataset = ds;
+  state.filteredKeys = null;
   // pick first numeric field as default
   state.field = ds.fields[0];
 

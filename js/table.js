@@ -6,6 +6,12 @@ import { formatNum } from "./stats.js";
 
 let sortState = { field: null, asc: true };
 
+// Expose current sort so downstream features (CSV export) can match what
+// the user sees on screen.
+export function getSortState() {
+  return { field: sortState.field, asc: sortState.asc };
+}
+
 /**
  * @param container the .table-wrap div
  * @param rows      dataset.rows  (each has .key, .name, .values)
