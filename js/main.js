@@ -70,6 +70,8 @@ const els = {
   chkCompare:   $("chk-compare"),
   rowFieldB:    $("row-field-b"),
   selectFieldB: $("select-field-b"),
+  rowPaletteB:  $("row-palette-b"),
+  selectPaletteB: $("select-palette-b"),
   paneB:        $("pane-b"),
   overlayB:        $("map-overlay-b"),
   overlayTitleB:   $("overlay-title-b"),
@@ -718,9 +720,13 @@ els.selectFieldB.addEventListener("change", () => {
   state.fieldB = els.selectFieldB.value;
   if (state.compare) refresh();
 });
+els.selectPaletteB.addEventListener("change", () => {
+  if (state.compare) refresh();
+});
 els.chkCompare.addEventListener("change", () => {
   state.compare = els.chkCompare.checked;
   els.rowFieldB.hidden = !state.compare;
+  els.rowPaletteB.hidden = !state.compare;
   els.paneB.hidden = !state.compare;
   if (state.compare) {
     ensureMapperB();
@@ -1876,7 +1882,8 @@ function refresh() {
   if (state.compare && state.fieldB) {
     const valuesB = state.dataset.rows.map(r => r.values[state.fieldB]);
     const { breaks: breaksB } = computeBreaks(valuesB, state.classes, state.method);
-    const colorsB = getPalette(state.palette, Math.max(1, breaksB.length - 1), state.reverse);
+    const paletteB = els.selectPaletteB.value || state.palette;
+    const colorsB = getPalette(paletteB, Math.max(1, breaksB.length - 1), state.reverse);
     const valueMapB = buildValueLookup(state.dataset, state.fieldB);
     if (mapperB) {
       mapperB.applyChoropleth(valueMapB, breaksB, colorsB, state.fieldB);

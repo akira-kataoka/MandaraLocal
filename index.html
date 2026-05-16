@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=80" />
+  <link rel="stylesheet" href="css/style.css?v=81" />
 </head>
 <body>
   <header class="app-header">
@@ -142,6 +142,20 @@
         <div class="form-row" id="row-field-b" hidden>
           <label for="select-field-b">対象列B</label>
           <select id="select-field-b"></select>
+        </div>
+        <div class="form-row" id="row-palette-b" hidden>
+          <label for="select-palette-b">色B</label>
+          <select id="select-palette-b">
+            <option value="">同左</option>
+            <option value="YlOrRd">黄→赤</option>
+            <option value="Blues">青系</option>
+            <option value="Greens">緑系</option>
+            <option value="Reds">赤系</option>
+            <option value="Purples">紫系</option>
+            <option value="RdYlBu">RdYlBu 発散</option>
+            <option value="Spectral">Spectral</option>
+            <option value="Viridis">Viridis</option>
+          </select>
         </div>
         <details class="derived">
           <summary>派生列を作る（A÷B など）</summary>
@@ -487,7 +501,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=80"></script>
+  <script type="module" src="js/main.js?v=81"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
