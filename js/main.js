@@ -1411,6 +1411,62 @@ function downloadSvg(svgEl, filename) {
 }
 const safeName = (v) => String(v || "data").replace(/[\s\\/:*?"<>|]+/g, "_");
 $("hist-svg")?.addEventListener("click", () => downloadSvg(els.histSvg, `histogram_${safeName(state.field)}.svg`));
+// Cycle 204: bin-level CSV export. Mirrors the on-screen histogram's binning
+// (linear or log10) so Excel post-processing matches what the user sees.
+$("hist-csv")?.addEventListener("click", () => {
+  if (!state.dataset || !state.field) {
+    setSummary("ヒストグラム CSV: データセットを読み込んでください", "warn"); return;
+  }
+  const raw = state.dataset.rows.map(r => r.values[state.field]);
+  const logX = !!els.chkHistLogX?.checked;
+  const v = logX ? raw.filter(x => Number.isFinite(x) && x > 0)
+                 : raw.filter(x => Number.isFinite(x));
+  if (v.length < 2) {
+    setSummary("ヒストグラム CSV: 有効な数値が2件未満です", "warn"); return;
+  }
+  const bins = parseInt(els.histBins?.value, 10) || 10;
+  const k = Math.max(3, Math.min(30, bins));
+  const min = Math.min(...v), max = Math.max(...v);
+  if (min === max) {
+    setSummary("ヒストグラム CSV: 値の分散がありません", "warn"); return;
+  }
+  const sx = logX ? (x) => Math.log10(x) : (x) => x;
+  const sMin = sx(min), sMax = sx(max);
+  const width = (sMax - sMin) / k;
+  const counts = new Array(k).fill(0);
+  for (const x of v) {
+    let i = Math.floor((sx(x) - sMin) / width);
+    if (i >= k) i = k - 1;
+    counts[i]++;
+  }
+  const total = v.length;
+  const rows = [["bin", "lo", "hi", "count", "pct", "cum_pct"]];
+  let cum = 0;
+  for (let i = 0; i < k; i++) {
+    const sLo = sMin + i * width;
+    const sHi = sLo + width;
+    const lo = logX ? Math.pow(10, sLo) : sLo;
+    const hi = logX ? Math.pow(10, sHi) : sHi;
+    cum += counts[i];
+    rows.push([
+      i + 1,
+      lo,
+      hi,
+      counts[i],
+      (counts[i] / total * 100).toFixed(2),
+      (cum / total * 100).toFixed(2),
+    ]);
+  }
+  const csv = rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `histogram_${safeName(state.field)}${logX ? "_log10" : ""}_${k}bins.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`ヒストグラム CSV: ${k}bin / ${total}件 を保存`, "success");
+});
 $("scatter-svg-btn")?.addEventListener("click", () => downloadSvg(els.scatterSvg, `scatter_${safeName(els.scatterX.value)}_vs_${safeName(els.scatterY.value)}.svg`));
 $("box-svg")?.addEventListener("click", () => downloadSvg(els.boxplotSvg, `boxplot_${safeName(state.field)}.svg`));
 
