@@ -1488,9 +1488,15 @@ els.scatterCsv?.addEventListener("click", () => {
     ["スピアマン順位相関 ρ", fmt(s.rho)].map(csvEscape).join(","),
     ["ρ 95%CI 下限", fmt(s.rhoCI?.[0])].map(csvEscape).join(","),
     ["ρ 95%CI 上限", fmt(s.rhoCI?.[1])].map(csvEscape).join(","),
-    ["決定係数 R²", fmt(s.r2)].map(csvEscape).join(","),
+    ["決定係数 R² (線形)", fmt(s.r2)].map(csvEscape).join(","),
     ["回帰係数 slope", fmt(s.slope, 6)].map(csvEscape).join(","),
     ["切片 intercept", fmt(s.intercept, 6)].map(csvEscape).join(","),
+    ["回帰次数", String(s.degree || 1)].map(csvEscape).join(","),
+    ...(s.coeffs || []).map((c, i) => [`多項式係数 c${i}`, fmt(c, 6)].map(csvEscape).join(",")),
+    ["多項式 R²", fmt(s.polyR2)].map(csvEscape).join(","),
+    ["残差平方和 SSE", fmt(s.sse, 4)].map(csvEscape).join(","),
+    ["AIC", fmt(s.aic, 3)].map(csvEscape).join(","),
+    ["BIC", fmt(s.bic, 3)].map(csvEscape).join(","),
   ];
   const csv = "﻿" + lines.join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -3375,9 +3381,10 @@ function drawScatter() {
     labels: els.scatterLabels?.value || "outliers",
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
   }, colorFor, names, categoryFor);
-  const { r, rho, rCI, rhoCI, n, slope, intercept, r2 } = scatterResult;
+  const { r, rho, rCI, rhoCI, n, slope, intercept, r2, degree, coeffs, polyR2, sse, aic, bic } = scatterResult;
   state.scatterStats = {
     xf, yf, n, r, rCI, rho, rhoCI, slope, intercept, r2,
+    degree, coeffs, polyR2, sse, aic, bic,
     logX: !!els.chkScatterLogX?.checked, logY: !!els.chkScatterLogY?.checked,
   };
   if (els.scatterCsv) els.scatterCsv.disabled = (r == null);
@@ -3398,7 +3405,10 @@ function drawScatter() {
   const note = (rho != null && Math.abs(rho) - Math.abs(r) > 0.15)
     ? ` <small style="color:#b45309">（ρ ≫ r：単調非線形の可能性）</small>`
     : "";
-  els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong>${ciTxt(rCI)} （${strength}${sign}の相関）${rhoTxt}${note} · 決定係数 R²=${r2}%`;
+  const polyInfo = (degree > 1 && polyR2 != null)
+    ? ` · <small style="color:#475569">多項式${degree}次 R²=${(polyR2*100).toFixed(1)}%, AIC=${aic == null ? "—" : aic.toFixed(1)}</small>`
+    : "";
+  els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong>${ciTxt(rCI)} （${strength}${sign}の相関）${rhoTxt}${note} · 決定係数 R²=${r2}%${polyInfo}`;
 }
 
 function onScatterHover(id, isHot) {

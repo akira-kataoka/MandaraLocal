@@ -178,6 +178,8 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   // visually straight even on log axes. Pearson r is still on raw values.
   const r = pearson(x, y);
   let slope = null, intercept = null;
+  let degree = 1;
+  let polyCoeffsOut = null;
   if (Number.isFinite(r) && xMax !== xMin) {
     const olsR = ols(xs2, ys2);
     slope = olsR.slope; intercept = olsR.intercept;
@@ -217,7 +219,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     }
     // Polynomial regression curve (Cycle 127). Degree 1 keeps the existing
     // straight line; 2/3 draws a smooth polyline sampled across the x range.
-    const degree = Math.max(1, Math.min(3, opts.degree | 0 || 1));
+    degree = Math.max(1, Math.min(3, opts.degree | 0 || 1));
     if (degree === 1) {
       const lineEl = el("line", {
         x1: pxAt(xMin), y1: pyAt(slope * xMin + intercept),
@@ -228,6 +230,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     } else {
       const polyCoeffs = polyfit(xs2, ys2, degree);
       if (polyCoeffs) {
+        polyCoeffsOut = polyCoeffs;
         const STEPS = 60;
         const pts = [];
         for (let i = 0; i <= STEPS; i++) {
@@ -243,6 +246,35 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
         svgEl.__polyCoeffs = polyCoeffs;
       }
     }
+  }
+  // Compute SSE / R² / AIC / BIC for the chosen model. For degree 1 we already
+  // have slope/intercept; for higher degrees use polyCoeffs.
+  let modelStats = { degree: degree, sse: null, polyR2: null, aic: null, bic: null, coeffs: null };
+  if (slope != null && xs2.length >= degree + 2) {
+    const nObs = xs2.length;
+    const predict = polyCoeffsOut
+      ? (xv) => polyEval(polyCoeffsOut, xv)
+      : (xv) => slope * xv + intercept;
+    const my = ys2.reduce((a, b) => a + b, 0) / nObs;
+    let sse = 0, sst = 0;
+    for (let i = 0; i < nObs; i++) {
+      const e = ys2[i] - predict(xs2[i]);
+      sse += e * e;
+      sst += (ys2[i] - my) ** 2;
+    }
+    const k = degree + 1; // number of fitted parameters
+    const polyR2 = sst > 0 ? 1 - sse / sst : null;
+    let aic = null, bic = null;
+    if (sse > 0) {
+      // AIC = n·ln(SSE/n) + 2k ;  BIC = n·ln(SSE/n) + k·ln(n)
+      const lnVar = Math.log(sse / nObs);
+      aic = nObs * lnVar + 2 * k;
+      bic = nObs * lnVar + k * Math.log(nObs);
+    }
+    modelStats = {
+      degree, sse, polyR2, aic, bic,
+      coeffs: polyCoeffsOut ? polyCoeffsOut.slice() : [intercept, slope],
+    };
   }
 
   // Regression equation text overlay (top-right corner of the chart)
@@ -383,7 +415,16 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   const nValid = pairs.length;
   const rCI   = fisherCI(r, nValid);
   const rhoCI = fisherCI(rho, nValid);
-  return { r, rho, rCI, rhoCI, n: nValid, slope, intercept, r2: Number.isFinite(r) ? r*r : null };
+  return {
+    r, rho, rCI, rhoCI, n: nValid, slope, intercept,
+    r2: Number.isFinite(r) ? r*r : null,
+    degree: modelStats.degree,
+    coeffs: modelStats.coeffs,
+    polyR2: modelStats.polyR2,
+    sse: modelStats.sse,
+    aic: modelStats.aic,
+    bic: modelStats.bic,
+  };
 }
 
 function pearson(xs, ys) {
