@@ -132,11 +132,24 @@ html, body {
 .panel.collapsed > *:not(h2) { display: none; }
 body.dark .panel h2 { color: #cbd5e1; border-bottom-color: #334155; }
 
+/* Ensure [hidden] beats display:flex / display:block from class rules.
+   Without !important Safari sometimes keeps a partially-applied layout. */
+[hidden] { display: none !important; }
+
+/* "Inactive" form rows that are visible but not interactive (used for
+   level-conditional inputs that we want to *grey out* instead of hide). */
+.form-row.is-inactive {
+  opacity: 0.45;
+  pointer-events: none;
+  filter: grayscale(0.6);
+}
+
 .form-row {
   margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
+  transition: opacity .15s, filter .15s;
 }
 .form-row label {
   font-size: 12px;
