@@ -4419,6 +4419,12 @@ window.addEventListener("keydown", (e) => {
     }
     return;
   }
+  // Cycle 282: Shift+R triggers the clean view reset (pins/filter/columns/...).
+  if (!inField && e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === "R" || e.key === "r")) {
+    e.preventDefault();
+    els.btnViewReset?.click();
+    return;
+  }
   // Cycle 250: "?" / Shift+/ opens the help modal.
   if (!inField && (e.key === "?" || (e.shiftKey && e.key === "/"))) {
     e.preventDefault();
@@ -4439,7 +4445,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "281"; // bumped each polish cycle
+const APP_VERSION = "282"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-280: ピン留め 6 surface × 5 export × 番号体系 + 系列別回帰 + Markdown/CSV/SVG/PNG/QR";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -4470,6 +4476,7 @@ function showHelpModal() {
       <code>Shift+P</code><span>ピン留め地域に地図をズーム</span>
       <code>Shift+O</code><span>散布図の外れ値を一括ピン</span>
       <code>Shift+B</code><span>直前の brush 選択をピン留めに昇格</span>
+      <code>Shift+R</code><span>表示状態をクリーンリセット（ピン/フィルタ/列ピッカー等）</span>
       <code>Z</code><span>Zen モード切替（サイドバー隠して地図全画面）</span>
 
       <strong>Shift+クリックでピン</strong><span style="font-size:11px;color:#475569">6箇所どこからでも同じ統一セット</span>
