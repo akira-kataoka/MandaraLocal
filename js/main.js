@@ -5046,13 +5046,20 @@ function getTableRows() {
   );
 }
 
+// Debounce table search input (Cycle 191): big datasets (1800+ rows) would
+// re-render on every keystroke; 150 ms gives smooth typing while feeling
+// instantaneous when the user pauses.
+let _tableSearchTimer = null;
 els.tableSearch?.addEventListener("input", () => {
-  // Re-render only the table, not the entire panel set.
-  if (state.dataset) {
-    const filtered = getTableRows();
-    renderTable(els.tableWrap, filtered, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
-    updateTableSearchInfo(filtered.length);
-  }
+  if (_tableSearchTimer) clearTimeout(_tableSearchTimer);
+  _tableSearchTimer = setTimeout(() => {
+    if (state.dataset) {
+      const filtered = getTableRows();
+      renderTable(els.tableWrap, filtered, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+      updateTableSearchInfo(filtered.length);
+    }
+    _tableSearchTimer = null;
+  }, 150);
 });
 
 // Show "N 件中 M 件マッチ" / "該当なし" only when the search box is non-empty.
