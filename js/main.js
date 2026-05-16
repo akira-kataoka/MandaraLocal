@@ -2192,6 +2192,33 @@ function onMapHover(id, isHot) {
 
 mapper.onFeatureHover(onMapHover);
 
+const fdDiv = document.getElementById("feature-detail");
+const fdName = document.getElementById("fd-name");
+const fdTable = document.getElementById("fd-table");
+document.getElementById("fd-close")?.addEventListener("click", () => fdDiv.hidden = true);
+mapper.onFeatureClick((id, props) => {
+  if (!state.dataset) {
+    fdName.textContent = props?.nam_ja || props?.name_jp || props?.name_en || "#" + id;
+    fdTable.innerHTML = "<tr><td colspan=2 style='color:var(--muted)'>データ未読込</td></tr>";
+    fdDiv.hidden = false;
+    return;
+  }
+  const row = state.dataset.rows.find(r => r.key === id);
+  if (!row) {
+    fdName.textContent = props?.nam_ja || props?.name_jp || props?.name_en || "#" + id;
+    fdTable.innerHTML = "<tr><td colspan=2 style='color:var(--muted)'>このデータには該当行がありません</td></tr>";
+    fdDiv.hidden = false;
+    return;
+  }
+  fdName.textContent = row.name || ("#" + row.key);
+  const rows = state.dataset.fields.map(f => {
+    const v = row.values[f];
+    return `<tr><td>${escapeHtmlText(f)}</td><td>${v == null ? "—" : formatNum(v)}</td></tr>`;
+  });
+  fdTable.innerHTML = rows.join("");
+  fdDiv.hidden = false;
+});
+
 // ----- Search -----
 let searchActiveIdx = -1;
 

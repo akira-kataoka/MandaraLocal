@@ -112,6 +112,9 @@ export class MandaraMap {
       if (this._hoverHandler) this._hoverHandler(feature.properties.id, true);
     });
     lyr.on("mousemove", (e) => this._showTooltip(feature, e));
+    lyr.on("click", () => {
+      if (this._clickHandler) this._clickHandler(feature.properties.id, feature.properties);
+    });
     lyr.on("mouseout", () => {
       // Revert outline only — never call resetStyle() here, that would
       // repaint with the gray defaultStyle and erase the choropleth color.
@@ -907,6 +910,9 @@ export class MandaraMap {
    */
   onFeatureHover(handler) {
     this._hoverHandler = handler;
+  }
+  onFeatureClick(handler) {
+    this._clickHandler = handler;
   }
 
   /**

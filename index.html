@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=71" />
+  <link rel="stylesheet" href="css/style.css?v=72" />
 </head>
 <body>
   <header class="app-header">
@@ -430,6 +430,13 @@
           <div class="map-overlay-legend" id="overlay-legend"></div>
           <div class="map-overlay-footer" id="overlay-footer"></div>
         </div>
+        <div id="feature-detail" class="feature-detail" hidden>
+          <div class="fd-head">
+            <strong id="fd-name"></strong>
+            <button id="fd-close" title="閉じる">×</button>
+          </div>
+          <table id="fd-table"></table>
+        </div>
       </div>
       <div class="map-pane" id="pane-b" hidden>
         <div id="map-b"></div>
@@ -459,7 +466,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=71"></script>
+  <script type="module" src="js/main.js?v=72"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
