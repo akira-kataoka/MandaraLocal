@@ -1061,6 +1061,60 @@ els.btnKml.addEventListener("click", () => {
 });
 els.btnTheme.addEventListener("click", toggleTheme);
 
+// ----- Keyboard shortcuts -----
+const kbdHelp = document.getElementById("kbd-help");
+const btnCloseHelp = document.getElementById("btn-close-help");
+btnCloseHelp?.addEventListener("click", () => kbdHelp.hidden = true);
+kbdHelp?.addEventListener("click", (e) => { if (e.target === kbdHelp) kbdHelp.hidden = true; });
+
+document.addEventListener("keydown", (e) => {
+  // Skip when typing in inputs
+  const t = e.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable)) {
+    if (e.key === "Escape") t.blur();
+    return;
+  }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  switch (e.key) {
+    case "?": kbdHelp.hidden = !kbdHelp.hidden; e.preventDefault(); break;
+    case "d": case "D": toggleTheme(); break;
+    case "/": els.inputGeocode?.focus(); e.preventDefault(); break;
+    case "s": case "S": els.loadSample?.click(); break;
+    case "m": case "M": toggleMeasure(!measureOn); break;
+    case "a": case "A": toggleArea(!areaOn); break;
+    case "b": case "B": toggleBuffer(!bufferOn); break;
+    case "p": case "P": els.btnPng?.click(); break;
+    case "k": case "K": els.btnKml?.click(); break;
+    case "g": case "G": els.btnGeoJson?.click(); break;
+    case " ":
+      if (!els.panelTs.hidden) {
+        if (tsState.timer) tsStop(); else tsPlay();
+        e.preventDefault();
+      }
+      break;
+    case "ArrowLeft":
+      if (!els.panelTs.hidden) {
+        const v = Math.max(0, parseInt(els.tsSlider.value, 10) - 1);
+        els.tsSlider.value = String(v); setTsField();
+      }
+      break;
+    case "ArrowRight":
+      if (!els.panelTs.hidden) {
+        const v = Math.min(parseInt(els.tsSlider.max, 10), parseInt(els.tsSlider.value, 10) + 1);
+        els.tsSlider.value = String(v); setTsField();
+      }
+      break;
+    case "Escape":
+      if (!kbdHelp.hidden) { kbdHelp.hidden = true; break; }
+      if (measureOn) toggleMeasure(false);
+      if (areaOn) toggleArea(false);
+      if (bufferOn) toggleBuffer(false);
+      mapper.clearHighlight();
+      mapper.clearOutlierMarks();
+      break;
+  }
+});
+
 // ----- Scenes (MANDARA「マップファイル」相当) -----
 const SCENES_KEY = "mandara_scenes_v1";
 function loadScenes() {

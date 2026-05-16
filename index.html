@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=69" />
+  <link rel="stylesheet" href="css/style.css?v=70" />
 </head>
 <body>
   <header class="app-header">
@@ -395,6 +395,28 @@
       </section>
     </aside>
 
+    <div id="kbd-help" class="kbd-help" hidden>
+      <div class="kbd-help-inner">
+        <h3>キーボードショートカット</h3>
+        <table>
+          <tr><td><kbd>?</kbd></td><td>このヘルプを表示/閉じる</td></tr>
+          <tr><td><kbd>D</kbd></td><td>ダークモード切替</td></tr>
+          <tr><td><kbd>/</kbd></td><td>住所検索フォーカス</td></tr>
+          <tr><td><kbd>S</kbd></td><td>サンプルデータ読込</td></tr>
+          <tr><td><kbd>M</kbd></td><td>距離測定 ON/OFF</td></tr>
+          <tr><td><kbd>A</kbd></td><td>面積測定 ON/OFF</td></tr>
+          <tr><td><kbd>B</kbd></td><td>バッファ ON/OFF</td></tr>
+          <tr><td><kbd>P</kbd></td><td>PNG 出力</td></tr>
+          <tr><td><kbd>K</kbd></td><td>KML 出力</td></tr>
+          <tr><td><kbd>G</kbd></td><td>GeoJSON 出力</td></tr>
+          <tr><td><kbd>Space</kbd></td><td>時系列 再生/停止 (時系列パネル表示時)</td></tr>
+          <tr><td><kbd>←</kbd> / <kbd>→</kbd></td><td>時系列 1ステップ進む/戻る</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>各種ツール OFF</td></tr>
+        </table>
+        <p style="font-size:11px;color:var(--muted)">入力欄にフォーカスがあるときは無効化されます。</p>
+        <button id="btn-close-help" class="btn btn-primary">閉じる</button>
+      </div>
+    </div>
     <section class="map-wrap" id="map-wrap">
       <div class="map-pane" id="pane-a">
         <div id="map"></div>
@@ -437,7 +459,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=69"></script>
+  <script type="module" src="js/main.js?v=70"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
