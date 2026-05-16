@@ -150,6 +150,7 @@ const els = {
   filterResult: $("filter-result"),
   panelLegend:  $("panel-legend"),
   legendBox:    $("legend-container"),
+  btnExportLegendPng: $("btn-export-legend-png"),
   selectLegendPos: $("select-legend-pos"),
   selectLegendFs:  $("select-legend-fs"),
   selectLegendPrec: $("select-legend-prec"),
@@ -985,6 +986,36 @@ els.btnResetCustomColors?.addEventListener("click", () => {
   delete state.customColors[state.palette];
   refresh();
   syncResetColorBtn();
+});
+
+// Cycle 203: export the legend as a standalone PNG so users can drop it into
+// a presentation or document without the surrounding map UI. Honors the same
+// DPI selector used by full-map export, with a 2× fallback if not set.
+els.btnExportLegendPng?.addEventListener("click", async () => {
+  if (!els.legendBox || !els.legendBox.children.length) {
+    setSummary("凡例が空のため書き出せません", "warn"); return;
+  }
+  if (typeof htmlToImage === "undefined") {
+    setSummary("htmlToImage の読み込みに失敗しました", "error"); return;
+  }
+  setSummary("凡例PNG を生成中…", "muted");
+  try {
+    const dpi = parseInt(els.selectExportDpi?.value || "2", 10) || 2;
+    const dataUrl = await htmlToImage.toPng(els.legendBox, {
+      pixelRatio: dpi,
+      backgroundColor: "#ffffff",
+      style: { padding: "8px" },
+    });
+    const a = document.createElement("a");
+    const safeField = (state.field || "legend").replace(/[\\/:*?"<>|]/g, "_");
+    a.href = dataUrl;
+    a.download = `mandara_legend_${safeField}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setSummary("凡例をPNGで保存しました", "success");
+  } catch (e) {
+    console.error(e);
+    setSummary("凡例PNG の生成に失敗しました: " + (e?.message || e), "error");
+  }
 });
 els.chkReverse.addEventListener("change", () => {
   state.reverse = els.chkReverse.checked;
