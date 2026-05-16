@@ -97,10 +97,21 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
 
   // points (sizeFor from opts gives variable radius for bubble-chart mode)
   const sizeFn = typeof opts.sizeFor === "function" ? opts.sizeFor : null;
+  const jitterPx = opts.jitter ? 2.5 : 0;
+  // Deterministic offset (mulberry32-style) — same id always gets the same jitter
+  const hashOffset = (key, axis) => {
+    let h = 2166136261 ^ axis;
+    const s = String(key);
+    for (let i = 0; i < s.length; i++) { h = Math.imul(h ^ s.charCodeAt(i), 16777619); }
+    h = (h ^ (h >>> 13)) >>> 0;
+    return ((h / 0xFFFFFFFF) * 2 - 1) * jitterPx;
+  };
   const pts = el("g");
   for (const [vx, vy, fid] of pairs) {
     const r0 = sizeFn && fid != null ? sizeFn(fid) : 3;
-    const c = circle(px(vx), py(vy), r0, "point");
+    const jx = jitterPx && fid != null ? hashOffset(fid, 0) : 0;
+    const jy = jitterPx && fid != null ? hashOffset(fid, 1) : 0;
+    const c = circle(px(vx) + jx, py(vy) + jy, r0, "point");
     if (fid != null) c.setAttribute("data-id", String(fid));
     c.__baseR = r0;
     // Priority: categoryFor (when set) overrides map-class colorFor.
