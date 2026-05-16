@@ -80,6 +80,31 @@ export function renderLegend(container, breaks, colors, options = {}) {
     const label = document.createElement("span");
     const range = `${formatBreak(lo)} 〜 ${formatBreak(hi)}`;
     label.textContent = unit ? `${range} ${unit}` : range;
+    if (typeof options.onBreakEdit === "function") {
+      label.title = "ダブルクリックで上限値を編集";
+      label.style.cursor = "text";
+      label.addEventListener("dblclick", (e) => {
+        e.stopPropagation();
+        const inp = document.createElement("input");
+        inp.type = "number";
+        inp.value = hi;
+        inp.step = "any";
+        inp.style.cssText = "width: 70px; padding: 1px 2px; font-size: 11px;";
+        label.replaceWith(inp);
+        inp.focus(); inp.select();
+        const commit = (save) => {
+          if (save) {
+            const v = parseFloat(inp.value);
+            if (Number.isFinite(v)) options.onBreakEdit(i, v);
+          }
+        };
+        inp.addEventListener("blur", () => commit(true));
+        inp.addEventListener("keydown", (k) => {
+          if (k.key === "Enter") { commit(true); inp.blur(); }
+          else if (k.key === "Escape") { inp.blur(); }
+        });
+      });
+    }
     row.appendChild(sw);
     row.appendChild(label);
     if (onClassHover) {

@@ -1942,6 +1942,20 @@ function refresh() {
       state.customColors[state.palette][idx] = hex;
       refresh();
     },
+    onBreakEdit: (idx, newUpper) => {
+      // Convert current breaks to manual mode: keep all but replace breaks[idx+1] with newUpper.
+      const updated = state.breaks.slice();
+      updated[idx + 1] = newUpper;
+      // Manual breaks UI takes inner cut points (length = classes - 1)
+      const inner = updated.slice(1, -1);
+      els.inputManualBreaks.value = inner.join(", ");
+      els.selectMethod.value = "manual";
+      state.method = "manual";
+      els.rowManualBreaks.hidden = false;
+      els.hintManual.hidden = false;
+      refresh();
+      setSummary(`境界値を ${newUpper} に変更（手動区分モード）`, "success");
+    },
   });
   els.legendBox.addEventListener("mouseleave", () => mapper.clearHighlight(), { once: true });
   renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag });
