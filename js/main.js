@@ -222,6 +222,7 @@ const els = {
   scatterLabelN:   $("scatter-label-n"),
   scatterLabelPlace: $("scatter-label-place"),
   btnScatterClearPins: $("btn-scatter-clear-pins"),
+  btnScatterZoomPins: $("btn-scatter-zoom-pins"),
   btnScatterPinsCsv: $("btn-scatter-pins-csv"),
   btnScatterPinOutliers: $("btn-scatter-pin-outliers"),
   btnScatterPinBrush: $("btn-scatter-pin-brush"),
@@ -7265,7 +7266,16 @@ function syncScatterPinBtn() {
   if (els.btnScatterPinsCsv) {
     els.btnScatterPinsCsv.hidden = count === 0;
   }
+  if (els.btnScatterZoomPins) {
+    els.btnScatterZoomPins.hidden = count === 0;
+  }
 }
+els.btnScatterZoomPins?.addEventListener("click", () => {
+  if (!(state.pinnedScatterIds instanceof Set) || !state.pinnedScatterIds.size) return;
+  const ok = mapper.zoomToPinned(state.pinnedScatterIds);
+  if (ok) setSummary(`ピン ${state.pinnedScatterIds.size} 件を含む範囲に地図をズームしました`, "success");
+  else setSummary("ピン地物の座標が見つかりません", "warn");
+});
 // Cycle 214: dump the pinned points (region + every field) to CSV. Mirrors
 // the BOM/quoting convention used by the other CSV exports.
 els.btnScatterPinsCsv?.addEventListener("click", () => {

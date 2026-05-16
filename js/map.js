@@ -1060,6 +1060,39 @@ export class MandaraMap {
     this.pinLayer.clearLayers();
   }
 
+  /**
+   * Cycle 243: zoom (or pan) the map to fit all currently pinned features.
+   * For 0 pins: no-op. For 1: zoomToFeature so detail is visible. For >=2:
+   * fit a LatLngBounds across all features + town points.
+   */
+  zoomToPinned(idSet) {
+    if (!idSet || !idSet.size) return false;
+    if (idSet.size === 1) {
+      const [only] = idSet;
+      try { this.zoomToFeature(only); return true; } catch { /* fall through */ }
+    }
+    const bounds = L.latLngBounds([]);
+    let count = 0;
+    if (this.layer) {
+      this.layer.eachLayer((lyr) => {
+        const id = lyr.feature?.properties?.id;
+        if (id == null || !idSet.has(id)) return;
+        try { bounds.extend(lyr.getBounds()); count++; } catch {}
+      });
+    }
+    if (this.symbolLayer) {
+      this.symbolLayer.eachLayer((s) => {
+        const tid = s.feature?.properties?.id ?? s.options?._townId;
+        if (tid != null && idSet.has(tid) && typeof s.getLatLng === "function") {
+          bounds.extend(s.getLatLng()); count++;
+        }
+      });
+    }
+    if (!count) return false;
+    this.map.fitBounds(bounds, { padding: [40, 40], maxZoom: 11 });
+    return true;
+  }
+
   clearOutlierMarks() {
     this._outlierIds = new Set();
     if (!this.layer) return;
