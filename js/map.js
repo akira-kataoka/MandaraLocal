@@ -241,6 +241,77 @@ export class MandaraMap {
    * @param valueMap Map<id, number|null>
    * @param breaks/colors  optional → use classified fill colour
    */
+  /**
+   * Hatch / pattern fill map: each class gets a distinct SVG pattern
+   * (diagonal lines, vertical, horizontal, dots, grid, dense diagonal).
+   * Patterns work in monochrome print and stack readably with the
+   * classified colour. MANDARA 「ハッチモード」相当。
+   *
+   * @param valueMap Map<id, number|null>
+   * @param breaks   classification breaks
+   * @param colors   palette
+   */
+  applyHatch(valueMap, breaks, colors) {
+    if (!this.layer || !valueMap) return;
+    this._ensureHatchDefs();
+    this.layer.eachLayer((lyr) => {
+      const id = lyr.feature.properties.id;
+      const v = valueMap.get(id);
+      if (!Number.isFinite(v)) {
+        lyr.setStyle({ weight: 0.5, color: "#475569", fillColor: "#e5e7eb", fillOpacity: 0.6 });
+        return;
+      }
+      const idx = classifyValue(v, breaks);
+      const patId = `mn-hatch-${Math.max(0, idx) % 6}`;
+      // Set fill first to the classified colour as a fallback, then to the pattern
+      lyr.setStyle({
+        weight: 0.8, color: "#1e293b",
+        fillColor: colors[idx] || "#94a3b8",
+        fillOpacity: 0.5,
+      });
+      // Apply SVG pattern via the underlying path element
+      if (lyr._path) lyr._path.setAttribute("fill", `url(#${patId})`);
+    });
+    this.symbolLayer.clearLayers();
+  }
+
+  _ensureHatchDefs() {
+    // Inject a single defs block into the map's SVG renderer the first time
+    if (this._hatchDefsAdded) return;
+    const svg = this.map.getRenderer({}) && this.map.getRenderer({})._container;
+    // Fallback: find any svg inside leaflet pane
+    const root = svg || this.map.getPanes().overlayPane.querySelector("svg");
+    if (!root) return;
+    const NS = "http://www.w3.org/2000/svg";
+    const defs = document.createElementNS(NS, "defs");
+    const patterns = [
+      // diagonal left
+      { id: 0, content: `<line x1="0" y1="0" x2="0" y2="8" stroke="#1e293b" stroke-width="1.5"/>`, transform: "rotate(45)" },
+      // diagonal right
+      { id: 1, content: `<line x1="0" y1="0" x2="0" y2="8" stroke="#1e293b" stroke-width="1.5"/>`, transform: "rotate(-45)" },
+      // vertical
+      { id: 2, content: `<line x1="0" y1="0" x2="0" y2="8" stroke="#1e293b" stroke-width="1.5"/>`, transform: "" },
+      // grid
+      { id: 3, content: `<path d="M0 0 L8 0 M0 0 L0 8" stroke="#1e293b" stroke-width="1"/>`, transform: "" },
+      // dots
+      { id: 4, content: `<circle cx="2" cy="2" r="1.2" fill="#1e293b"/>`, transform: "" },
+      // dense diagonal
+      { id: 5, content: `<line x1="0" y1="0" x2="0" y2="4" stroke="#1e293b" stroke-width="1.5"/>`, transform: "rotate(45)" },
+    ];
+    for (const p of patterns) {
+      const pat = document.createElementNS(NS, "pattern");
+      pat.setAttribute("id", `mn-hatch-${p.id}`);
+      pat.setAttribute("width", p.id === 5 ? "4" : "8");
+      pat.setAttribute("height", p.id === 5 ? "4" : "8");
+      pat.setAttribute("patternUnits", "userSpaceOnUse");
+      if (p.transform) pat.setAttribute("patternTransform", p.transform);
+      pat.innerHTML = p.content;
+      defs.appendChild(pat);
+    }
+    root.appendChild(defs);
+    this._hatchDefsAdded = true;
+  }
+
   applyCartogram(valueMap, breaks, colors) {
     this.symbolLayer.clearLayers();
     if (!this.layer || !valueMap) return;

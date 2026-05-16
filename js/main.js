@@ -1266,6 +1266,8 @@ function refresh() {
     });
   } else if (state.mode === "cartogram") {
     mapper.applyCartogram(state.valueMap, state.breaks, state.colors);
+  } else if (state.mode === "hatch") {
+    mapper.applyHatch(state.valueMap, state.breaks, state.colors);
   } else if (state.mode === "label") {
     mapper.applyLabels(state.valueMap, state.field);
   } else if (state.mode === "contour") {
