@@ -741,6 +741,51 @@ els.csvFile.addEventListener("change", async (e) => {
   }
 });
 
+// Drag-and-drop import (Cycle 148): drop a CSV/Excel/Shapefile anywhere on the
+// page to load it. Routes by extension to the existing handlers.
+(function setupDropImport() {
+  let dragCount = 0;
+  const isFileDrag = (e) => e.dataTransfer && [...(e.dataTransfer.types || [])].includes("Files");
+  document.addEventListener("dragenter", (e) => {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    dragCount++;
+    document.body.classList.add("is-dropping");
+  });
+  document.addEventListener("dragover", (e) => {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+  });
+  document.addEventListener("dragleave", (e) => {
+    if (!isFileDrag(e)) return;
+    dragCount = Math.max(0, dragCount - 1);
+    if (dragCount === 0) document.body.classList.remove("is-dropping");
+  });
+  document.addEventListener("drop", async (e) => {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    dragCount = 0;
+    document.body.classList.remove("is-dropping");
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    const name = (file.name || "").toLowerCase();
+    if (name.endsWith(".csv") || name.endsWith(".xlsx") || name.endsWith(".xls")) {
+      try {
+        setSummary(`「${file.name}」を読み込み中…`, "muted");
+        const ds = await loadCsvFile(file, csvParseOpts());
+        onDatasetReady(ds, file.name);
+      } catch (err) {
+        setSummary("CSV読み込み失敗: " + err.message, "error");
+      }
+    } else if (name.endsWith(".shp") || name.endsWith(".zip") || name.endsWith(".geojson") || name.endsWith(".json")) {
+      try { await handleShapeFile(file); }
+      catch (err) { setSummary("Shapefile 読み込み失敗: " + err.message, "error"); }
+    } else {
+      setSummary(`未対応の拡張子: ${file.name}（CSV/Excel/Shape/GeoJSON が利用可）`, "warn");
+    }
+  });
+})();
+
 els.csvMerge.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;

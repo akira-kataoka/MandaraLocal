@@ -336,6 +336,28 @@ body.dark #ranking-box .rk-row:hover { background: #1e3a8a; }
 body.dark .suggest-method { background: #422006; border-color: #92400e; color: #fcd34d; }
 body.dark .suggest-method.is-match { background: #064e3b; border-color: #065f46; color: #6ee7b7; }
 
+/* Drag-and-drop import overlay (Cycle 148) */
+body.is-dropping::before {
+  content: "ファイルをここにドロップ\A（CSV / Excel / Shape / GeoJSON）";
+  white-space: pre-line;
+  position: fixed; inset: 0;
+  background: rgba(37, 99, 235, 0.15);
+  border: 3px dashed #2563eb;
+  color: #1e3a8a;
+  font-size: 22px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  z-index: 9999;
+  pointer-events: none;
+  letter-spacing: 0.05em;
+}
+body.dark.is-dropping::before {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: #60a5fa;
+  color: #dbeafe;
+}
+
 .mr-result {
   margin-top: 8px;
   font-size: 11px;
