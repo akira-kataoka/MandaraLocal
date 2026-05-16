@@ -28,7 +28,10 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
   const heatRange = heat ? buildHeatRanges(rows, fields) : null;
   // Cycle 215: highlight pinned-scatter rows (Set of row.key) so the user can
   // see which table rows correspond to their on-plot pins.
+  // Cycle 236: ピン色は呼出側 (Cycle 235) と統一する。
   const pinnedRows = opts.pinnedIds instanceof Set ? opts.pinnedIds : null;
+  const pinColor = (typeof opts.pinColor === "string" && /^#[0-9a-f]{6}$/i.test(opts.pinColor))
+    ? opts.pinColor : "#dc2626";
 
   const table = document.createElement("table");
   // header
@@ -53,9 +56,9 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
     tr.dataset.id = r.key;
     if (pinnedRows && pinnedRows.has(r.key)) {
       tr.classList.add("is-pinned");
-      // Red left border + soft tint; works with the heatmap because it sits
-      // on the row, not on individual cells.
-      tr.style.boxShadow = "inset 3px 0 0 #dc2626";
+      // Red (or user-configured) left border + soft tint; works with the
+      // heatmap because it sits on the row, not on individual cells.
+      tr.style.boxShadow = `inset 3px 0 0 ${pinColor}`;
     }
     if (onRowDelete) {
       const delTd = document.createElement("td");

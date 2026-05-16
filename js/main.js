@@ -1925,6 +1925,8 @@ els.scatterPinColor?.addEventListener("input", () => {
   state.pinColor = els.scatterPinColor.value;
   saveSettings(state);
   drawScatter();
+  if (typeof refreshTable === "function") refreshTable();
+  if (state.pinnedScatterIds?.size) mapper.markPinned(state.pinnedScatterIds, state.pinColor);
 });
 els.chkScatterStats?.addEventListener("change", drawScatter);
 els.chkScatterCi?.addEventListener("change", drawScatter);
@@ -5690,6 +5692,7 @@ function getTableOpts() {
   return {
     heat: !!els.chkTableHeat?.checked,
     pinnedIds: state.pinnedScatterIds instanceof Set ? state.pinnedScatterIds : null,
+    pinColor: els.scatterPinColor?.value || "#dc2626",
   };
 }
 els.chkTableHeat?.addEventListener("change", () => {
