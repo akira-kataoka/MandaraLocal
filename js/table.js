@@ -12,7 +12,7 @@ let sortState = { field: null, asc: true };
  * @param fields    dataset.fields
  * @param onRowHover (id, isOn) -> void
  */
-export function renderTable(container, rows, fields, onRowHover) {
+export function renderTable(container, rows, fields, onRowHover, onCellEdit = null) {
   container.innerHTML = "";
   if (!rows.length || !fields.length) return;
 
@@ -39,6 +39,36 @@ export function renderTable(container, rows, fields, onRowHover) {
       const td = document.createElement("td");
       td.className = "num";
       td.textContent = formatNum(r.values[f]);
+      if (onCellEdit) {
+        td.title = "ダブルクリックで編集";
+        td.style.cursor = "text";
+        td.addEventListener("dblclick", (e) => {
+          e.stopPropagation();
+          const cur = r.values[f];
+          const input = document.createElement("input");
+          input.type = "number";
+          input.value = cur == null ? "" : cur;
+          input.step = "any";
+          input.style.cssText = "width: 90%; padding: 1px 2px; font-size: 11px;";
+          td.innerHTML = "";
+          td.appendChild(input);
+          input.focus();
+          input.select();
+          const commit = (save) => {
+            if (save) {
+              const v = parseFloat(input.value);
+              onCellEdit(r.key, f, Number.isFinite(v) ? v : null);
+            } else {
+              td.textContent = formatNum(cur);
+            }
+          };
+          input.addEventListener("blur", () => commit(true));
+          input.addEventListener("keydown", (k) => {
+            if (k.key === "Enter") { commit(true); input.blur(); }
+            else if (k.key === "Escape") { commit(false); input.blur(); }
+          });
+        });
+      }
       tr.appendChild(td);
     }
     if (onRowHover) {

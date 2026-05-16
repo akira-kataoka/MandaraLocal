@@ -1909,8 +1909,8 @@ function refresh() {
     els.overlayB.hidden = true;
   }
 
-  // Data table
-  renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover);
+  // Data table — with inline editing
+  renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit);
 
   // Box plot
   if (els.boxplotSvg) renderBoxplot(els.boxplotSvg, values, state.field);
@@ -2036,6 +2036,14 @@ function applyOutlierHighlight(values) {
 function onTableRowHover(id, isOn) {
   if (isOn) mapper.highlightById(id);
   else      mapper.clearHighlight();
+}
+
+function onCellEdit(id, field, newValue) {
+  const row = state.dataset?.rows.find(r => r.key === id);
+  if (!row) return;
+  row.values[field] = newValue;
+  setSummary(`${row.name || "#"+id} の「${field}」を ${newValue == null ? "—" : newValue} に更新`, "success");
+  refresh();
 }
 
 // ----- Time series (連続表示モード) -----
