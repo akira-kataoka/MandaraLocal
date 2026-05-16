@@ -194,6 +194,7 @@ const els = {
   panelPca:        $("panel-pca"),
   pcaXList:        $("pca-x-list"),
   pcaRun:          $("pca-run"),
+  pcaCsv:          $("pca-csv"),
   pcaAdd:          $("pca-add"),
   pcaResult:       $("pca-result"),
   panelKm:         $("panel-kmeans"),
@@ -201,6 +202,7 @@ const els = {
   kmK:             $("km-k"),
   kmRun:           $("km-run"),
   kmElbow:         $("km-elbow"),
+  kmCsv:           $("km-csv"),
   kmAdd:           $("km-add"),
   kmResult:        $("km-result"),
   panelMr:         $("panel-multireg"),
@@ -1962,6 +1964,7 @@ function runKmeansClustering() {
   state.kmResult = { K, xFields, n: out.n, iterations: out.iter, wss: out.wss, keys: out.keys, assignments: out.assignments };
   renderKmResult(state.kmResult);
   if (els.kmAdd) els.kmAdd.disabled = false;
+  if (els.kmCsv) els.kmCsv.disabled = false;
 }
 
 function runElbow() {
@@ -2041,6 +2044,44 @@ function renderKmResult(r) {
 els.kmRun?.addEventListener("click", runKmeansClustering);
 els.kmElbow?.addEventListener("click", runElbow);
 
+els.kmCsv?.addEventListener("click", () => {
+  const r = state.kmResult;
+  if (!r) { setSummary("先に k-means を実行してください", "warn"); return; }
+  const nameById = new Map(state.dataset.rows.map(row => [row.key, row.name || `#${row.key}`]));
+  const sizes = new Array(r.K).fill(0);
+  for (const a of r.assignments) sizes[a]++;
+  const lines = [];
+  // 1. Cluster summary
+  lines.push(["クラスタ", "件数", "割合"].map(csvEscape).join(","));
+  for (let k = 0; k < r.K; k++) {
+    lines.push([String(k + 1), String(sizes[k]), (sizes[k] / r.n * 100).toFixed(2) + "%"].map(csvEscape).join(","));
+  }
+  lines.push("");
+  // 2. Meta
+  lines.push(["統計", "値"].map(csvEscape).join(","));
+  lines.push(["K (クラスタ数)", String(r.K)].map(csvEscape).join(","));
+  lines.push(["説明変数 X", r.xFields.join(", ")].map(csvEscape).join(","));
+  lines.push(["n (有効サンプル)", String(r.n)].map(csvEscape).join(","));
+  lines.push(["反復回数", String(r.iterations)].map(csvEscape).join(","));
+  lines.push(["WSS", r.wss.toFixed(4)].map(csvEscape).join(","));
+  lines.push("");
+  // 3. Per-region assignment
+  lines.push(["id", "地域", "クラスタ"].map(csvEscape).join(","));
+  for (let i = 0; i < r.keys.length; i++) {
+    const id = r.keys[i];
+    lines.push([String(id), nameById.get(id) || `#${id}`, String(r.assignments[i] + 1)].map(csvEscape).join(","));
+  }
+  const csv = "﻿" + lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `kmeans_K${r.K}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`k-means結果を ${a.download} として保存しました（K=${r.K}, n=${r.n}）`, "success");
+});
+
 // ----- Principal Component Analysis (Cycle 147) -----
 function populatePcaSelectors(fields) {
   if (!els.pcaXList) return;
@@ -2119,6 +2160,7 @@ function runPca() {
   state.pcaResult = { xFields, n, d, eigvals: sortedEigvals, ratios, cumRatios, loadings, scores, keys };
   renderPcaResult(state.pcaResult);
   if (els.pcaAdd) els.pcaAdd.disabled = false;
+  if (els.pcaCsv) els.pcaCsv.disabled = false;
 }
 
 // Jacobi eigendecomposition for symmetric matrices. Returns eigvals + V
@@ -2286,6 +2328,41 @@ function buildScreePlot(r) {
 }
 
 els.pcaRun?.addEventListener("click", runPca);
+
+els.pcaCsv?.addEventListener("click", () => {
+  const r = state.pcaResult;
+  if (!r) { setSummary("先に PCA を実行してください", "warn"); return; }
+  const fmt = (v, d = 4) => (v == null || !Number.isFinite(v)) ? "" : v.toFixed(d);
+  const nameById = new Map(state.dataset.rows.map(row => [row.key, row.name || `#${row.key}`]));
+  const lines = [];
+  // 1. Variance explained
+  lines.push(["主成分", "固有値", "寄与率", "累積寄与率"].map(csvEscape).join(","));
+  for (let k = 0; k < r.d; k++) {
+    lines.push([`PC${k + 1}`, fmt(r.eigvals[k]), fmt(r.ratios[k] * 100, 2), fmt(r.cumRatios[k] * 100, 2)].map(csvEscape).join(","));
+  }
+  lines.push("");
+  // 2. Loadings
+  lines.push(["変数", ...r.eigvals.map((_, k) => `PC${k + 1}`)].map(csvEscape).join(","));
+  for (let i = 0; i < r.d; i++) {
+    lines.push([r.xFields[i], ...r.loadings[i].map(v => fmt(v))].map(csvEscape).join(","));
+  }
+  lines.push("");
+  // 3. Per-region scores
+  lines.push(["id", "地域", ...r.eigvals.map((_, k) => `PC${k + 1}_score`)].map(csvEscape).join(","));
+  for (let i = 0; i < r.keys.length; i++) {
+    const id = r.keys[i];
+    lines.push([String(id), nameById.get(id) || `#${id}`, ...r.scores[i].map(v => fmt(v))].map(csvEscape).join(","));
+  }
+  const csv = "﻿" + lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `pca_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`PCA結果を ${a.download} として保存しました（${r.d}主成分 × ${r.n}地域）`, "success");
+});
 
 els.pcaAdd?.addEventListener("click", () => {
   const r = state.pcaResult;
