@@ -96,6 +96,7 @@ const els = {
   derivedA:     $("derived-a"),
   derivedOp:    $("derived-op"),
   derivedB:     $("derived-b"),
+  rowDerivedB:  $("row-derived-b"),
   derivedName:  $("derived-name"),
   btnDerived:   $("btn-add-derived"),
   btnZscore:    $("btn-add-zscore"),
@@ -1501,6 +1502,9 @@ els.scatterCsv?.addEventListener("click", () => {
   setSummary(`散布図統計を ${a.download} として保存しました`, "success");
 });
 els.btnDerived.addEventListener("click", addDerivedField);
+els.derivedOp?.addEventListener("change", () => {
+  if (els.rowDerivedB) els.rowDerivedB.hidden = isUnaryOp(els.derivedOp.value);
+});
 function batchStandardise(kind) {
   if (!state.dataset) return;
   const baseFields = state.dataset.fields.filter(f => !f.endsWith("_z") && !f.endsWith("_minmax"));
@@ -3238,19 +3242,45 @@ function populateFieldSelects() {
 
 const OP_FN = { div: (a,b) => b===0 ? null : a/b, mul: (a,b)=>a*b, add: (a,b)=>a+b, sub: (a,b)=>a-b };
 const OP_SYM = { div: "÷", mul: "×", add: "+", sub: "−" };
+// Unary ops (Cycle 126): operate on a single column. log/sqrt return null for
+// non-positive values; recip returns null for 0.
+const OP_UNARY_FN = {
+  log10:  (a) => a > 0 ? Math.log10(a) : null,
+  ln:     (a) => a > 0 ? Math.log(a)   : null,
+  sqrt:   (a) => a >= 0 ? Math.sqrt(a) : null,
+  abs:    (a) => Math.abs(a),
+  square: (a) => a * a,
+  recip:  (a) => a === 0 ? null : 1 / a,
+};
+const OP_UNARY_NAME = {
+  log10: "log10", ln: "ln", sqrt: "√", abs: "|·|", square: "²", recip: "1/",
+};
+function isUnaryOp(op) { return Object.prototype.hasOwnProperty.call(OP_UNARY_FN, op); }
 
 function addDerivedField() {
   if (!state.dataset) return;
   const a = els.derivedA.value, b = els.derivedB.value, op = els.derivedOp.value;
   const explicit = els.derivedName.value.trim();
-  const name = explicit || `${a} ${OP_SYM[op]} ${b}`;
+  const unary = isUnaryOp(op);
+  const defaultName = unary
+    ? (op === "square" ? `${a}²` : op === "recip" ? `1/${a}` : op === "abs" ? `|${a}|` : `${OP_UNARY_NAME[op]}(${a})`)
+    : `${a} ${OP_SYM[op]} ${b}`;
+  const name = explicit || defaultName;
   if (state.dataset.fields.includes(name)) {
     setSummary(`列「${name}」はすでに存在します`, "warn"); return;
   }
-  const fn = OP_FN[op];
-  for (const r of state.dataset.rows) {
-    const va = r.values[a], vb = r.values[b];
-    r.values[name] = (Number.isFinite(va) && Number.isFinite(vb)) ? fn(va, vb) : null;
+  if (unary) {
+    const ufn = OP_UNARY_FN[op];
+    for (const r of state.dataset.rows) {
+      const va = r.values[a];
+      r.values[name] = Number.isFinite(va) ? ufn(va) : null;
+    }
+  } else {
+    const fn = OP_FN[op];
+    for (const r of state.dataset.rows) {
+      const va = r.values[a], vb = r.values[b];
+      r.values[name] = (Number.isFinite(va) && Number.isFinite(vb)) ? fn(va, vb) : null;
+    }
   }
   state.dataset.fields.push(name);
   populateFieldSelects();

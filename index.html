@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=125" />
+  <link rel="stylesheet" href="css/style.css?v=126" />
 </head>
 <body>
   <header class="app-header">
@@ -180,13 +180,23 @@
           <div class="form-row">
             <label for="derived-op">演算</label>
             <select id="derived-op">
-              <option value="div">÷</option>
-              <option value="mul">×</option>
-              <option value="add">+</option>
-              <option value="sub">−</option>
+              <optgroup label="二項">
+                <option value="div">÷</option>
+                <option value="mul">×</option>
+                <option value="add">+</option>
+                <option value="sub">−</option>
+              </optgroup>
+              <optgroup label="単項（Aのみ）">
+                <option value="log10">log10(A)</option>
+                <option value="ln">ln(A)</option>
+                <option value="sqrt">√A</option>
+                <option value="abs">|A|</option>
+                <option value="square">A²</option>
+                <option value="recip">1/A</option>
+              </optgroup>
             </select>
           </div>
-          <div class="form-row">
+          <div class="form-row" id="row-derived-b">
             <label for="derived-b">B</label>
             <select id="derived-b"></select>
           </div>
@@ -633,7 +643,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=125"></script>
+  <script type="module" src="js/main.js?v=126"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
