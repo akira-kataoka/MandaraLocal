@@ -29,7 +29,7 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
   if (groups) {
     // Cycle 262: facet (small multiples) when requested, else default overlay.
     if (opts.facet) return renderFacetHistogram(svgEl, groups, label, bins, logX, { ...opts, onBinHover });
-    return renderGroupHistogram(svgEl, groups, label, bins, logX);
+    return renderGroupHistogram(svgEl, groups, label, bins, logX, opts);
   }
   // When log axis is requested, only positive values are usable.
   let v;
@@ -315,12 +315,18 @@ function renderFacetHistogram(svgEl, groups, label, bins, logX, opts = {}) {
   const totalH = topPad + filtered.length * (facetH + facetGap) + 16;
   svgEl.setAttribute("viewBox", `0 0 ${W} ${totalH}`);
   svgEl.setAttribute("height", String(totalH));
+  // Cycle 290: shared axisFontSize with the other charts.
+  const fsKey = opts.axisFontSize === "S" || opts.axisFontSize === "L" ? opts.axisFontSize : "M";
+  const tickFs = fsKey === "S" ? 7 : fsKey === "L" ? 11 : 9;
+  const labelFs = tickFs + 1;
   // Shared X axis at the top (3 ticks)
   const xAt = (sval) => PAD.left + ((sval - sMin) / (sMax - sMin)) * innerW;
   const axisTop = el("g", { class: "axis" });
   for (const f of [0, 0.5, 1]) {
     const tx = PAD.left + f * innerW;
-    axisTop.appendChild(text(tx, 10, formatShort(logX ? Math.pow(10, sMin + f * (sMax - sMin)) : sMin + f * (sMax - sMin)), "middle"));
+    const t = text(tx, 10, formatShort(logX ? Math.pow(10, sMin + f * (sMax - sMin)) : sMin + f * (sMax - sMin)), "middle");
+    t.setAttribute("font-size", String(tickFs));
+    axisTop.appendChild(t);
   }
   svgEl.appendChild(axisTop);
   // Per-facet panels
@@ -331,7 +337,7 @@ function renderFacetHistogram(svgEl, groups, label, bins, logX, opts = {}) {
     const maxCount = Math.max(...counts) || 1;
     const color = GROUP_PALETTE[gi % GROUP_PALETTE.length];
     // Panel name + n
-    const labelTxt = el("text", { x: PAD.left, y: facetTop - 2, "font-size": 10, "font-weight": 600, fill: "#1e293b" });
+    const labelTxt = el("text", { x: PAD.left, y: facetTop - 2, "font-size": labelFs, "font-weight": 600, fill: "#1e293b" });
     labelTxt.textContent = `${g.name.length > 18 ? g.name.slice(0, 17) + "…" : g.name} (n=${g.v.length})`;
     svgEl.appendChild(labelTxt);
     // Baseline
@@ -373,14 +379,19 @@ function renderFacetHistogram(svgEl, groups, label, bins, logX, opts = {}) {
       svgEl.appendChild(rect);
     });
     // Right-side max count text
-    svgEl.appendChild(text(W - PAD.right + 2, facetTop + 8, `max=${maxCount}`, "start"));
+    const maxText = text(W - PAD.right + 2, facetTop + 8, `max=${maxCount}`, "start");
+    maxText.setAttribute("font-size", String(tickFs));
+    svgEl.appendChild(maxText);
   });
   // X axis label at the bottom (shared)
-  svgEl.appendChild(text(W / 2, totalH - 2, label || "", "middle"));
+  const xLabelEl = text(W / 2, totalH - 2, label || "", "middle");
+  xLabelEl.setAttribute("font-size", String(labelFs));
+  xLabelEl.setAttribute("font-weight", "600");
+  svgEl.appendChild(xLabelEl);
   return { n: allVals.length, binCount: k, max: Math.max(...countsByGroup.flat()), groups: filtered.length, facet: true };
 }
 
-function renderGroupHistogram(svgEl, groups, label, bins, logX) {
+function renderGroupHistogram(svgEl, groups, label, bins, logX, opts = {}) {
   // Filter each group to positive values only when log axis is on.
   const filtered = groups.map(g => ({
     name: g.name,
@@ -412,6 +423,10 @@ function renderGroupHistogram(svgEl, groups, label, bins, logX) {
   const innerH = H - PAD.top - PAD.bottom;
   const x = (i) => PAD.left + (i / k) * innerW;
   const y = (c) => PAD.top + innerH - (c / maxCount) * innerH;
+  // Cycle 290: axisFontSize for overlay histogram.
+  const fsKey = opts.axisFontSize === "S" || opts.axisFontSize === "L" ? opts.axisFontSize : "M";
+  const tickFs = fsKey === "S" ? 7 : fsKey === "L" ? 11 : 9;
+  const labelFs = tickFs + 1;
   // Axes
   const axis = el("g", { class: "axis" });
   axis.appendChild(line(PAD.left, H - PAD.bottom, W - PAD.right, H - PAD.bottom));
@@ -421,14 +436,21 @@ function renderGroupHistogram(svgEl, groups, label, bins, logX) {
     axis.appendChild(line(tx, H - PAD.bottom, tx, H - PAD.bottom + 3));
     const sval = sMin + f * (sMax - sMin);
     const raw = logX ? Math.pow(10, sval) : sval;
-    axis.appendChild(text(tx, H - PAD.bottom + 12, formatShort(raw), "middle"));
+    const t = text(tx, H - PAD.bottom + 12, formatShort(raw), "middle");
+    t.setAttribute("font-size", String(tickFs));
+    axis.appendChild(t);
   }
   for (const c of [0, maxCount]) {
     const ty = y(c);
     axis.appendChild(line(PAD.left - 3, ty, PAD.left, ty));
-    axis.appendChild(text(PAD.left - 5, ty + 3, String(c), "end"));
+    const t = text(PAD.left - 5, ty + 3, String(c), "end");
+    t.setAttribute("font-size", String(tickFs));
+    axis.appendChild(t);
   }
-  axis.appendChild(text(W / 2, H - 4, label || "", "middle"));
+  const xLabelEl = text(W / 2, H - 4, label || "", "middle");
+  xLabelEl.setAttribute("font-size", String(labelFs));
+  xLabelEl.setAttribute("font-weight", "600");
+  axis.appendChild(xLabelEl);
   svgEl.appendChild(axis);
   // Bars per group, overlaid translucent
   const barW = innerW / k;
