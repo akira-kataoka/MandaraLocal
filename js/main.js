@@ -119,6 +119,7 @@ const els = {
   btnSvg:       $("btn-export-svg"),
   btnCsv:       $("btn-export-csv"),
   btnMeasure:   $("btn-measure"),
+  btnArea:      $("btn-area"),
   btnTheme:     $("btn-theme"),
 };
 
@@ -730,9 +731,12 @@ els.btnCsv.addEventListener("click", exportCurrentCsv);
 els.btnTheme.addEventListener("click", toggleTheme);
 
 let measureOn = false;
-els.btnMeasure.addEventListener("click", () => {
-  measureOn = !measureOn;
-  if (measureOn) {
+let areaOn = false;
+
+function toggleMeasure(on) {
+  measureOn = on;
+  if (on) {
+    if (areaOn) toggleArea(false);
     mapper.enableMeasureTool();
     els.btnMeasure.classList.add("btn-primary");
     setSummary("地図を2点クリックして距離を測定。3点目で再開始。", "muted");
@@ -740,7 +744,21 @@ els.btnMeasure.addEventListener("click", () => {
     mapper.disableMeasureTool();
     els.btnMeasure.classList.remove("btn-primary");
   }
-});
+}
+function toggleArea(on) {
+  areaOn = on;
+  if (on) {
+    if (measureOn) toggleMeasure(false);
+    mapper.enableAreaTool();
+    els.btnArea.classList.add("btn-primary");
+    setSummary("クリックで頂点を追加・ダブルクリックで面積を確定 (km² / m²)", "muted");
+  } else {
+    mapper.disableAreaTool();
+    els.btnArea.classList.remove("btn-primary");
+  }
+}
+els.btnMeasure.addEventListener("click", () => toggleMeasure(!measureOn));
+els.btnArea.addEventListener("click", () => toggleArea(!areaOn));
 
 function toggleTheme() {
   const next = document.body.classList.toggle("dark");

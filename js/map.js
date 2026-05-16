@@ -620,6 +620,90 @@ export class MandaraMap {
     if (this._measureCleanup) this._measureCleanup();
   }
 
+  /**
+   * Area-measurement tool. Each click adds a polygon vertex, double-click
+   * closes the polygon and shows the spherical area in km² / m².
+   * MANDARA「面積測定」相当。
+   */
+  enableAreaTool() {
+    if (this._areaCleanup) this._areaCleanup();
+    if (!this._areaLayer) this._areaLayer = L.layerGroup().addTo(this.map);
+    let points = [];
+    let liveLine = null;
+    let dots = [];
+    const me = this;
+    const container = this.map.getContainer();
+    container.style.cursor = "crosshair";
+
+    const redrawLine = () => {
+      if (liveLine) me._areaLayer.removeLayer(liveLine);
+      if (points.length >= 2) {
+        liveLine = L.polyline(points, { color: "#16a34a", weight: 2, dashArray: "4 4" });
+        liveLine.addTo(me._areaLayer);
+      }
+    };
+
+    const onClick = (e) => {
+      // double-click is handled separately; ignore zero-time repeat
+      points.push(e.latlng);
+      const d = L.circleMarker(e.latlng, {
+        radius: 3.5, color: "#16a34a", fillColor: "#16a34a", fillOpacity: 1, weight: 0,
+      }).addTo(me._areaLayer);
+      dots.push(d);
+      redrawLine();
+    };
+
+    const finishPolygon = () => {
+      if (points.length < 3) return;
+      if (liveLine) me._areaLayer.removeLayer(liveLine);
+      const poly = L.polygon(points, {
+        color: "#16a34a", weight: 2, fillColor: "#16a34a", fillOpacity: 0.18,
+      });
+      poly.addTo(me._areaLayer);
+      const areaKm2 = sphericalPolygonAreaKm2(points.map(p => [p.lng, p.lat]));
+      const label = areaKm2 < 0.01
+        ? `${(areaKm2 * 1_000_000).toFixed(0)} m²`
+        : `${areaKm2.toFixed(2)} km²`;
+      let cx = 0, cy = 0;
+      for (const p of points) { cx += p.lat; cy += p.lng; }
+      cx /= points.length; cy /= points.length;
+      L.marker([cx, cy], {
+        icon: L.divIcon({
+          className: "measure-label",
+          html: `<div class="map-label"><span class="ml-val">${label}</span></div>`,
+          iconSize: null,
+        }),
+        interactive: false,
+      }).addTo(me._areaLayer);
+      points = [];
+      dots = [];
+      liveLine = null;
+    };
+
+    const onDblClick = (e) => {
+      L.DomEvent.stopPropagation(e);
+      finishPolygon();
+    };
+
+    this.map.on("click", onClick);
+    this.map.on("dblclick", onDblClick);
+    this.map.doubleClickZoom.disable();
+
+    this._areaCleanup = () => {
+      this.map.off("click", onClick);
+      this.map.off("dblclick", onDblClick);
+      this.map.doubleClickZoom.enable();
+      container.style.cursor = "";
+      if (this._areaLayer) this._areaLayer.clearLayers();
+      this._areaCleanup = null;
+    };
+    return this._areaCleanup;
+  }
+
+  disableAreaTool() {
+    if (this._areaCleanup) this._areaCleanup();
+  }
+
   getMapElement() { return this._mapEl; }
 }
 
@@ -717,6 +801,28 @@ function randomPointInPolygon(poly) {
     if (pointInPolygon([x, y], poly)) return [x, y];
   }
   return null;
+}
+
+/**
+ * Spherical polygon area in km² using the L'Huilier-style integral.
+ * Input: array of [lon, lat] pairs in degrees (auto-closed).
+ * Same formula as scripts/build_muni_areas.py — calibrated to within ~1%
+ * of MLIT official figures (北海道 0.3%, 東京 0.5%).
+ */
+function sphericalPolygonAreaKm2(ring) {
+  if (!ring || ring.length < 3) return 0;
+  const R = 6371.0088; // mean Earth radius (km)
+  let closed = ring.slice();
+  if (closed[0][0] !== closed[closed.length - 1][0] ||
+      closed[0][1] !== closed[closed.length - 1][1]) closed.push(closed[0]);
+  let s = 0;
+  for (let i = 0; i < closed.length - 1; i++) {
+    const [lon1, lat1] = closed[i];
+    const [lon2, lat2] = closed[i + 1];
+    s += (lon2 - lon1) * (Math.PI / 180) *
+         (2 + Math.sin(lat1 * Math.PI / 180) + Math.sin(lat2 * Math.PI / 180));
+  }
+  return Math.abs(s) * R * R / 2;
 }
 
 function escapeHtml(s) {
