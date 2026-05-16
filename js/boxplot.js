@@ -67,6 +67,26 @@ export function renderBoxplot(svgEl, values, label) {
   for (const o of outliers) {
     svgEl.appendChild(make("circle", { cx: x(o), cy, r: 2.5, fill: "#dc2626", "fill-opacity": 0.85 }));
   }
+  // Mean marker (◇ diamond) — drawn in the same color family as scatter overlay (Cycle 105)
+  // so the visual language stays consistent across panels (hist / scatter / box).
+  const mean = v.reduce((a, b) => a + b, 0) / n;
+  const mx = x(mean);
+  const dx = 4;
+  const diamond = make("polygon", {
+    points: `${mx},${cy - dx} ${mx + dx},${cy} ${mx},${cy + dx} ${mx - dx},${cy}`,
+    fill: "#dc2626", stroke: "#ffffff", "stroke-width": 1.4,
+  });
+  const tip = document.createElementNS(svgNS, "title");
+  tip.textContent = `平均 X̄ = ${formatNum(mean)}`;
+  diamond.appendChild(tip);
+  svgEl.appendChild(diamond);
+  // Small μ label above the marker
+  const meanLab = make("text", {
+    x: mx, y: cy - dx - 2, "text-anchor": "middle",
+    "font-size": 8, "font-weight": 700, fill: "#dc2626", "font-family": "sans-serif",
+  });
+  meanLab.textContent = "μ";
+  svgEl.appendChild(meanLab);
 
   // Axis tick labels: min, median, max
   for (const [val, anchor] of [[min, "start"], [med, "middle"], [max, "end"]]) {
@@ -86,5 +106,5 @@ export function renderBoxplot(svgEl, values, label) {
     lbl.textContent = label;
     svgEl.appendChild(lbl);
   }
-  return { n, q1, median: med, q3, min, max, outliers: outliers.length };
+  return { n, q1, median: med, q3, min, max, mean, outliers: outliers.length };
 }
