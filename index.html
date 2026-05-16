@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=177" />
+  <link rel="stylesheet" href="css/style.css?v=178" />
 </head>
 <body>
   <header class="app-header">
@@ -560,6 +560,9 @@
         <div class="form-row inline">
           <label><input type="checkbox" id="chk-scatter-jitter" /> ジッター（離散値の点の重なり回避）</label>
         </div>
+        <div class="form-row inline">
+          <label><input type="checkbox" id="chk-scatter-lowess" /> LOWESS 平滑線（局所重み付き回帰）</label>
+        </div>
         <div class="form-row">
           <label for="scatter-labels">ラベル</label>
           <select id="scatter-labels">
@@ -807,7 +810,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=177"></script>
+  <script type="module" src="js/main.js?v=178"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

@@ -314,6 +314,20 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     }
   }
 
+  // LOWESS smoother (Cycle 178): non-parametric local trend, drawn before
+  // the OLS line so the parametric line stays on top.
+  if (opts.lowess) {
+    const lwPts = lowessCurve(xs2, ys2, 0.5, 50);
+    if (lwPts) {
+      const pts = lwPts.map(([xv, yv]) => `${pxAt(xv).toFixed(1)},${pyAt(yv).toFixed(1)}`).join(" ");
+      const poly = el("polyline", {
+        points: pts,
+        fill: "none", stroke: "#16a34a", "stroke-width": 1.6, opacity: 0.9, class: "regline-lowess",
+      });
+      svgEl.appendChild(poly);
+    }
+  }
+
   // OLS regression line in the *scaled* coordinate system so it stays
   // visually straight even on log axes. Pearson r is still on raw values.
   const r = pearson(x, y);
@@ -715,6 +729,41 @@ export function polyfit(xs, ys, d) {
   }
   return coeffs;
 }
+// LOWESS smoother (Cycle 178). Returns an array of [x, y] points along the
+// X range smoothed by locally weighted linear regression with tricube
+// weights. bandwidth ∈ (0, 1] controls window size as a fraction of n.
+function lowessCurve(xs, ys, bandwidth = 0.5, steps = 50) {
+  const n = xs.length;
+  if (n < 4) return null;
+  const K = Math.max(3, Math.min(n, Math.ceil(bandwidth * n)));
+  const xMin = Math.min(...xs), xMax = Math.max(...xs);
+  if (xMax === xMin) return null;
+  const pairs = xs.map((x, i) => ({ x, y: ys[i] }));
+  const out = [];
+  for (let s = 0; s <= steps; s++) {
+    const xq = xMin + (s / steps) * (xMax - xMin);
+    // K nearest by |x - xq|
+    pairs.sort((a, b) => Math.abs(a.x - xq) - Math.abs(b.x - xq));
+    const window = pairs.slice(0, K);
+    const maxDist = Math.max(...window.map(p => Math.abs(p.x - xq))) || 1e-9;
+    let sw = 0, swx = 0, swy = 0, swxx = 0, swxy = 0;
+    for (const p of window) {
+      const u = Math.abs(p.x - xq) / maxDist;
+      if (u >= 1) continue;
+      const w = (1 - u * u * u) ** 3;
+      sw += w; swx += w * p.x; swy += w * p.y;
+      swxx += w * p.x * p.x; swxy += w * p.x * p.y;
+    }
+    if (sw === 0) continue;
+    const meanX = swx / sw, meanY = swy / sw;
+    const denom = swxx / sw - meanX * meanX;
+    const slope = denom > 0 ? (swxy / sw - meanX * meanY) / denom : 0;
+    const yq = meanY + slope * (xq - meanX);
+    out.push([xq, yq]);
+  }
+  return out.length > 1 ? out : null;
+}
+
 function polyEval(coeffs, x) {
   // Horner's method
   let r = 0;
