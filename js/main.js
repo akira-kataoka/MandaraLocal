@@ -4428,7 +4428,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "277"; // bumped each polish cycle
+const APP_VERSION = "278"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-257 (6 surfaces × Shift+クリック ピン留め + 系列別回帰 + Markdown/CSV出力)";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -5065,8 +5065,18 @@ els.selectScene.addEventListener("change", async () => {
 els.btnSceneDelete.addEventListener("click", () => {
   const name = els.selectScene.value;
   if (!name) return;
-  if (!confirm(`シーン「${name}」を削除しますか？`)) return;
+  // Cycle 278: peek into the scene snapshot to tell the user what they're
+  // about to lose (pins / starred fields / description).
   const all = loadScenes();
+  const snap = all[name];
+  const extras = [];
+  const pinN = Array.isArray(snap?.pinIds) ? snap.pinIds.length : 0;
+  const starN = Array.isArray(snap?.starredFields) ? snap.starredFields.length : 0;
+  if (pinN) extras.push(`📌 ピン ${pinN}件`);
+  if (starN) extras.push(`★ お気に入り列 ${starN}件`);
+  const tag = extras.length ? `\n（含まれる: ${extras.join(" / ")}）` : "";
+  const descLine = snap?.description ? `\n説明: ${snap.description}` : "";
+  if (!confirm(`シーン「${name}」を削除しますか？${descLine}${tag}`)) return;
   delete all[name];
   saveScenes(all);
   refreshSceneList();
