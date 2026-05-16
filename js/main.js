@@ -2085,7 +2085,12 @@ els.scatterLabelN?.addEventListener("change", drawScatter);
 els.scatterLabelN?.addEventListener("input", drawScatter);
 els.scatterLabelPlace?.addEventListener("change", drawScatter);
 els.scatterDegree?.addEventListener("change", drawScatter);
-els.scatterAxisFs?.addEventListener("change", drawScatter);
+els.scatterAxisFs?.addEventListener("change", () => {
+  // Cycle 291: persist axis size across reloads / shared scenes.
+  state.chartAxisFs = els.scatterAxisFs.value;
+  saveSettings(state);
+  refresh();
+});
 els.chkScatterLogX.addEventListener("change", drawScatter);
 els.chkScatterLogY.addEventListener("change", drawScatter);
 els.scatterSwap?.addEventListener("click", () => {
@@ -4447,7 +4452,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "290"; // bumped each polish cycle
+const APP_VERSION = "291"; // bumped each polish cycle
 // Cycle 285: 600ms green pulse on clipboard / save success to give the user
 // immediate visual feedback in addition to setSummary().
 function flashBtn(el) {
@@ -4459,6 +4464,13 @@ function flashBtn(el) {
 (() => {
   const b = document.getElementById("app-version-badge");
   if (b) b.textContent = `v${APP_VERSION}`;
+})();
+// Cycle 291: restore axis font-size from prior session if it survived in state.
+(() => {
+  const v = state.chartAxisFs;
+  if ((v === "S" || v === "M" || v === "L") && els.scatterAxisFs) {
+    els.scatterAxisFs.value = v;
+  }
 })();
 const APP_VERSION_NOTE = "Polish cycles 195-280: ピン留め 6 surface × 5 export × 番号体系 + 系列別回帰 + Markdown/CSV/SVG/PNG/QR";
 function showHelpModal() {
@@ -4914,6 +4926,7 @@ function snapshotCurrent() {
     legendFs: els.selectLegendFs?.value || "m",
     legendPrec: els.selectLegendPrec?.value || "auto",
     legendLayout: els.selectLegendLayout?.value || "vertical",
+    chartAxisFs: els.scatterAxisFs?.value || "M",
     // Cycle 240: include scatter pin selection + color so recipients see the
     // exact same pinned regions when opening a shared URL.
     pinIds: (state.pinnedScatterIds instanceof Set && state.pinnedScatterIds.size)
@@ -5082,6 +5095,11 @@ els.selectScene.addEventListener("change", async () => {
   }
   if (snap.legendLayout !== undefined && els.selectLegendLayout) {
     els.selectLegendLayout.value = snap.legendLayout;
+  }
+  // Cycle 291: restore chart axis font-size selector if present.
+  if ((snap.chartAxisFs === "S" || snap.chartAxisFs === "M" || snap.chartAxisFs === "L") && els.scatterAxisFs) {
+    els.scatterAxisFs.value = snap.chartAxisFs;
+    state.chartAxisFs = snap.chartAxisFs;
   }
   // Apply visibility toggles
   els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both" || state.mode === "graduated");
