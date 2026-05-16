@@ -4110,6 +4110,19 @@ function buildAnalysisMarkdown() {
       lines.push("");
       lines.push("> ⚠ 全体回帰と符号が逆転するグループあり (Simpson's paradox の可能性)");
     }
+    // Cycle 234: include the 2-group slope-difference t-test (Cycle 233)
+    if (gr.slopeTest) {
+      const s = gr.slopeTest;
+      const sig = s.p == null ? ""
+        : s.p < 0.001 ? " ***"
+        : s.p < 0.01 ? " **"
+        : s.p < 0.05 ? " *" : "";
+      const pFmt = s.p == null ? "—"
+        : s.p < 0.001 ? "< 0.001"
+        : s.p.toFixed(3);
+      lines.push("");
+      lines.push(`**2群の傾き差検定:** Δa(${s.cat1} − ${s.cat2}) = ${fmt(s.dSlope)} (SE=${fmt(s.seDiff)}), t(${s.df})=${fmt(s.t, 2)}, p=${pFmt}${sig}`);
+    }
     lines.push("");
   }
 
@@ -7016,7 +7029,14 @@ els.btnGroupRegCsv?.addEventListener("click", () => {
       flip, "",
     ];
   });
-  const csv = [header, ...body].map(line => line.map(esc).join(",")).join("\n");
+  const lines = [header, ...body];
+  // Cycle 234: append the slope-diff t-test as an extra annotated row when present.
+  if (gr.slopeTest) {
+    const s = gr.slopeTest;
+    const note = `slope_diff_test: ${s.cat1} - ${s.cat2} (t(${s.df})=${s.t.toFixed(3)}, p=${s.p == null ? "" : s.p.toFixed(4)})`;
+    lines.push(["__test__", "", s.dSlope.toFixed(6), "", "", "", note]);
+  }
+  const csv = lines.map(line => line.map(esc).join(",")).join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const norm = (s) => String(s).replace(/[\s\\/:*?"<>|]+/g, "_");
