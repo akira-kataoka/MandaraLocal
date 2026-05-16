@@ -18,9 +18,14 @@ export function getSortState() {
  * @param fields    dataset.fields
  * @param onRowHover (id, isOn) -> void
  */
-export function renderTable(container, rows, fields, onRowHover, onCellEdit = null, onRowDelete = null, onRowClick = null) {
+export function renderTable(container, rows, fields, onRowHover, onCellEdit = null, onRowDelete = null, onRowClick = null, opts = {}) {
   container.innerHTML = "";
   if (!rows.length || !fields.length) return;
+
+  // Cycle 208: per-column min/max for cell-background heatmap. Computed once
+  // up-front so the body loop just does the linear interpolation.
+  const heat = !!opts.heat;
+  const heatRange = heat ? buildHeatRanges(rows, fields) : null;
 
   const table = document.createElement("table");
   // header
@@ -66,6 +71,14 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
       const td = document.createElement("td");
       td.className = "num";
       td.textContent = formatNum(r.values[f]);
+      if (heat) {
+        const range = heatRange.get(f);
+        const val = r.values[f];
+        if (range && Number.isFinite(val) && range.max > range.min) {
+          const t = (val - range.min) / (range.max - range.min);
+          td.style.backgroundColor = heatColor(t);
+        }
+      }
       if (onCellEdit) {
         td.title = "ダブルクリックで編集";
         td.style.cursor = "text";
@@ -137,11 +150,43 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
     el.addEventListener("click", () => {
       if (sortState.field === key) sortState.asc = !sortState.asc;
       else { sortState.field = key; sortState.asc = numeric ? false : true; }
-      renderTable(container, rows, fields, onRowHover, onCellEdit, onRowDelete, onRowClick);
+      renderTable(container, rows, fields, onRowHover, onCellEdit, onRowDelete, onRowClick, opts);
     });
     if (numeric) el.style.textAlign = "right";
     return el;
   }
+}
+
+// Cycle 208: build per-column { min, max } from the (possibly filtered) row
+// set so the heatmap reflects what the user is looking at, not the original
+// dataset. Non-finite values are skipped.
+function buildHeatRanges(rows, fields) {
+  const m = new Map();
+  for (const f of fields) m.set(f, { min: Infinity, max: -Infinity });
+  for (const r of rows) {
+    for (const f of fields) {
+      const v = r.values[f];
+      if (!Number.isFinite(v)) continue;
+      const range = m.get(f);
+      if (v < range.min) range.min = v;
+      if (v > range.max) range.max = v;
+    }
+  }
+  return m;
+}
+// Linear ramp blue(low) → white(mid) → red(high). t in [0,1].
+function heatColor(t) {
+  t = Math.max(0, Math.min(1, t));
+  // Stops: 0 → #bfdbfe (blue-200), 0.5 → #ffffff, 1 → #fecaca (red-200).
+  // Soft pastels so dark text on top stays readable.
+  const stops = [[191, 219, 254], [255, 255, 255], [254, 202, 202]];
+  const seg = t < 0.5 ? 0 : 1;
+  const u = (t - seg * 0.5) / 0.5;
+  const a = stops[seg], b = stops[seg + 1];
+  const r = Math.round(a[0] + (b[0] - a[0]) * u);
+  const g = Math.round(a[1] + (b[1] - a[1]) * u);
+  const bl = Math.round(a[2] + (b[2] - a[2]) * u);
+  return `rgb(${r},${g},${bl})`;
 }
 
 function sortRows(rows, fields) {

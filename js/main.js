@@ -160,6 +160,7 @@ const els = {
   tableSearchInfo: $("table-search-info"),
   btnTableCols: $("btn-table-cols"),
   tableColPicker: $("table-col-picker"),
+  chkTableHeat: $("chk-table-heat"),
   panelHist:    $("panel-histogram"),
   histBins:     $("hist-bins"),
   chkHistOverlay: $("chk-hist-overlay"),
@@ -4944,7 +4945,7 @@ function refresh() {
     els.overlayTitle.textContent = state.field;
     els.overlayFooter.textContent = `MandaraNext ·${state.chochoPref}${state.chochoMuni} · ${new Date().toLocaleDateString("ja-JP")}`;
     renderStats(values);
-    renderTable(els.tableWrap, state.dataset.rows, getVisibleFields(), () => {});
+    renderTable(els.tableWrap, state.dataset.rows, getVisibleFields(), () => {}, null, null, null, getTableOpts());
     saveSettings(state);
     return;
   }
@@ -4969,7 +4970,7 @@ function refresh() {
       parts.push(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`);
       els.overlayFooter.textContent = parts.join(" · ");
       renderStats(values);
-      renderTable(els.tableWrap, getTableRows(), getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+      renderTable(els.tableWrap, getTableRows(), getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick, getTableOpts());
       saveSettings(state);
       return;
     }
@@ -4998,7 +4999,7 @@ function refresh() {
       parts.push(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`);
       els.overlayFooter.textContent = parts.join(" · ");
       renderStats(values);
-      renderTable(els.tableWrap, getTableRows(), getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+      renderTable(els.tableWrap, getTableRows(), getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick, getTableOpts());
       saveSettings(state);
       return;
     }
@@ -5143,7 +5144,7 @@ function refresh() {
   }
 
   // Data table — with inline editing
-  renderTable(els.tableWrap, getTableRows(), getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+  renderTable(els.tableWrap, getTableRows(), getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick, getTableOpts());
 
   // Box plot
   if (els.boxplotSvg) {
@@ -5331,6 +5332,15 @@ function getTableRows() {
   );
 }
 
+// Cycle 208: shared opts builder so every renderTable call carries the heat
+// toggle, column visibility persistence, and any future per-table flags.
+function getTableOpts() {
+  return { heat: !!els.chkTableHeat?.checked };
+}
+els.chkTableHeat?.addEventListener("change", () => {
+  if (state.dataset) refreshTable();
+});
+
 // Cycle 200: per-column visibility — users can hide noisy/irrelevant fields
 // from the data table. Hidden columns remain in the dataset (and CSV export);
 // only the on-screen rendering is filtered.
@@ -5434,7 +5444,7 @@ function moveColumn(i, dir) {
 function refreshTable() {
   if (!state.dataset) return;
   const filtered = (typeof getTableRows === "function") ? getTableRows() : state.dataset.rows;
-  renderTable(els.tableWrap, filtered, getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+  renderTable(els.tableWrap, filtered, getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick, getTableOpts());
 }
 els.btnTableCols?.addEventListener("click", () => {
   if (!state.dataset?.fields?.length) return;
@@ -5452,7 +5462,7 @@ els.tableSearch?.addEventListener("input", () => {
   _tableSearchTimer = setTimeout(() => {
     if (state.dataset) {
       const filtered = getTableRows();
-      renderTable(els.tableWrap, filtered, getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+      renderTable(els.tableWrap, filtered, getVisibleFields(), onTableRowHover, onCellEdit, onRowDelete, onTableRowClick, getTableOpts());
       updateTableSearchInfo(filtered.length);
     }
     _tableSearchTimer = null;
