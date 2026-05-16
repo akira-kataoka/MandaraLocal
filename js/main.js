@@ -4053,6 +4053,20 @@ function buildAnalysisMarkdown() {
   const lines = [];
   const fmt = (v, d = 3) => (v == null || !Number.isFinite(v)) ? "—" : v.toFixed(d);
   lines.push(`# MandaraNext 分析サマリー`);
+  // Cycle 244: surface the scene / source / author metadata at the top so a
+  // copied report identifies itself when shared.
+  const meta = [];
+  const sceneVal = els.selectScene?.value || "";
+  if (sceneVal) meta.push(`シーン: ${sceneVal.startsWith("demo:") ? sceneVal.slice(5) + " (サンプル)" : sceneVal}`);
+  const titleVal = (els.inputMapTitle?.value || "").trim();
+  if (titleVal) meta.push(`タイトル: ${titleVal}`);
+  const subtitleVal = (els.inputMapSubtitle?.value || "").trim();
+  if (subtitleVal) meta.push(`サブタイトル: ${subtitleVal}`);
+  const authorVal = (els.inputMapAuthor?.value || "").trim();
+  if (authorVal) meta.push(`作成者: ${authorVal}`);
+  const sourceVal = (els.inputDataSource?.value || "").trim();
+  if (sourceVal) meta.push(`データ出典: ${sourceVal}`);
+  for (const m of meta) lines.push(`*${m}*`);
   lines.push(`*生成: ${new Date().toLocaleString("ja-JP")}*`);
   lines.push("");
   if (!state.dataset) {
