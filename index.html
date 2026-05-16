@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=192" />
+  <link rel="stylesheet" href="css/style.css?v=193" />
 </head>
 <body>
   <header class="app-header">
@@ -467,6 +467,7 @@
           <label for="hist-bins">階級数</label>
           <input type="number" id="hist-bins" min="3" max="30" value="10" />
         </div>
+        <div id="hist-bins-hint" style="font-size:10px;color:var(--muted);margin-bottom:4px"></div>
         <div class="form-row inline">
           <label><input type="checkbox" id="chk-hist-overlay" checked /> 統計線（μ・中央値・±1σ）</label>
         </div>
@@ -815,7 +816,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=192"></script>
+  <script type="module" src="js/main.js?v=193"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

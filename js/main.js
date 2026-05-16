@@ -159,6 +159,7 @@ const els = {
   chkHistOverlay: $("chk-hist-overlay"),
   chkHistBreaks:  $("chk-hist-breaks"),
   chkHistLogX:    $("chk-hist-logx"),
+  histBinsHint:   $("hist-bins-hint"),
   panelBox:     $("panel-boxplot"),
   boxplotSvg:   $("boxplot-svg"),
   histSvg:      $("histogram-svg"),
@@ -4894,6 +4895,8 @@ function refresh() {
   // Histogram with bin → map highlight link
   if (els.histSvg) {
     const bins = parseInt(els.histBins.value, 10) || 10;
+    // Update bin-count hint (Cycle 193): Sturges + Freedman-Diaconis suggestions.
+    updateHistBinsHint(values);
     // Group overlay (Cycle 176) when scatter color-by is set and category
     // count is in [2, 4]. Same path as the grouped boxplot (Cycle 175).
     const colorByField = els.scatterColorBy?.value || "";
@@ -5444,6 +5447,41 @@ async function copyClassMembers(classIdx) {
   } catch (e) {
     setSummary(`第${classIdx + 1}階級の ${members.length} 件を地図ハイライト（コピー失敗: ${e.message}）`, "warn");
   }
+}
+
+// Cycle 193: show Sturges + Freedman-Diaconis bin-count suggestions below the
+// histogram bin input. Clicking either suggestion applies it.
+function updateHistBinsHint(values) {
+  if (!els.histBinsHint) return;
+  const v = values.filter(Number.isFinite);
+  if (v.length < 3) { els.histBinsHint.innerHTML = ""; return; }
+  const n = v.length;
+  const sturges = Math.max(3, Math.min(30, Math.ceil(Math.log2(n) + 1)));
+  const sorted = v.slice().sort((a, b) => a - b);
+  const q = (p) => {
+    const idx = (n - 1) * p;
+    const lo = Math.floor(idx), hi = Math.ceil(idx);
+    return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+  };
+  const iqr = q(0.75) - q(0.25);
+  const range = sorted[n - 1] - sorted[0];
+  let fd = sturges;
+  if (iqr > 0 && range > 0) {
+    const binWidth = 2 * iqr / Math.cbrt(n);
+    fd = Math.max(3, Math.min(30, Math.ceil(range / binWidth)));
+  }
+  els.histBinsHint.innerHTML =
+    `推奨: <a href="#" data-bin="${sturges}">Sturges=${sturges}</a> / ` +
+    `<a href="#" data-bin="${fd}">FD=${fd}</a>`;
+  els.histBinsHint.querySelectorAll("a[data-bin]").forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      const b = parseInt(a.dataset.bin, 10);
+      if (!b) return;
+      els.histBins.value = String(b);
+      refresh();
+    });
+  });
 }
 
 function suggestClassMethod(values) {
