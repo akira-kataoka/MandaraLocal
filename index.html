@@ -10,7 +10,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
 
-  <link rel="stylesheet" href="css/style.css?v=47" />
+  <link rel="stylesheet" href="css/style.css?v=48" />
 </head>
 <body>
   <header class="app-header">
@@ -192,11 +192,19 @@
             <option value="quantile">等量区分（分位数）</option>
             <option value="equal">等値区分（等間隔）</option>
             <option value="jenks">自然区分（Jenks）</option>
+            <option value="manual">手動区分</option>
           </select>
         </div>
         <div class="form-row">
           <label for="input-classes">階級数</label>
           <input type="number" id="input-classes" min="2" max="9" value="5" />
+        </div>
+        <div class="form-row" id="row-manual-breaks" hidden>
+          <label for="input-manual-breaks" style="min-width:78px">境界値</label>
+          <input id="input-manual-breaks" type="text" placeholder="例: 100000, 500000, 1000000, 5000000" />
+        </div>
+        <div class="form-row hint" id="hint-manual" hidden>
+          昇順カンマ区切り。境界値が k-1 個あれば k 階級になる
         </div>
         <div class="form-row">
           <label for="select-palette">色パレット</label>
@@ -359,6 +367,6 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=47"></script>
+  <script type="module" src="js/main.js?v=48"></script>
 </body>
 </html>

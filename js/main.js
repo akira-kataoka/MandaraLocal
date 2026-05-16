@@ -88,6 +88,9 @@ const els = {
   panelClass:   $("panel-class"),
   selectMethod: $("select-method"),
   inputClasses: $("input-classes"),
+  rowManualBreaks: $("row-manual-breaks"),
+  inputManualBreaks: $("input-manual-breaks"),
+  hintManual:     $("hint-manual"),
   selectPalette:$("select-palette"),
   chkReverse:   $("chk-reverse"),
   palettePreview: $("palette-preview"),
@@ -696,8 +699,12 @@ els.inputMaxR.addEventListener("change", () => {
 });
 els.selectMethod.addEventListener("change", () => {
   state.method = els.selectMethod.value;
+  const manualOn = state.method === "manual";
+  els.rowManualBreaks.hidden = !manualOn;
+  els.hintManual.hidden = !manualOn;
   refresh();
 });
+els.inputManualBreaks.addEventListener("change", () => refresh());
 els.inputClasses.addEventListener("change", () => {
   const n = clamp(parseInt(els.inputClasses.value || "5", 10), 2, 9);
   els.inputClasses.value = n;
@@ -1113,7 +1120,10 @@ function onDatasetReady(ds, label) {
 function refresh() {
   if (!state.dataset || !state.field) return;
   const values = state.dataset.rows.map(r => r.values[state.field]);
-  const { breaks } = computeBreaks(values, state.classes, state.method);
+  const manualBreaks = state.method === "manual"
+    ? els.inputManualBreaks.value.split(/[,、\s]+/).map(s => parseFloat(s.replace(/,/g, ""))).filter(v => Number.isFinite(v))
+    : null;
+  const { breaks } = computeBreaks(values, state.classes, state.method, { manualBreaks });
   state.breaks = breaks;
   state.colors = getPalette(state.palette, Math.max(1, breaks.length - 1), state.reverse);
   state.valueMap = buildValueLookup(state.dataset, state.field);

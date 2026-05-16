@@ -27,6 +27,15 @@ export function computeBreaks(values, classes, method, opts = {}) {
   }
 
   let breaks;
+  if (method === "manual" && Array.isArray(opts.manualBreaks) && opts.manualBreaks.length) {
+    // Manual breaks are interior cut points (k-1 of them for k classes).
+    // We sandwich them between the data min/max to form k+1 boundaries.
+    const inner = opts.manualBreaks.filter(v => Number.isFinite(v)).slice().sort((a, b) => a - b);
+    const rawMin = useLog ? Math.pow(10, min) : min;
+    const rawMax = useLog ? Math.pow(10, max) : max;
+    breaks = [Math.min(rawMin, inner[0] ?? rawMin), ...inner, Math.max(rawMax, inner[inner.length - 1] ?? rawMax)];
+    return { breaks, method, classes: breaks.length - 1, log: useLog };
+  }
   if (method === "equal")      breaks = equalBreaks(min, max, classes);
   else if (method === "jenks") breaks = jenksBreaks(sorted, classes);
   else                         breaks = quantileBreaks(sorted, classes);
