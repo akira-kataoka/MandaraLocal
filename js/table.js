@@ -133,7 +133,9 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
         // editable cell's <input> (cell edit takes priority).
         const t = e.target;
         if (t.closest("button") || t.tagName === "INPUT") return;
-        onRowClick(r.key);
+        // Cycle 251: pass the event so callers can branch on shiftKey (pin)
+        // vs plain click (zoom). Old callers ignore the second arg.
+        onRowClick(r.key, e);
       });
     }
     tbody.appendChild(tr);

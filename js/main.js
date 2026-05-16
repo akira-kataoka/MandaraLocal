@@ -4378,6 +4378,7 @@ function showHelpModal() {
       <span>🌡 ヒート</span><span>列ごとの min/max で背景色を青→白→赤</span>
       <span>列ヘッダクリック</span><span>ソート切替</span>
       <span>セル ダブルクリック</span><span>値をその場で編集</span>
+      <span>Shift+行クリック</span><span>その地域をピン留め（散布図・地図と連動）</span>
       <span>行ホバー</span><span>地図ハイライト</span>
 
       <strong>共有</strong><span></span>
@@ -6196,7 +6197,19 @@ function onTableRowHover(id, isOn) {
   else      mapper.clearHighlight();
 }
 
-function onTableRowClick(id) {
+function onTableRowClick(id, ev) {
+  // Cycle 251: Shift+click toggles a scatter pin from the table side. Keeps
+  // the same ergonomics as the scatter plot itself (Cycle 212).
+  if (ev && ev.shiftKey) {
+    if (!(state.pinnedScatterIds instanceof Set)) state.pinnedScatterIds = new Set();
+    if (state.pinnedScatterIds.has(id)) state.pinnedScatterIds.delete(id);
+    else state.pinnedScatterIds.add(id);
+    syncScatterPinBtn();
+    drawScatter();
+    if (typeof refreshTable === "function") refreshTable();
+    mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
+    return;
+  }
   // Pan + zoom the map to the clicked region (Cycle 179).
   if (state.level === "chocho") return; // town points: no polygon to zoom to
   mapper.zoomToFeature?.(id);
