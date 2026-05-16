@@ -210,6 +210,7 @@ const els = {
   scatterShapeBy: $("scatter-shape-by"),
   scatterSizeBy:   $("scatter-size-by"),
   chkScatterStats: $("chk-scatter-stats"),
+  chkScatterRegGroup: $("chk-scatter-reg-group"),
   chkScatterCi:    $("chk-scatter-ci"),
   chkScatterPi:    $("chk-scatter-pi"),
   chkScatterYx:    $("chk-scatter-yx"),
@@ -1882,6 +1883,7 @@ els.scatterColorBy?.addEventListener("change", drawScatter);
 els.scatterSizeBy?.addEventListener("change", drawScatter);
 els.scatterLabelBy?.addEventListener("change", drawScatter);
 els.scatterShapeBy?.addEventListener("change", drawScatter);
+els.chkScatterRegGroup?.addEventListener("change", drawScatter);
 els.chkScatterStats?.addEventListener("change", drawScatter);
 els.chkScatterCi?.addEventListener("change", drawScatter);
 els.chkScatterPi?.addEventListener("change", drawScatter);
@@ -1904,7 +1906,7 @@ document.getElementById("btn-scatter-clear-overlays")?.addEventListener("click",
   const toggles = [
     "chk-scatter-stats", "chk-scatter-ci", "chk-scatter-pi",
     "chk-scatter-yx", "chk-scatter-zero", "chk-scatter-jitter",
-    "chk-scatter-lowess",
+    "chk-scatter-lowess", "chk-scatter-reg-group",
   ];
   let any = false;
   for (const id of toggles) {
@@ -6604,6 +6606,7 @@ function drawScatter() {
     pinnedIds: state.pinnedScatterIds instanceof Set ? state.pinnedScatterIds : null,
     shapeFor,
     shapeLegend,
+    regressionByGroup: !!els.chkScatterRegGroup?.checked,
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
     onBrush: (ids) => {
       mapper.markOutliers(ids);

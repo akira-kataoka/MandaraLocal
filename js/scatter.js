@@ -443,6 +443,37 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
         class: "regline",
       });
       svgEl.appendChild(lineEl);
+      // Cycle 221: per-category regression lines for Simpson's-paradox checks.
+      // Only when the color-by category map is active. Each line spans the
+      // category's own x range, drawn as a dashed colored stroke.
+      if (opts.regressionByGroup && catMap && categoryFor) {
+        const groups = new Map();
+        for (let i = 0; i < pairs.length; i++) {
+          const fid = pairs[i][2];
+          if (fid == null) continue;
+          const cat = categoryFor(fid);
+          if (cat == null || cat === "") continue;
+          const key = String(cat);
+          if (!groups.has(key)) groups.set(key, { xs: [], ys: [] });
+          groups.get(key).xs.push(xs2[i]);
+          groups.get(key).ys.push(ys2[i]);
+        }
+        for (const [cat, gd] of groups) {
+          if (gd.xs.length < 3) continue;
+          const reg = ols(gd.xs, gd.ys);
+          if (!Number.isFinite(reg.slope) || !Number.isFinite(reg.intercept)) continue;
+          const gXmin = Math.min(...gd.xs), gXmax = Math.max(...gd.xs);
+          if (gXmin === gXmax) continue;
+          const color = catMap.get(cat) || catMap.get("__other__") || "#475569";
+          const ln = el("line", {
+            x1: pxAt(gXmin), y1: pyAt(reg.slope * gXmin + reg.intercept),
+            x2: pxAt(gXmax), y2: pyAt(reg.slope * gXmax + reg.intercept),
+            stroke: color, "stroke-width": "1.3", "stroke-dasharray": "4 2", opacity: "0.85",
+            class: "regline-group",
+          });
+          svgEl.appendChild(ln);
+        }
+      }
     } else {
       const polyCoeffs = polyfit(xs2, ys2, degree);
       if (polyCoeffs) {

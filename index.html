@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=220" />
+  <link rel="stylesheet" href="css/style.css?v=221" />
 </head>
 <body>
   <header class="app-header">
@@ -603,6 +603,9 @@
           <button id="btn-scatter-pins-csv" class="btn" type="button" style="font-size:11px" hidden title="ピン留めした点の全フィールドをCSVで保存">📋 ピンCSV</button>
         </div>
         <div class="form-row inline">
+          <label title="色分け列でグループ化されている場合、各グループの回帰線（破線）を追加"><input type="checkbox" id="chk-scatter-reg-group" /> 系列別回帰線（Simpson's paradox 検出）</label>
+        </div>
+        <div class="form-row inline">
           <label><input type="checkbox" id="chk-scatter-stats" /> 統計オーバーレイ（重心 + IQR）</label>
         </div>
         <div class="form-row inline">
@@ -876,7 +879,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=220"></script>
+  <script type="module" src="js/main.js?v=221"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
