@@ -1585,6 +1585,7 @@ function runMultipleRegression() {
     yField, xFields, coeffs, se, tStats, pValues, ciLo, ciHi, vif,
     n, p, R2, adjR2, F, pF, dfModel, dfResid, residualSE: Math.sqrt(sigma2),
     labels: ["(Intercept)", ...xFields],
+    fitted: yhat, residuals,
   };
   renderMrResult(state.mrResult);
   if (els.mrCsv) els.mrCsv.disabled = false;
@@ -1625,7 +1626,70 @@ function renderMrResult(r) {
     (r.F != null ? `, F(${r.dfModel},${r.dfResid})=${fmt(r.F, 2)}, p=${pFmt(r.pF)}` : "") +
     `, 残差SE=${fmt(r.residualSE, 3)}` +
     `</div>`;
+  // Residual plot (Cycle 142) — diagnostic for model adequacy.
+  html += `<div style="margin-top:6px;font-size:11px;font-weight:600">残差プロット (Residuals vs Fitted)</div>`;
+  html += `<svg id="mr-residual-svg" width="280" height="140" viewBox="0 0 280 140" style="background:#fff;border:1px solid #e2e8f0"></svg>`;
   els.mrResult.innerHTML = html;
+  renderResidualPlot(r);
+}
+
+function renderResidualPlot(r) {
+  const svg = els.mrResult.querySelector("#mr-residual-svg");
+  if (!svg || !r.fitted || !r.residuals) return;
+  const NS = "http://www.w3.org/2000/svg";
+  const make = (tag, attrs) => {
+    const e = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    return e;
+  };
+  const W = 280, H = 140, PAD = { top: 8, right: 8, bottom: 22, left: 36 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+  const fits = r.fitted, res = r.residuals;
+  const fMin = Math.min(...fits), fMax = Math.max(...fits);
+  const rMax = Math.max(...res.map(Math.abs));
+  if (!(fMax > fMin) || !(rMax > 0)) return;
+  const px = (v) => PAD.left + ((v - fMin) / (fMax - fMin)) * innerW;
+  const py = (v) => PAD.top + innerH - ((v + rMax) / (2 * rMax)) * innerH;
+  // Axes
+  svg.appendChild(make("line", { x1: PAD.left, y1: H - PAD.bottom, x2: W - PAD.right, y2: H - PAD.bottom, stroke: "#94a3b8" }));
+  svg.appendChild(make("line", { x1: PAD.left, y1: PAD.top, x2: PAD.left, y2: H - PAD.bottom, stroke: "#94a3b8" }));
+  // y=0 reference line
+  const yZero = py(0);
+  svg.appendChild(make("line", {
+    x1: PAD.left, y1: yZero, x2: W - PAD.right, y2: yZero,
+    stroke: "#dc2626", "stroke-width": 1, "stroke-dasharray": "3,2",
+  }));
+  // ±1σ residual band
+  const sd = r.residualSE || 0;
+  if (sd > 0 && sd <= rMax) {
+    const yPlus = py(sd), yMinus = py(-sd);
+    svg.appendChild(make("rect", {
+      x: PAD.left, y: Math.min(yPlus, yMinus),
+      width: innerW, height: Math.abs(yPlus - yMinus),
+      fill: "rgba(37,99,235,0.06)", stroke: "none",
+    }));
+  }
+  // Points
+  for (let i = 0; i < fits.length; i++) {
+    svg.appendChild(make("circle", {
+      cx: px(fits[i]), cy: py(res[i]), r: 2.2,
+      fill: "rgba(15,23,42,0.6)", stroke: "#1e293b", "stroke-width": 0.3,
+    }));
+  }
+  // Axis labels
+  const lbl = (x, y, text, anchor = "middle") => {
+    const t = make("text", { x, y, "font-size": 8, fill: "#475569", "text-anchor": anchor });
+    t.textContent = text; svg.appendChild(t);
+  };
+  lbl(W / 2, H - 6, "予測値 (Fitted)");
+  lbl(4, PAD.top + innerH / 2, "残差", "start");
+  // y tick marks at +rMax, 0, -rMax
+  for (const [val, anchor] of [[rMax, "end"], [0, "end"], [-rMax, "end"]]) {
+    const y = py(val);
+    svg.appendChild(make("line", { x1: PAD.left - 2, y1: y, x2: PAD.left, y2: y, stroke: "#94a3b8" }));
+    lbl(PAD.left - 4, y + 3, val === 0 ? "0" : (val >= 1000 ? (val / 1000).toFixed(0) + "k" : val.toFixed(1)), "end");
+  }
 }
 
 els.mrRun?.addEventListener("click", runMultipleRegression);
