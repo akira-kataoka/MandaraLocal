@@ -211,6 +211,7 @@ const els = {
   scatterSizeBy:   $("scatter-size-by"),
   chkScatterStats: $("chk-scatter-stats"),
   chkScatterRegGroup: $("chk-scatter-reg-group"),
+  chkScatterStatsTitle: $("chk-scatter-stats-title"),
   chkScatterCi:    $("chk-scatter-ci"),
   chkScatterPi:    $("chk-scatter-pi"),
   chkScatterYx:    $("chk-scatter-yx"),
@@ -1888,6 +1889,7 @@ els.scatterSizeBy?.addEventListener("change", drawScatter);
 els.scatterLabelBy?.addEventListener("change", drawScatter);
 els.scatterShapeBy?.addEventListener("change", drawScatter);
 els.chkScatterRegGroup?.addEventListener("change", drawScatter);
+els.chkScatterStatsTitle?.addEventListener("change", drawScatter);
 els.chkScatterStats?.addEventListener("change", drawScatter);
 els.chkScatterCi?.addEventListener("change", drawScatter);
 els.chkScatterPi?.addEventListener("change", drawScatter);
@@ -6660,6 +6662,7 @@ function drawScatter() {
     shapeFor,
     shapeLegend,
     regressionByGroup: !!els.chkScatterRegGroup?.checked,
+    titleStats: !!els.chkScatterStatsTitle?.checked,
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
     onBrush: (ids) => {
       mapper.markOutliers(ids);

@@ -738,6 +738,20 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     svgEl.appendChild(lg);
   }
 
+  // Cycle 227: optional statistics subtitle drawn inside the SVG so PNG/SVG
+  // exports carry n / r / R² without the user having to caption the image.
+  if (opts.titleStats && Number.isFinite(r) && nValid >= 2) {
+    const r2pct = (r * r * 100).toFixed(1);
+    const t = el("text", {
+      x: PAD.left + (W - PAD.left - PAD.right) / 2,
+      y: 8,
+      "text-anchor": "middle",
+      "font-size": 9, "font-weight": 600, fill: "#475569",
+    });
+    t.textContent = `n=${nValid}  r=${r.toFixed(3)}  R²=${r2pct}%`;
+    svgEl.appendChild(t);
+  }
+
   return {
     r, rho, rCI, rhoCI, n: nValid, slope, intercept,
     r2: Number.isFinite(r) ? r*r : null,

@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=226" />
+  <link rel="stylesheet" href="css/style.css?v=227" />
 </head>
 <body>
   <header class="app-header">
@@ -605,6 +605,7 @@
         </div>
         <div class="form-row inline">
           <label title="色分け列でグループ化されている場合、各グループの回帰線（破線）を追加"><input type="checkbox" id="chk-scatter-reg-group" /> 系列別回帰線（Simpson's paradox 検出）</label>
+          <label style="margin-left:8px" title="散布図の左上に n / r / R² の小型サマリーを描画。PNG/SVG出力にも含まれる"><input type="checkbox" id="chk-scatter-stats-title" /> 統計サブタイトル</label>
         </div>
         <div class="form-row inline">
           <label><input type="checkbox" id="chk-scatter-stats" /> 統計オーバーレイ（重心 + IQR）</label>
@@ -885,7 +886,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=226"></script>
+  <script type="module" src="js/main.js?v=227"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
