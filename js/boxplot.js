@@ -108,3 +108,114 @@ export function renderBoxplot(svgEl, values, label) {
   }
   return { n, q1, median: med, q3, min, max, mean, outliers: outliers.length };
 }
+
+// Grouped boxplot (Cycle 175): stacks one horizontal box per category to
+// visualize between-group differences (companion to Welch's t / ANOVA).
+const GROUP_PALETTE = [
+  "#2563eb", "#dc2626", "#16a34a", "#d97706",
+  "#9333ea", "#0891b2", "#db2777", "#65a30d",
+];
+export function renderGroupedBoxplot(svgEl, groups, label) {
+  svgEl.innerHTML = "";
+  if (!groups || groups.length === 0) return { n: 0 };
+  const G = groups.length;
+  const PAD2 = { top: 12, right: 14, bottom: 28, left: 70 };
+  const rowH = 22;
+  const totalH = PAD2.top + PAD2.bottom + G * rowH;
+  // Update SVG viewBox & physical height to fit groups
+  const W2 = W;
+  svgEl.setAttribute("viewBox", `0 0 ${W2} ${totalH}`);
+  svgEl.setAttribute("height", String(totalH));
+  // Compute per-group stats
+  const groupStats = groups.map(g => {
+    const v = g.values.filter(Number.isFinite);
+    if (v.length < 4) return null;
+    const sorted = v.slice().sort((a, b) => a - b);
+    const q = (p) => {
+      const idx = (v.length - 1) * p;
+      const lo = Math.floor(idx), hi = Math.ceil(idx);
+      return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+    };
+    const q1 = q(0.25), med = q(0.5), q3 = q(0.75);
+    const iqr = q3 - q1;
+    const wLo = q1 - 1.5 * iqr, wHi = q3 + 1.5 * iqr;
+    const lowerWhisker = Math.max(sorted[0], sorted.find(x => x >= wLo) ?? sorted[0]);
+    const upperWhisker = Math.min(sorted[sorted.length - 1], [...sorted].reverse().find(x => x <= wHi) ?? sorted[sorted.length - 1]);
+    const outs = sorted.filter(x => x < wLo || x > wHi);
+    const mean = v.reduce((a, b) => a + b, 0) / v.length;
+    return { name: g.name, q1, med, q3, min: sorted[0], max: sorted[sorted.length - 1], lowerWhisker, upperWhisker, outs, mean, n: v.length };
+  }).filter(Boolean);
+  if (groupStats.length === 0) return { n: 0 };
+  // Common X scale spans the union of all observations.
+  let gMin = Infinity, gMax = -Infinity;
+  for (const g of groupStats) {
+    if (g.min < gMin) gMin = g.min;
+    if (g.max > gMax) gMax = g.max;
+  }
+  const innerW = W2 - PAD2.left - PAD2.right;
+  const xRange = gMax - gMin || 1;
+  const xAt = (v) => PAD2.left + ((v - gMin) / xRange) * innerW;
+  const svgNS = "http://www.w3.org/2000/svg";
+  const make = (tag, attrs) => {
+    const n = document.createElementNS(svgNS, tag);
+    for (const [k, val] of Object.entries(attrs)) n.setAttribute(k, val);
+    return n;
+  };
+  // Top label
+  if (label) {
+    const t = make("text", {
+      x: W2 / 2, y: PAD2.top - 2, "text-anchor": "middle",
+      "font-size": 10, fill: "#1e293b", "font-weight": 600,
+    });
+    t.textContent = label;
+    svgEl.appendChild(t);
+  }
+  // Render each group as a row
+  groupStats.forEach((g, gi) => {
+    const cy = PAD2.top + gi * rowH + rowH / 2;
+    const color = GROUP_PALETTE[gi % GROUP_PALETTE.length];
+    const boxH = 14;
+    // Whiskers
+    svgEl.appendChild(make("line", { x1: xAt(g.lowerWhisker), y1: cy, x2: xAt(g.q1), y2: cy, stroke: "#475569", "stroke-width": 1 }));
+    svgEl.appendChild(make("line", { x1: xAt(g.q3), y1: cy, x2: xAt(g.upperWhisker), y2: cy, stroke: "#475569", "stroke-width": 1 }));
+    svgEl.appendChild(make("line", { x1: xAt(g.lowerWhisker), y1: cy - 4, x2: xAt(g.lowerWhisker), y2: cy + 4, stroke: "#475569", "stroke-width": 1 }));
+    svgEl.appendChild(make("line", { x1: xAt(g.upperWhisker), y1: cy - 4, x2: xAt(g.upperWhisker), y2: cy + 4, stroke: "#475569", "stroke-width": 1 }));
+    // Box
+    svgEl.appendChild(make("rect", {
+      x: xAt(g.q1), y: cy - boxH / 2, width: xAt(g.q3) - xAt(g.q1), height: boxH,
+      fill: color, "fill-opacity": "0.35", stroke: color, "stroke-width": 1,
+    }));
+    // Median
+    svgEl.appendChild(make("line", { x1: xAt(g.med), y1: cy - boxH / 2, x2: xAt(g.med), y2: cy + boxH / 2, stroke: color, "stroke-width": 2 }));
+    // Mean ◇
+    const dx = 4;
+    svgEl.appendChild(make("polygon", {
+      points: `${xAt(g.mean)},${cy - dx} ${xAt(g.mean) + dx},${cy} ${xAt(g.mean)},${cy + dx} ${xAt(g.mean) - dx},${cy}`,
+      fill: "#dc2626", stroke: "#fff", "stroke-width": 1,
+    }));
+    // Outliers
+    for (const o of g.outs) {
+      svgEl.appendChild(make("circle", { cx: xAt(o), cy, r: 2, fill: "#dc2626", "fill-opacity": 0.85 }));
+    }
+    // Group name (left margin)
+    const lab = make("text", {
+      x: PAD2.left - 4, y: cy + 3, "text-anchor": "end",
+      "font-size": 10, fill: "#1e293b", "font-weight": 500,
+    });
+    const shortName = g.name.length > 10 ? g.name.slice(0, 9) + "…" : g.name;
+    lab.textContent = `${shortName} (n=${g.n})`;
+    svgEl.appendChild(lab);
+  });
+  // X-axis tick marks (min / mid / max)
+  for (const f of [0, 0.5, 1]) {
+    const x = PAD2.left + f * innerW;
+    svgEl.appendChild(make("line", { x1: x, y1: totalH - PAD2.bottom, x2: x, y2: totalH - PAD2.bottom + 3, stroke: "#475569" }));
+    const t = make("text", {
+      x, y: totalH - PAD2.bottom + 14, "text-anchor": "middle",
+      "font-size": 9, fill: "#475569",
+    });
+    t.textContent = formatNum(gMin + f * xRange);
+    svgEl.appendChild(t);
+  }
+  return { n: groupStats.length };
+}

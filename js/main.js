@@ -12,7 +12,7 @@ import { exportPng, exportSvg, exportKml } from "./export.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { renderScatter } from "./scatter.js";
 import { renderHistogram } from "./histogram.js";
-import { renderBoxplot } from "./boxplot.js";
+import { renderBoxplot, renderGroupedBoxplot } from "./boxplot.js";
 import { renderTable, getSortState } from "./table.js";
 
 // ----- State -----
@@ -4653,7 +4653,33 @@ function refresh() {
   renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete);
 
   // Box plot
-  if (els.boxplotSvg) renderBoxplot(els.boxplotSvg, values, state.field);
+  if (els.boxplotSvg) {
+    // Grouped boxplot when a category column is selected (Cycle 175);
+    // otherwise fall back to the single boxplot.
+    const colorByField = els.scatterColorBy?.value || "";
+    if (colorByField && colorByField !== state.field) {
+      const groupMap = new Map();
+      for (const r of state.dataset.rows) {
+        const yv = r.values[state.field];
+        if (!Number.isFinite(yv)) continue;
+        const c = r.values[colorByField];
+        if (c == null || c === "") continue;
+        const key = String(c);
+        if (!groupMap.has(key)) groupMap.set(key, []);
+        groupMap.get(key).push(yv);
+      }
+      const groups = [...groupMap.entries()].map(([name, vals]) => ({ name, values: vals }));
+      // Cap to 8 groups for readability; fall back to single boxplot if too many
+      // valid groups or none.
+      if (groups.length >= 2 && groups.length <= 8) {
+        renderGroupedBoxplot(els.boxplotSvg, groups, `${state.field} × ${colorByField}`);
+      } else {
+        renderBoxplot(els.boxplotSvg, values, state.field);
+      }
+    } else {
+      renderBoxplot(els.boxplotSvg, values, state.field);
+    }
+  }
 
   // Histogram with bin → map highlight link
   if (els.histSvg) {
