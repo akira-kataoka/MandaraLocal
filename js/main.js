@@ -133,6 +133,7 @@ const els = {
   btnSvg:       $("btn-export-svg"),
   btnCsv:       $("btn-export-csv"),
   btnKml:       $("btn-export-kml"),
+  btnGeoJson:   $("btn-export-geojson"),
   btnMeasure:   $("btn-measure"),
   btnArea:      $("btn-area"),
   btnBuffer:    $("btn-buffer"),
@@ -772,6 +773,34 @@ els.scatterY.addEventListener("change", drawScatter);
 els.btnDerived.addEventListener("click", addDerivedField);
 els.btnTemplate.addEventListener("click", downloadTemplate);
 els.btnCsv.addEventListener("click", exportCurrentCsv);
+els.btnGeoJson.addEventListener("click", () => {
+  if (!state.geojson) { setSummary("地図データが読み込まれていません", "warn"); return; }
+  // Clone features and inject every dataset value into each feature's properties
+  const byId = new Map();
+  if (state.dataset) for (const r of state.dataset.rows) byId.set(r.key, r);
+  const out = {
+    type: "FeatureCollection",
+    features: state.geojson.features.map(f => {
+      const id = f.properties?.id;
+      const row = byId.get(id);
+      const merged = { ...(f.properties || {}) };
+      if (row) {
+        merged._region = row.name;
+        for (const k of Object.keys(row.values)) merged[k] = row.values[k];
+      }
+      return { type: "Feature", properties: merged, geometry: f.geometry };
+    }),
+  };
+  const fname = `mandara_${(state.field || "map").replace(/\s+/g, "_")}.geojson`;
+  const blob = new Blob([JSON.stringify(out)], { type: "application/geo+json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`GeoJSON を ${fname} に書き出しました (${out.features.length} features)`, "success");
+});
+
 els.btnKml.addEventListener("click", () => {
   if (!state.geojson) { setSummary("地図データが読み込まれていません", "warn"); return; }
   const fname = `mandara_${(state.field || "map").replace(/\s+/g, "_")}.kml`;
