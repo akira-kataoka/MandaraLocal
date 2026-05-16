@@ -155,6 +155,24 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
     addLine(median,     "#2563eb", "3,2",    "M");
     addLine(mean - sd,  "#64748b", "1,2",    "-σ");
     addLine(mean + sd,  "#64748b", "1,2",    "+σ");
+    // Theoretical normal-distribution curve (Cycle 156) — scaled to the
+    // histogram's count axis: density × n × binWidth.
+    if (opts.normalCurve !== false && sd > 0) {
+      const STEPS = 100;
+      const pts = [];
+      for (let i = 0; i <= STEPS; i++) {
+        const xv = min + (i / STEPS) * (max - min);
+        const z = (xv - mean) / sd;
+        const dens = Math.exp(-0.5 * z * z) / (sd * Math.sqrt(2 * Math.PI));
+        const count = dens * n * width;  // bin width = (max-min)/k
+        pts.push(`${xAt(xv).toFixed(1)},${y(count).toFixed(1)}`);
+      }
+      const curve = el("polyline", {
+        points: pts.join(" "),
+        fill: "none", stroke: "#dc2626", "stroke-width": 1.5, opacity: 0.85,
+      });
+      overlay.appendChild(curve);
+    }
     svgEl.appendChild(overlay);
     return { n, binCount: k, max: maxCount, mean, median, sd };
   }
