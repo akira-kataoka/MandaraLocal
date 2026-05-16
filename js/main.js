@@ -667,7 +667,13 @@ function refresh() {
   }
 
   const naFlag = hasMissing(values);
-  renderLegend(els.legendBox, state.breaks, state.colors, { title: state.field, showNA: naFlag });
+  renderLegend(els.legendBox, state.breaks, state.colors, {
+    title: state.field, showNA: naFlag,
+    onClassHover: (idx, ev) => {
+      if (ev.type === "mouseenter") mapper.highlightByClass(idx);
+    },
+  });
+  els.legendBox.addEventListener("mouseleave", () => mapper.clearHighlight(), { once: true });
   renderLegend(els.overlayLegend, state.breaks, state.colors, { showNA: naFlag });
   els.overlay.hidden = false;
   els.overlayTitle.textContent = state.field;
@@ -769,6 +775,9 @@ function renderStats(values) {
     ["四分位範囲 (IQR)", s.iqr != null ? formatNum(s.iqr) : "—"],
     ["標準偏差", s.std != null ? formatNum(s.std) : "—"],
     ["変動係数 (CV)", s.cv != null ? (s.cv * 100).toFixed(1) + "%" : "—"],
+    ["歪度", s.skewness != null ? s.skewness.toFixed(3) : "—"],
+    ["尖度 (超過)", s.kurtosis != null ? s.kurtosis.toFixed(3) : "—"],
+    ["最頻値", s.mode != null ? formatNum(s.mode) : "—"],
   ];
   els.statsTable.innerHTML = rows.map(([k,v]) =>
     `<tr><td>${k}</td><td>${v}</td></tr>`

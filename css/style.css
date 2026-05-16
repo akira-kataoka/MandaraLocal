@@ -427,6 +427,154 @@ details.derived .form-row input[type="text"] {
 .map-tooltip strong { font-weight: 600; }
 .map-tooltip .val { color: #fde68a; margin-left: 4px; }
 
+/* ===== Polish: Scrollbars (WebKit minimal) ===== */
+.sidebar::-webkit-scrollbar,
+.table-wrap::-webkit-scrollbar,
+.search-suggestions::-webkit-scrollbar,
+.outlier-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.sidebar::-webkit-scrollbar-track,
+.table-wrap::-webkit-scrollbar-track,
+.search-suggestions::-webkit-scrollbar-track,
+.outlier-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar::-webkit-scrollbar-thumb,
+.table-wrap::-webkit-scrollbar-thumb,
+.search-suggestions::-webkit-scrollbar-thumb,
+.outlier-list::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+  border-radius: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover,
+.table-wrap::-webkit-scrollbar-thumb:hover,
+.search-suggestions::-webkit-scrollbar-thumb:hover,
+.outlier-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+body.dark .sidebar::-webkit-scrollbar-thumb,
+body.dark .table-wrap::-webkit-scrollbar-thumb,
+body.dark .search-suggestions::-webkit-scrollbar-thumb,
+body.dark .outlier-list::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+}
+body.dark .sidebar::-webkit-scrollbar-thumb:hover,
+body.dark .table-wrap::-webkit-scrollbar-thumb:hover,
+body.dark .search-suggestions::-webkit-scrollbar-thumb:hover,
+body.dark .outlier-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.55);
+}
+
+/* ===== Polish: Focus-visible (a11y) ===== */
+.btn:focus-visible,
+.form-row select:focus-visible,
+.form-row input:focus-visible,
+.map-search input:focus-visible,
+details.derived .form-row input[type="text"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.form-row select:focus,
+.form-row input:focus,
+.map-search input:focus,
+details.derived .form-row input[type="text"]:focus {
+  border-color: var(--accent);
+}
+
+/* ===== Polish: Smoother hover transitions ===== */
+.btn {
+  transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.panel h2 {
+  transition: background-color .12s ease;
+  border-radius: 3px;
+}
+.panel h2:hover {
+  background-color: rgba(148, 163, 184, 0.12);
+}
+body.dark .panel h2:hover {
+  background-color: rgba(148, 163, 184, 0.16);
+}
+
+/* ===== Polish: Panel elevation + dark mode shadows ===== */
+.panel {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+body.dark .panel {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+body.dark .map-overlay {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+}
+body.dark .search-suggestions {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+}
+
+/* ===== Polish: Legend swatch borders ===== */
+.legend-swatch {
+  border-color: rgba(15, 23, 42, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+}
+body.dark .legend-swatch {
+  border-color: rgba(226, 232, 240, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.3);
+}
+
+/* ===== Polish: Leaflet attribution placement / overlap avoidance ===== */
+.leaflet-bottom.leaflet-right {
+  opacity: 0.7;
+}
+.leaflet-bottom.leaflet-right:hover {
+  opacity: 1;
+}
+.map-pane .leaflet-control-attribution.leaflet-control {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  right: auto;
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.75);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+body.dark .map-pane .leaflet-control-attribution.leaflet-control {
+  background: rgba(15, 23, 42, 0.75);
+  color: #cbd5e1;
+}
+body.dark .map-pane .leaflet-control-attribution.leaflet-control a {
+  color: #93c5fd;
+}
+
+/* ===== Polish: Print styles (for future PDF export) ===== */
+@media print {
+  .app-header,
+  .sidebar,
+  .map-search,
+  .leaflet-control-container .leaflet-top,
+  .leaflet-control-container .leaflet-bottom.leaflet-right {
+    display: none !important;
+  }
+  .app-main { height: auto; display: block; }
+  .map-wrap { display: block; width: 100%; }
+  .map-pane {
+    width: 100% !important;
+    height: 100vh !important;
+    border: none !important;
+    page-break-inside: avoid;
+  }
+  #map, #map-b { width: 100% !important; height: 100vh !important; }
+  .map-overlay {
+    box-shadow: none;
+    border-color: #94a3b8;
+    background: #fff !important;
+    color: #1f2937 !important;
+  }
+  body, body.dark { background: #fff !important; color: #1f2937 !important; }
+}
+
 /* ===== Responsive ===== */
 /* Tablet portrait */
 @media (max-width: 900px) {

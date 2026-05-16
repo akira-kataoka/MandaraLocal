@@ -2,11 +2,24 @@
 // stats.js  -- Basic descriptive statistics on numeric data
 // =====================================================================
 
+/**
+ * Compute basic descriptive statistics for a numeric array.
+ * Non-finite entries are dropped and counted as `missing`.
+ *
+ * Returned fields:
+ *   n, missing, sum, mean, median, min, max, range, std, variance,
+ *   q1, q3, iqr, cv,
+ *   skewness  -- sample skewness (Fisher–Pearson g1); null when std === 0
+ *   kurtosis  -- excess kurtosis (g2); null when variance === 0
+ *   mode      -- most frequent value (count >= 2 required); on ties the
+ *               smallest value wins. null when no value repeats.
+ * When the finite-filtered n is 0, every field other than n/missing is null.
+ */
 export function computeStats(values) {
   const v = values.filter(x => Number.isFinite(x));
   const n = v.length;
   const missing = values.length - n;
-  if (n === 0) return { n: 0, missing, sum: null, mean: null, median: null, min: null, max: null, range: null, std: null, variance: null, q1: null, q3: null, iqr: null, cv: null };
+  if (n === 0) return { n: 0, missing, sum: null, mean: null, median: null, min: null, max: null, range: null, std: null, variance: null, q1: null, q3: null, iqr: null, cv: null, skewness: null, kurtosis: null, mode: null };
 
   const sorted = v.slice().sort((a, b) => a - b);
   const sum = v.reduce((a, b) => a + b, 0);
@@ -26,10 +39,42 @@ export function computeStats(values) {
   const iqr = q3 - q1;
   // Population std (matches MANDARA's basic stats display)
   let ss2 = 0;
-  for (const x of v) ss2 += (x - mean) * (x - mean);
+  let ss3 = 0;
+  let ss4 = 0;
+  for (const x of v) {
+    const d = x - mean;
+    const d2 = d * d;
+    ss2 += d2;
+    ss3 += d2 * d;
+    ss4 += d2 * d2;
+  }
   const variance = ss2 / n;
   const std = Math.sqrt(variance);
   const cv = mean !== 0 ? std / Math.abs(mean) : null;   // coefficient of variation
+  // Fisher–Pearson sample skewness (g1); undefined when std === 0
+  const skewness = std === 0 ? null : (ss3 / n) / (std * std * std);
+  // Excess kurtosis (g2); undefined when variance === 0
+  const kurtosis = variance === 0 ? null : (ss4 / n) / (variance * variance) - 3;
+  // Mode -- only meaningful when at least one value repeats; ties resolved
+  // by the smallest value (sorted ascending, first-seen wins).
+  let mode = null;
+  let bestCount = 1;
+  let runValue = sorted[0];
+  let runCount = 1;
+  for (let i = 1; i <= n; i++) {
+    if (i < n && sorted[i] === runValue) {
+      runCount++;
+    } else {
+      if (runCount >= 2 && runCount > bestCount) {
+        bestCount = runCount;
+        mode = runValue;
+      }
+      if (i < n) {
+        runValue = sorted[i];
+        runCount = 1;
+      }
+    }
+  }
 
   return {
     n, missing,
@@ -38,6 +83,7 @@ export function computeStats(values) {
     std, variance,
     q1, q3, iqr,
     cv,
+    skewness, kurtosis, mode,
   };
 }
 

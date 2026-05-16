@@ -4,34 +4,73 @@
 
 import { formatNum, extractUnit } from "./stats.js";
 
+// Format a single break value: extreme magnitudes get special treatment so
+// the legend never overflows. Falls back to the shared formatNum() helper.
+function formatBreak(v) {
+  if (v == null || !Number.isFinite(v)) return formatNum(v);
+  const abs = Math.abs(v);
+  if (abs >= 100000) return Math.round(v).toLocaleString("ja-JP");
+  if (abs > 0 && abs < 0.001) return v.toExponential(2);
+  return formatNum(v);
+}
+
+// Strip the trailing "(unit)" / "（unit）" portion from a title.
+function stripUnitParen(title) {
+  return title.replace(/[(（][^)）]+[)）]\s*$/u, "").trim();
+}
+
 export function renderLegend(container, breaks, colors, options = {}) {
   container.innerHTML = "";
   if (!breaks.length || !colors.length) return;
 
   const title = options.title;
   const unit  = title ? extractUnit(title) : "";
+  const k     = colors.length;
+
+  // Accessibility: announce the legend as an image-region with a label.
+  container.setAttribute("role", "img");
+  container.setAttribute("aria-label", `凡例: ${title || ""}`.trim());
+
   if (title) {
     const t = document.createElement("div");
     t.style.fontWeight = "600";
-    t.style.marginBottom = "4px";
-    t.textContent = title;
+    t.style.marginBottom = "2px";
+    // If the title contains a unit in parentheses, render "<name>（単位: <unit>）"
+    t.textContent = unit ? `${stripUnitParen(title)}（単位: ${unit}）` : title;
     container.appendChild(t);
+
+    const sub = document.createElement("div");
+    sub.style.fontSize = "11px";
+    sub.style.opacity = "0.7";
+    sub.style.marginBottom = "4px";
+    sub.textContent = `${k}階級`;
+    container.appendChild(sub);
   }
 
-  const k = colors.length;
+  const onClassHover = typeof options.onClassHover === "function"
+    ? options.onClassHover
+    : null;
+
   for (let i = k - 1; i >= 0; i--) {
     const lo = breaks[i];
     const hi = breaks[i + 1];
     const row = document.createElement("div");
     row.className = "legend-row";
+    row.dataset.classIndex = String(i);
     const sw = document.createElement("span");
     sw.className = "legend-swatch";
     sw.style.background = colors[i];
     const label = document.createElement("span");
-    const range = `${formatNum(lo)} 〜 ${formatNum(hi)}`;
+    const range = `${formatBreak(lo)} 〜 ${formatBreak(hi)}`;
     label.textContent = unit ? `${range} ${unit}` : range;
     row.appendChild(sw);
     row.appendChild(label);
+    if (onClassHover) {
+      row.addEventListener("mouseenter", (ev) => {
+        const idx = Number(ev.currentTarget.dataset.classIndex);
+        onClassHover(idx, ev);
+      });
+    }
     container.appendChild(row);
   }
 

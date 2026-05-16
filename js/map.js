@@ -241,8 +241,9 @@ export class MandaraMap {
    * @param breaks     classification breaks   (optional)
    * @param colors     palette colors          (optional)
    * @param fieldName  current data field      (optional)
+   * @param opts       { mode: "choropleth"|"symbol"|"both", maxRadiusPx } (optional)
    */
-  applyTownPlot(towns, valueMap, breaks, colors, fieldName) {
+  applyTownPlot(towns, valueMap, breaks, colors, fieldName, opts) {
     this.symbolLayer.clearLayers();
     // Remove any base polygon layer (towns are points)
     if (this.layer) {
@@ -250,20 +251,49 @@ export class MandaraMap {
       this.layer = null;
     }
     if (!towns || !towns.length) return;
+    const mode = opts?.mode || "choropleth";
+    const maxR = opts?.maxRadiusPx ?? 24;
+    const minR = 2;
+    const sizeByValue = mode === "symbol" || mode === "both";
+    const useClassifiedColor = mode === "choropleth" || mode === "both";
+
+    let maxVal = 0;
+    if (sizeByValue && valueMap) {
+      for (const v of valueMap.values()) {
+        if (Number.isFinite(v) && v > maxVal) maxVal = v;
+      }
+    }
+
     const lookup = (id) => {
-      if (!valueMap || !breaks || !colors) return null;
+      if (!valueMap) return null;
       const v = valueMap.get(id);
       if (!Number.isFinite(v)) return null;
-      const idx = classifyValue(v, breaks);
-      return { v, color: idx < 0 ? null : colors[idx] };
+      let color = null;
+      if (useClassifiedColor && breaks && colors) {
+        const idx = classifyValue(v, breaks);
+        color = idx < 0 ? null : colors[idx];
+      }
+      return { v, color };
     };
 
     const group = L.featureGroup();
     for (const t of towns) {
       if (!Number.isFinite(t.lat) || !Number.isFinite(t.lng)) continue;
       const info = lookup(t.id);
-      const color = info?.color || "#2563eb";
-      const r = info?.v != null ? 6 : 4;
+      let color;
+      if (mode === "symbol") {
+        color = "#9ca3af";
+      } else {
+        color = info?.color || "#2563eb";
+      }
+      let r;
+      if (sizeByValue && maxVal > 0 && Number.isFinite(info?.v) && info.v > 0) {
+        r = Math.max(minR, Math.sqrt(info.v / maxVal) * maxR);
+      } else if (sizeByValue) {
+        r = minR;
+      } else {
+        r = info?.v != null ? 6 : 4;
+      }
       const m = L.circleMarker([t.lat, t.lng], {
         radius: r, color: "#1e3a8a", weight: 0.7,
         fillColor: color, fillOpacity: 0.7,
@@ -382,6 +412,27 @@ export class MandaraMap {
         fillOpacity: 0.88, dashArray: null,
       });
     });
+  }
+
+  /**
+   * Highlight every feature whose classified value falls in the given
+   * class index (0..k-1). Other features get a faded outline so the
+   * class stands out. Use clearHighlight() to reset.
+   */
+  highlightByClass(classIndex) {
+    if (!this.layer || !this._lookupFn) return;
+    this.layer.eachLayer((lyr) => {
+      const info = this._lookupFn(lyr.feature.properties.id);
+      const inClass = info && info.classIndex === classIndex;
+      lyr.setStyle({
+        weight: inClass ? 2 : 0.4,
+        color: inClass ? "#dc2626" : "#94a3b8",
+        fillColor: info ? info.color : "#e5e7eb",
+        fillOpacity: inClass ? 0.95 : 0.4,
+      });
+      if (inClass && lyr.bringToFront) lyr.bringToFront();
+    });
+    this.symbolLayer.eachLayer(s => s.bringToFront && s.bringToFront());
   }
 
   clearHighlight() {
