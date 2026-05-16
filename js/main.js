@@ -87,6 +87,8 @@ const els = {
   btnZscore:    $("btn-add-zscore"),
   btnMinMax:    $("btn-add-minmax"),
   fieldList:    $("field-list"),
+  btnBatchZ:    $("btn-batch-z"),
+  btnBatchMM:   $("btn-batch-mm"),
   selectMode:   $("select-mode"),
   rowSymbolSize:$("row-symbol-size"),
   inputMaxR:    $("input-maxr"),
@@ -1046,6 +1048,42 @@ els.scatterSwap?.addEventListener("click", () => {
   drawScatter();
 });
 els.btnDerived.addEventListener("click", addDerivedField);
+function batchStandardise(kind) {
+  if (!state.dataset) return;
+  const baseFields = state.dataset.fields.filter(f => !f.endsWith("_z") && !f.endsWith("_minmax"));
+  let added = 0;
+  for (const f of baseFields) {
+    const newName = kind === "z" ? `${f}_z` : `${f}_minmax`;
+    if (state.dataset.fields.includes(newName)) continue;
+    const vals = state.dataset.rows.map(r => r.values[f]).filter(Number.isFinite);
+    if (vals.length < 2) continue;
+    if (kind === "z") {
+      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+      const variance = vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length;
+      const std = Math.sqrt(variance);
+      if (std === 0) continue;
+      for (const r of state.dataset.rows) {
+        const v = r.values[f];
+        r.values[newName] = Number.isFinite(v) ? (v - mean) / std : null;
+      }
+    } else {
+      const min = Math.min(...vals), max = Math.max(...vals);
+      if (min === max) continue;
+      for (const r of state.dataset.rows) {
+        const v = r.values[f];
+        r.values[newName] = Number.isFinite(v) ? (v - min) / (max - min) : null;
+      }
+    }
+    state.dataset.fields.push(newName);
+    added++;
+  }
+  populateFieldSelects();
+  refresh();
+  setSummary(`バッチ ${kind === "z" ? "Z-score" : "min-max"} 化: ${added}列を追加`, "success");
+}
+els.btnBatchZ?.addEventListener("click", () => batchStandardise("z"));
+els.btnBatchMM?.addEventListener("click", () => batchStandardise("minmax"));
+
 els.btnMinMax?.addEventListener("click", () => {
   if (!state.dataset) return;
   const f = els.derivedA.value;

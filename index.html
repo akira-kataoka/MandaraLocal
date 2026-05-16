@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=90" />
+  <link rel="stylesheet" href="css/style.css?v=91" />
 </head>
 <body>
   <header class="app-header">
@@ -188,6 +188,10 @@
             <button id="btn-add-derived" class="btn btn-primary">列を追加</button>
             <button id="btn-add-zscore" class="btn" title="A列を平均0・標準偏差1に標準化">+Z-score (A)</button>
             <button id="btn-add-minmax" class="btn" title="A列を [0,1] 区間に正規化">+min-max (A)</button>
+          </div>
+          <div class="form-row">
+            <button id="btn-batch-z" class="btn" style="font-size:11px" title="既存の全数値列を一括Z-score化">全列をZ-score化</button>
+            <button id="btn-batch-mm" class="btn" style="font-size:11px" title="既存の全数値列を一括[0,1]正規化">全列をmin-max化</button>
           </div>
           <div id="field-list" class="field-list"></div>
         </details>
@@ -512,7 +516,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=90"></script>
+  <script type="module" src="js/main.js?v=91"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
