@@ -3462,6 +3462,7 @@ function drawScatter() {
   // bin into quartile labels (Q1/Q2/Q3/Q4) so it still renders as discrete series.
   const colorByField = els.scatterColorBy?.value || "";
   let categoryFor = null;
+  let welchResult = null;  // populated below when exactly 2 categories exist
   if (colorByField) {
     const rowsByKey = new Map(state.dataset.rows.map(r => [r.key, r]));
     const allVals = state.dataset.rows.map(r => r.values[colorByField]);
@@ -3486,6 +3487,25 @@ function drawScatter() {
         const v = row?.values[colorByField];
         return v == null ? null : String(v);
       };
+    }
+    // Welch's t-test (Cycle 138): if categoryFor produces exactly 2 distinct
+    // categories, compare Y values between the two groups.
+    if (categoryFor) {
+      const groupY = new Map();
+      for (const r of state.dataset.rows) {
+        const yv = r.values[yf];
+        if (!Number.isFinite(yv)) continue;
+        const cat = categoryFor(r.key);
+        if (cat == null) continue;
+        if (!groupY.has(cat)) groupY.set(cat, []);
+        groupY.get(cat).push(yv);
+      }
+      if (groupY.size === 2) {
+        const [[k1, a1], [k2, a2]] = [...groupY.entries()];
+        if (a1.length >= 2 && a2.length >= 2) {
+          welchResult = welchTTest(a1, a2, k1, k2);
+        }
+      }
     }
   }
   // Size-by-field: third dimension as point radius (3..10 px).
@@ -3547,7 +3567,14 @@ function drawScatter() {
   const polyInfo = (degree > 1 && polyR2 != null)
     ? ` · <small style="color:#475569">多項式${degree}次 R²=${(polyR2*100).toFixed(1)}%, AIC=${aic == null ? "—" : aic.toFixed(1)}</small>`
     : "";
-  els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong>${ciTxt(rCI)} （${strength}${sign}の相関）${rhoTxt}${note} · 決定係数 R²=${r2}%${polyInfo}`;
+  let welchInfo = "";
+  if (welchResult) {
+    const w = welchResult;
+    const sig = w.pValue < 0.001 ? " ***" : w.pValue < 0.01 ? " **" : w.pValue < 0.05 ? " *" : "";
+    const pFmt = w.pValue < 0.001 ? "< 0.001" : w.pValue.toFixed(3);
+    welchInfo = ` · <small style="color:#1e3a8a">Welch t-test: ${escapeHtmlText(w.label1)} (n=${w.n1}, μ=${formatNum(w.mean1)}) vs ${escapeHtmlText(w.label2)} (n=${w.n2}, μ=${formatNum(w.mean2)}) → t(${w.df.toFixed(1)})=${w.t.toFixed(2)}, p=${pFmt}${sig}</small>`;
+  }
+  els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong>${ciTxt(rCI)} （${strength}${sign}の相関）${rhoTxt}${note} · 決定係数 R²=${r2}%${polyInfo}${welchInfo}`;
 }
 
 function onScatterHover(id, isHot) {
@@ -3948,6 +3975,72 @@ function renderBivariateLegend(container, palette9, fieldX, fieldY) {
   colWrap.appendChild(xLab);
   wrap.appendChild(colWrap);
   container.appendChild(wrap);
+}
+
+// Welch's t-test for unequal-variance comparison of two independent samples.
+// Returns { t, df, pValue, mean1, mean2, label1, label2, n1, n2 } or null.
+function welchTTest(a, b, label1, label2) {
+  const n1 = a.length, n2 = b.length;
+  if (n1 < 2 || n2 < 2) return null;
+  const m1 = a.reduce((s, v) => s + v, 0) / n1;
+  const m2 = b.reduce((s, v) => s + v, 0) / n2;
+  const v1 = a.reduce((s, v) => s + (v - m1) ** 2, 0) / (n1 - 1);
+  const v2 = b.reduce((s, v) => s + (v - m2) ** 2, 0) / (n2 - 1);
+  const se2 = v1 / n1 + v2 / n2;
+  if (se2 <= 0) return null;
+  const t = (m1 - m2) / Math.sqrt(se2);
+  // Welch-Satterthwaite degrees of freedom
+  const dfNum = se2 * se2;
+  const dfDen = (v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1);
+  const df = dfDen > 0 ? dfNum / dfDen : (n1 + n2 - 2);
+  // Two-tailed p-value via the chi-square route: t² with df=1 numerator ≈
+  // F(1, df) distribution. Use a direct approximation via regularized
+  // incomplete beta function instead.
+  const pValue = 2 * (1 - studentTCdfAbs(Math.abs(t), df));
+  return { t, df, pValue, mean1: m1, mean2: m2, label1, label2, n1, n2, var1: v1, var2: v2 };
+}
+
+// Student-t one-sided CDF for |t|: P(T <= |t|) using the incomplete beta function.
+// Returns a value in [0.5, 1].
+function studentTCdfAbs(absT, df) {
+  if (!(df > 0) || !(absT >= 0)) return 0.5;
+  const x = df / (df + absT * absT);
+  // 1 - 0.5 * I_x(df/2, 1/2)
+  return 1 - 0.5 * regularizedBeta(x, df / 2, 0.5);
+}
+
+// Regularized incomplete beta I_x(a, b) via continued fraction (Numerical Recipes).
+function regularizedBeta(x, a, b) {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const lnBeta = logGamma(a) + logGamma(b) - logGamma(a + b);
+  const front = Math.exp(Math.log(x) * a + Math.log(1 - x) * b - lnBeta) / a;
+  // Continued fraction; symmetry trick for stability when x > (a+1)/(a+b+2).
+  if (x > (a + 1) / (a + b + 2)) {
+    return 1 - regularizedBeta(1 - x, b, a);
+  }
+  // Lentz's algorithm
+  const EPS = 1e-12;
+  let qab = a + b, qap = a + 1, qam = a - 1;
+  let c = 1, d = 1 - qab * x / qap;
+  if (Math.abs(d) < 1e-30) d = 1e-30;
+  d = 1 / d;
+  let h = d;
+  for (let m = 1; m < 200; m++) {
+    const m2 = 2 * m;
+    let aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+    d = 1 + aa * d; if (Math.abs(d) < 1e-30) d = 1e-30;
+    c = 1 + aa / c; if (Math.abs(c) < 1e-30) c = 1e-30;
+    d = 1 / d; h *= d * c;
+    aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+    d = 1 + aa * d; if (Math.abs(d) < 1e-30) d = 1e-30;
+    c = 1 + aa / c; if (Math.abs(c) < 1e-30) c = 1e-30;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+    if (Math.abs(del - 1) < EPS) break;
+  }
+  return front * h;
 }
 
 // Chi-square survival function P(X > x) for df degrees of freedom.
