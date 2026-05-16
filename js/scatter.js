@@ -173,6 +173,40 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   if (Number.isFinite(r) && xMax !== xMin) {
     const olsR = ols(xs2, ys2);
     slope = olsR.slope; intercept = olsR.intercept;
+    // Optional: 95% confidence band for the mean response. Drawn before the
+    // line so the line sits cleanly on top. t = 1.96 (good for n >= 30,
+    // slightly conservative for smaller n).
+    if (opts.regCI && xs2.length >= 3) {
+      const n = xs2.length;
+      const mxs = xs2.reduce((a, b) => a + b, 0) / n;
+      let sxx = 0, rss = 0;
+      for (let i = 0; i < n; i++) {
+        sxx += (xs2[i] - mxs) ** 2;
+        const yhat = slope * xs2[i] + intercept;
+        rss += (ys2[i] - yhat) ** 2;
+      }
+      if (sxx > 0 && rss >= 0) {
+        const se = Math.sqrt(rss / Math.max(1, n - 2));
+        const t = 1.96;
+        const STEPS = 40;
+        const upper = [];
+        const lower = [];
+        for (let i = 0; i <= STEPS; i++) {
+          const xv = xMin + (i / STEPS) * (xMax - xMin);
+          const ym = slope * xv + intercept;
+          const half = t * se * Math.sqrt(1 / n + ((xv - mxs) ** 2) / sxx);
+          upper.push([pxAt(xv), pyAt(ym + half)]);
+          lower.push([pxAt(xv), pyAt(ym - half)]);
+        }
+        // Build filled polygon: upper-left → upper-right → lower-right → lower-left.
+        const pts = [...upper, ...lower.reverse()].map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+        const band = el("polygon", {
+          points: pts,
+          fill: "rgba(220,38,38,0.12)", stroke: "none",
+        });
+        svgEl.appendChild(band);
+      }
+    }
     const lineEl = el("line", {
       x1: pxAt(xMin), y1: pyAt(slope * xMin + intercept),
       x2: pxAt(xMax), y2: pyAt(slope * xMax + intercept),
