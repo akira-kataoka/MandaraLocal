@@ -4122,6 +4122,15 @@ function buildAnalysisMarkdown() {
     lines.push("");
     lines.push(`**お気に入り列 (★)**: ${[...state.starredFields].join(", ")}`);
   }
+  // Cycle 281: list custom legend color overrides so the report records the
+  // exact palette deviations (useful when a chart is reproduced elsewhere).
+  const overrides = state.customColors?.[state.palette];
+  if (overrides && Object.keys(overrides).length) {
+    const entries = Object.entries(overrides)
+      .map(([k, hex]) => `クラス${Number(k) + 1}=${hex}`)
+      .join(", ");
+    lines.push(`**カスタム色 (${state.palette})**: ${entries}`);
+  }
   lines.push("");
   if (!state.dataset) {
     lines.push("_データセット未読込_");
@@ -4430,7 +4439,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "280"; // bumped each polish cycle
+const APP_VERSION = "281"; // bumped each polish cycle
 const APP_VERSION_NOTE = "Polish cycles 195-280: ピン留め 6 surface × 5 export × 番号体系 + 系列別回帰 + Markdown/CSV/SVG/PNG/QR";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
