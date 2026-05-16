@@ -84,6 +84,7 @@ const els = {
   derivedB:     $("derived-b"),
   derivedName:  $("derived-name"),
   btnDerived:   $("btn-add-derived"),
+  btnZscore:    $("btn-add-zscore"),
   selectMode:   $("select-mode"),
   rowSymbolSize:$("row-symbol-size"),
   inputMaxR:    $("input-maxr"),
@@ -1043,6 +1044,31 @@ els.scatterSwap?.addEventListener("click", () => {
   drawScatter();
 });
 els.btnDerived.addEventListener("click", addDerivedField);
+els.btnZscore?.addEventListener("click", () => {
+  if (!state.dataset) return;
+  const f = els.derivedA.value;
+  if (!f) { setSummary("A列を選んでください", "warn"); return; }
+  const name = `${f}_z`;
+  if (state.dataset.fields.includes(name)) {
+    setSummary(`列「${name}」はすでに存在します`, "warn"); return;
+  }
+  const vals = state.dataset.rows.map(r => r.values[f]).filter(Number.isFinite);
+  if (vals.length < 2) { setSummary("有効な値が2つ未満です", "warn"); return; }
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const variance = vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length;
+  const std = Math.sqrt(variance);
+  if (std === 0) { setSummary("分散が0なのでZ-score化できません", "warn"); return; }
+  for (const r of state.dataset.rows) {
+    const v = r.values[f];
+    r.values[name] = Number.isFinite(v) ? (v - mean) / std : null;
+  }
+  state.dataset.fields.push(name);
+  populateFieldSelects();
+  state.field = name;
+  els.selectField.value = name;
+  refresh();
+  setSummary(`Z-score列「${name}」を追加 (μ=${mean.toFixed(2)}, σ=${std.toFixed(2)})`, "success");
+});
 els.btnTemplate.addEventListener("click", downloadTemplate);
 
 els.btnPaste?.addEventListener("click", async () => {
