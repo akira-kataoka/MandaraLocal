@@ -267,6 +267,7 @@ const els = {
   inputGeocode: $("input-geocode"),
   btnTheme:     $("btn-theme"),
   btnZen:       $("btn-zen"),
+  btnCopyResults: $("btn-copy-results"),
   selectScene:  $("select-scene"),
   btnSceneSave: $("btn-scene-save"),
   btnSceneDelete: $("btn-scene-delete"),
@@ -3291,6 +3292,131 @@ function toggleZenMode() {
   setSummary(on ? "Zenモード（地図全画面） / Esc または Z で解除" : "Zenモード解除", "muted");
 }
 els.btnZen?.addEventListener("click", toggleZenMode);
+
+// Markdown clipboard export (Cycle 172): bundle all currently-computed
+// analysis results into one Markdown block so the user can paste it into
+// Obsidian / Notion / Word / Slack for note-taking.
+function buildAnalysisMarkdown() {
+  const lines = [];
+  const fmt = (v, d = 3) => (v == null || !Number.isFinite(v)) ? "—" : v.toFixed(d);
+  lines.push(`# MandaraNext 分析サマリー`);
+  lines.push(`*生成: ${new Date().toLocaleString("ja-JP")}*`);
+  lines.push("");
+  if (!state.dataset) {
+    lines.push("_データセット未読込_");
+    return lines.join("\n");
+  }
+  const ds = state.dataset;
+  lines.push(`## データ概要`);
+  lines.push(`- 行数: ${ds.rows.length}`);
+  lines.push(`- 列数: ${ds.fields.length}`);
+  lines.push(`- レベル: ${ds.level || state.level}`);
+  if (ds.encoding) lines.push(`- 文字コード: ${ds.encoding}`);
+  if (state.field) lines.push(`- 表示列: **${state.field}**`);
+  lines.push("");
+
+  // Basic stats
+  if (state.field) {
+    const values = ds.rows.map(r => r.values[state.field]);
+    const s = computeStats(values);
+    if (s.n > 0) {
+      lines.push(`## 基本統計 (${state.field})`);
+      lines.push(`| 指標 | 値 |`);
+      lines.push(`|---|---|`);
+      lines.push(`| n | ${s.n} |`);
+      lines.push(`| 欠損 | ${s.missing} |`);
+      lines.push(`| 平均 | ${fmt(s.mean)} |`);
+      lines.push(`| 中央値 | ${fmt(s.median)} |`);
+      lines.push(`| 最小 〜 最大 | ${fmt(s.min)} 〜 ${fmt(s.max)} |`);
+      lines.push(`| 標準偏差 | ${fmt(s.std)} |`);
+      if (s.ciMeanLo != null) lines.push(`| 平均 95% CI | [${fmt(s.ciMeanLo)}, ${fmt(s.ciMeanHi)}] |`);
+      if (s.skewness != null) lines.push(`| 歪度 | ${fmt(s.skewness)} |`);
+      if (s.kurtosis != null) lines.push(`| 尖度 (超過) | ${fmt(s.kurtosis)} |`);
+      lines.push("");
+    }
+  }
+
+  // Scatter / correlation
+  const sc = state.scatterStats;
+  if (sc && sc.r != null) {
+    lines.push(`## 散布図統計 (${sc.xf} × ${sc.yf})`);
+    lines.push(`- n=${sc.n}`);
+    lines.push(`- Pearson r = ${fmt(sc.r)}${sc.rCI ? ` [${fmt(sc.rCI[0])}, ${fmt(sc.rCI[1])}]` : ""}`);
+    if (sc.rho != null) lines.push(`- Spearman ρ = ${fmt(sc.rho)}${sc.rhoCI ? ` [${fmt(sc.rhoCI[0])}, ${fmt(sc.rhoCI[1])}]` : ""}`);
+    if (sc.r2 != null) lines.push(`- R² = ${fmt(sc.r2)}`);
+    if (sc.degree > 1 && sc.polyR2 != null) {
+      lines.push(`- 多項式 ${sc.degree} 次 R² = ${fmt(sc.polyR2)}`);
+      if (sc.aic != null) lines.push(`- AIC = ${fmt(sc.aic, 2)}, BIC = ${fmt(sc.bic, 2)}`);
+    }
+    lines.push("");
+  }
+
+  // Multiple regression
+  const mr = state.mrResult;
+  if (mr) {
+    lines.push(`## 重回帰分析`);
+    lines.push(`- 目的変数: ${mr.yField}`);
+    lines.push(`- 説明変数: ${mr.xFields.join(", ")}`);
+    lines.push(`- n=${mr.n}, R²=${fmt(mr.R2)}, 調整R²=${fmt(mr.adjR2)}, F(${mr.dfModel},${mr.dfResid})=${fmt(mr.F, 2)}`);
+    lines.push("");
+    lines.push(`| 変数 | 係数 | 標準化β | 95% CI | t | p | VIF |`);
+    lines.push(`|---|---|---|---|---|---|---|`);
+    mr.labels.forEach((lbl, i) => {
+      const ciLo = mr.ciLo?.[i], ciHi = mr.ciHi?.[i];
+      const ci = (ciLo != null && ciHi != null) ? `[${fmt(ciLo)}, ${fmt(ciHi)}]` : "—";
+      lines.push(`| ${lbl} | ${fmt(mr.coeffs[i], 4)} | ${fmt(mr.stdCoeffs?.[i])} | ${ci} | ${fmt(mr.tStats[i], 2)} | ${fmt(mr.pValues[i], 4)} | ${fmt(mr.vif?.[i], 2)} |`);
+    });
+    lines.push("");
+  }
+
+  // k-means / hclust / PCA / LISA summaries
+  if (state.kmResult) {
+    const r = state.kmResult;
+    lines.push(`## k-means クラスタリング`);
+    lines.push(`- K=${r.K}, n=${r.n}, WSS=${fmt(r.wss, 2)}, シルエット=${fmt(r.silhouette)}`);
+    lines.push("");
+  }
+  if (state.hcResult) {
+    const r = state.hcResult;
+    lines.push(`## 階層クラスタリング (${r.linkage})`);
+    lines.push(`- K=${r.K}, n=${r.n}, シルエット=${fmt(r.silhouette)}`);
+    lines.push("");
+  }
+  if (state.pcaResult) {
+    const r = state.pcaResult;
+    lines.push(`## 主成分分析 (PCA)`);
+    lines.push(`- n=${r.n}, d=${r.d}`);
+    const top = Math.min(3, r.d);
+    for (let k = 0; k < top; k++) {
+      lines.push(`- PC${k + 1}: 固有値 ${fmt(r.eigvals[k])}, 寄与率 ${fmt(r.ratios[k] * 100, 1)}% (累積 ${fmt(r.cumRatios[k] * 100, 1)}%)`);
+    }
+    lines.push("");
+  }
+  if (state.lisaResult) {
+    const r = state.lisaResult;
+    lines.push(`## LISA 空間自己相関 (${r.field})`);
+    lines.push(`- n=${r.n}, 全体 Moran's I = ${fmt(r.globalI)}, 有意 ${r.sigCount}/${r.n} (p<${r.alpha}, ${r.perm}回順列)`);
+    lines.push(`- HH=${r.catTally.HH}, LL=${r.catTally.LL}, HL=${r.catTally.HL}, LH=${r.catTally.LH}, NS=${r.catTally.NS}`);
+    lines.push("");
+  }
+
+  lines.push(`---`);
+  lines.push(`*Generated by [MandaraNext](https://akira-kataoka.github.io/MandaraNext/)*`);
+  return lines.join("\n");
+}
+
+els.btnCopyResults?.addEventListener("click", async () => {
+  const md = buildAnalysisMarkdown();
+  if (!navigator.clipboard?.writeText) {
+    setSummary("お使いのブラウザはクリップボード書込みに未対応です", "warn"); return;
+  }
+  try {
+    await navigator.clipboard.writeText(md);
+    setSummary(`分析結果を Markdown でクリップボードにコピーしました（${md.split("\n").length}行）`, "success");
+  } catch (e) {
+    setSummary("コピー失敗: " + e.message, "error");
+  }
+});
 
 els.btnDataReset?.addEventListener("click", () => {
   if (!state.dataset) {
