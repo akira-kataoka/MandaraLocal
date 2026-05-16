@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=116" />
+  <link rel="stylesheet" href="css/style.css?v=117" />
 </head>
 <body>
   <header class="app-header">
@@ -287,6 +287,9 @@
       <section class="panel" id="panel-stats" hidden>
         <h2>4. 基本統計量</h2>
         <table id="stats-table" class="stats-table"></table>
+        <div class="form-row" style="margin-top:6px">
+          <button id="btn-stats-export" class="btn" style="margin-left:auto">全列の統計を CSV 出力</button>
+        </div>
         <div class="form-row inline" style="margin-top:6px">
           <label><input type="checkbox" id="chk-outliers" /> 外れ値を地図で強調 (IQR×1.5)</label>
         </div>
@@ -610,7 +613,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=116"></script>
+  <script type="module" src="js/main.js?v=117"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

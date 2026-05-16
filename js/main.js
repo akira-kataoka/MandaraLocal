@@ -124,6 +124,7 @@ const els = {
   palettePreview: $("palette-preview"),
   panelStats:   $("panel-stats"),
   statsTable:   $("stats-table"),
+  btnStatsExport: $("btn-stats-export"),
   chkOutliers:  $("chk-outliers"),
   outlierList:  $("outlier-list"),
   chkSde:       $("chk-sde"),
@@ -2851,6 +2852,54 @@ function renderPieLegend(container, fields, colors, title) {
     container.appendChild(row);
   });
 }
+
+function exportAllStatsCsv() {
+  if (!state.dataset || !state.dataset.fields.length) {
+    setSummary("先にデータを読み込んでください", "warn");
+    return;
+  }
+  const cols = [
+    "フィールド", "n", "欠損", "合計", "平均", "中央値",
+    "最小", "最大", "範囲", "Q1", "Q3", "IQR",
+    "標準偏差", "変動係数(%)", "歪度", "尖度(超過)", "最頻値",
+  ];
+  const fmt = (v, digits) => (v == null || !Number.isFinite(v)) ? "" : (digits != null ? v.toFixed(digits) : String(v));
+  const lines = [cols.map(csvEscape).join(",")];
+  for (const f of state.dataset.fields) {
+    const values = state.dataset.rows.map(r => r.values[f]);
+    const s = computeStats(values);
+    const row = [
+      f,
+      fmt(s.n),
+      fmt(s.missing),
+      fmt(s.sum),
+      fmt(s.mean),
+      fmt(s.median),
+      fmt(s.min),
+      fmt(s.max),
+      fmt(s.range),
+      fmt(s.q1),
+      fmt(s.q3),
+      fmt(s.iqr),
+      fmt(s.std),
+      s.cv == null ? "" : (s.cv * 100).toFixed(1),
+      fmt(s.skewness, 3),
+      fmt(s.kurtosis, 3),
+      fmt(s.mode),
+    ];
+    lines.push(row.map(csvEscape).join(","));
+  }
+  const csv = "﻿" + lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `descriptive_stats_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`${state.dataset.fields.length}列の基本統計を ${a.download} として保存しました`, "success");
+}
+els.btnStatsExport?.addEventListener("click", exportAllStatsCsv);
 
 function renderStats(values) {
   const s = computeStats(values);
