@@ -162,6 +162,7 @@ const els = {
   btnTableCols: $("btn-table-cols"),
   tableColPicker: $("table-col-picker"),
   chkTableHeat: $("chk-table-heat"),
+  btnTableViewCsv: $("btn-table-view-csv"),
   panelHist:    $("panel-histogram"),
   histBins:     $("hist-bins"),
   chkHistOverlay: $("chk-hist-overlay"),
@@ -4096,6 +4097,45 @@ els.btnDataReset?.addEventListener("click", () => {
   setSummary("データセットをクリアしました。新しい CSV を読み込んでください", "success");
 });
 els.btnCsv.addEventListener("click", exportCurrentCsv);
+
+// Cycle 218: export the data table exactly as the user sees it — applying
+// table search, attribute filter, sort, column visibility, and column order.
+els.btnTableViewCsv?.addEventListener("click", () => {
+  if (!state.dataset) { setSummary("先にデータを読み込んでください", "warn"); return; }
+  const fields = getVisibleFields();
+  if (!fields.length) { setSummary("表示列が空のためCSVに出力できません", "warn"); return; }
+  // getTableRows() honors both attribute filter and the search box.
+  let rowsRaw = (typeof getTableRows === "function") ? getTableRows() : state.dataset.rows.slice();
+  const sort = getSortState();
+  if (sort.field) {
+    const dir = sort.asc ? 1 : -1;
+    const isName = sort.field === "name";
+    rowsRaw = rowsRaw.slice().sort((a, b) => {
+      const va = isName ? (a.name || "") : a.values[sort.field];
+      const vb = isName ? (b.name || "") : b.values[sort.field];
+      if (va == null && vb == null) return 0;
+      if (va == null) return 1;
+      if (vb == null) return -1;
+      if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
+      return String(va).localeCompare(String(vb), "ja") * dir;
+    });
+  }
+  const header = ["地域", ...fields];
+  const rows = rowsRaw.map(r => [r.name || ("#" + r.key), ...fields.map(k => r.values[k] ?? "")]);
+  const esc = (c) => {
+    const s = String(c ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [header, ...rows].map(line => line.map(esc).join(",")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `mandara_table_view_${rowsRaw.length}rows_${fields.length}cols.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`表示中のテーブルをCSV出力 (${rowsRaw.length}行 × ${fields.length}列)`, "success");
+});
 els.btnPdf.addEventListener("click", async () => {
   if (typeof htmlToImage === "undefined" || typeof window.jspdf === "undefined") {
     setSummary("PDFライブラリの読み込みに失敗しました", "error"); return;
