@@ -1629,8 +1629,91 @@ function renderMrResult(r) {
   // Residual plot (Cycle 142) — diagnostic for model adequacy.
   html += `<div style="margin-top:6px;font-size:11px;font-weight:600">残差プロット (Residuals vs Fitted)</div>`;
   html += `<svg id="mr-residual-svg" width="280" height="140" viewBox="0 0 280 140" style="background:#fff;border:1px solid #e2e8f0"></svg>`;
+  // Q-Q plot (Cycle 143) — visual normality check of residuals.
+  html += `<div style="margin-top:6px;font-size:11px;font-weight:600">Q-Q プロット (残差の正規性)</div>`;
+  html += `<svg id="mr-qq-svg" width="280" height="140" viewBox="0 0 280 140" style="background:#fff;border:1px solid #e2e8f0"></svg>`;
   els.mrResult.innerHTML = html;
   renderResidualPlot(r);
+  renderQQPlot(r);
+}
+
+// Acklam's rational approximation for the standard normal inverse CDF
+// (Φ⁻¹). Accurate to ~1e-9 in the body of the distribution, sufficient for
+// the visual Q-Q plot use case.
+function probit(p) {
+  if (!(p > 0 && p < 1)) return p === 0 ? -Infinity : Infinity;
+  const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+  const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+  const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+  const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+  const pLow = 0.02425, pHigh = 1 - pLow;
+  if (p < pLow) {
+    const q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  }
+  if (p <= pHigh) {
+    const q = p - 0.5, r = q * q;
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+  }
+  const q = Math.sqrt(-2 * Math.log(1 - p));
+  return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+}
+
+function renderQQPlot(r) {
+  const svg = els.mrResult.querySelector("#mr-qq-svg");
+  if (!svg || !r.residuals || r.residuals.length < 2) return;
+  const NS = "http://www.w3.org/2000/svg";
+  const make = (tag, attrs) => {
+    const e = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    return e;
+  };
+  const W = 280, H = 140, PAD = { top: 8, right: 8, bottom: 22, left: 36 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+  const sorted = r.residuals.slice().sort((a, b) => a - b);
+  const n = sorted.length;
+  const theo = sorted.map((_, i) => probit((i + 0.5) / n));
+  const tMin = theo[0], tMax = theo[n - 1];
+  const sMin = sorted[0], sMax = sorted[n - 1];
+  const tRange = tMax - tMin || 1;
+  const sRange = sMax - sMin || 1;
+  const px = (v) => PAD.left + ((v - tMin) / tRange) * innerW;
+  const py = (v) => PAD.top + innerH - ((v - sMin) / sRange) * innerH;
+  // Reference line: y = mean(res) + sd(res) × theoretical quantile
+  const mean = r.residuals.reduce((s, v) => s + v, 0) / n;
+  const sd = Math.sqrt(r.residuals.reduce((s, v) => s + (v - mean) ** 2, 0) / Math.max(1, n - 1));
+  // Axes
+  svg.appendChild(make("line", { x1: PAD.left, y1: H - PAD.bottom, x2: W - PAD.right, y2: H - PAD.bottom, stroke: "#94a3b8" }));
+  svg.appendChild(make("line", { x1: PAD.left, y1: PAD.top, x2: PAD.left, y2: H - PAD.bottom, stroke: "#94a3b8" }));
+  // Reference line clipped to box
+  if (sd > 0) {
+    svg.appendChild(make("line", {
+      x1: px(tMin), y1: py(mean + sd * tMin),
+      x2: px(tMax), y2: py(mean + sd * tMax),
+      stroke: "#dc2626", "stroke-width": 1, "stroke-dasharray": "3,2",
+    }));
+  }
+  // Points
+  for (let i = 0; i < n; i++) {
+    svg.appendChild(make("circle", {
+      cx: px(theo[i]), cy: py(sorted[i]), r: 2.2,
+      fill: "rgba(15,23,42,0.6)", stroke: "#1e293b", "stroke-width": 0.3,
+    }));
+  }
+  // Axis labels & ticks
+  const lbl = (x, y, text, anchor = "middle") => {
+    const t = make("text", { x, y, "font-size": 8, fill: "#475569", "text-anchor": anchor });
+    t.textContent = text; svg.appendChild(t);
+  };
+  lbl(W / 2, H - 6, "理論分位点 (Standard Normal)");
+  lbl(4, PAD.top + innerH / 2, "残差分位点", "start");
+  for (const t of [-2, 0, 2]) {
+    if (t < tMin - 0.2 || t > tMax + 0.2) continue;
+    const x = px(t);
+    svg.appendChild(make("line", { x1: x, y1: H - PAD.bottom, x2: x, y2: H - PAD.bottom + 2, stroke: "#94a3b8" }));
+    lbl(x, H - PAD.bottom + 12, String(t));
+  }
 }
 
 function renderResidualPlot(r) {
