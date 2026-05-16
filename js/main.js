@@ -188,6 +188,7 @@ const els = {
   scatterSizeBy:   $("scatter-size-by"),
   chkScatterStats: $("chk-scatter-stats"),
   chkScatterCi:    $("chk-scatter-ci"),
+  chkScatterPi:    $("chk-scatter-pi"),
   scatterLabels:   $("scatter-labels"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
@@ -1437,6 +1438,7 @@ els.scatterColorBy?.addEventListener("change", drawScatter);
 els.scatterSizeBy?.addEventListener("change", drawScatter);
 els.chkScatterStats?.addEventListener("change", drawScatter);
 els.chkScatterCi?.addEventListener("change", drawScatter);
+els.chkScatterPi?.addEventListener("change", drawScatter);
 els.scatterLabels?.addEventListener("change", drawScatter);
 els.scatterDegree?.addEventListener("change", drawScatter);
 els.chkScatterLogX.addEventListener("change", drawScatter);
@@ -4604,6 +4606,7 @@ function drawScatter() {
     logY: els.chkScatterLogY.checked,
     statsOverlay: !!els.chkScatterStats?.checked,
     regCI: !!els.chkScatterCi?.checked,
+    regPI: !!els.chkScatterPi?.checked,
     labels: els.scatterLabels?.value || "outliers",
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
     onBrush: (ids) => {

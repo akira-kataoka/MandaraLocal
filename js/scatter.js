@@ -248,7 +248,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     // Optional: 95% confidence band for the mean response. Drawn before the
     // line so the line sits cleanly on top. t = 1.96 (good for n >= 30,
     // slightly conservative for smaller n).
-    if (opts.regCI && xs2.length >= 3) {
+    if ((opts.regCI || opts.regPI) && xs2.length >= 3) {
       const n = xs2.length;
       const mxs = xs2.reduce((a, b) => a + b, 0) / n;
       let sxx = 0, rss = 0;
@@ -261,22 +261,23 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
         const se = Math.sqrt(rss / Math.max(1, n - 2));
         const t = 1.96;
         const STEPS = 40;
-        const upper = [];
-        const lower = [];
-        for (let i = 0; i <= STEPS; i++) {
-          const xv = xMin + (i / STEPS) * (xMax - xMin);
-          const ym = slope * xv + intercept;
-          const half = t * se * Math.sqrt(1 / n + ((xv - mxs) ** 2) / sxx);
-          upper.push([pxAt(xv), pyAt(ym + half)]);
-          lower.push([pxAt(xv), pyAt(ym - half)]);
-        }
-        // Build filled polygon: upper-left → upper-right → lower-right → lower-left.
-        const pts = [...upper, ...lower.reverse()].map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
-        const band = el("polygon", {
-          points: pts,
-          fill: "rgba(220,38,38,0.12)", stroke: "none",
-        });
-        svgEl.appendChild(band);
+        // Helper that emits a band polygon ("+ extra" adds 1 for prediction interval).
+        const makeBand = (extra, fill) => {
+          const upper = [];
+          const lower = [];
+          for (let i = 0; i <= STEPS; i++) {
+            const xv = xMin + (i / STEPS) * (xMax - xMin);
+            const ym = slope * xv + intercept;
+            const half = t * se * Math.sqrt(extra + 1 / n + ((xv - mxs) ** 2) / sxx);
+            upper.push([pxAt(xv), pyAt(ym + half)]);
+            lower.push([pxAt(xv), pyAt(ym - half)]);
+          }
+          const pts = [...upper, ...lower.reverse()].map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+          return el("polygon", { points: pts, fill, stroke: "none" });
+        };
+        // Draw PI first (wider, lighter) so the CI sits cleanly on top.
+        if (opts.regPI) svgEl.appendChild(makeBand(1, "rgba(220,38,38,0.06)"));
+        if (opts.regCI) svgEl.appendChild(makeBand(0, "rgba(220,38,38,0.12)"));
       }
     }
     // Polynomial regression curve (Cycle 127). Degree 1 keeps the existing
