@@ -140,6 +140,7 @@ const els = {
   inputBufferKm:$("input-buffer-km"),
   btnMesh:      $("btn-mesh"),
   selectMeshLevel: $("select-mesh-level"),
+  inputGeocode: $("input-geocode"),
   btnTheme:     $("btn-theme"),
 };
 
@@ -903,6 +904,36 @@ els.btnMesh.addEventListener("click", () => {
   }
 });
 els.selectMeshLevel.addEventListener("change", () => meshOn && refreshMesh());
+
+// ----- Geocoding via GSI AddressSearch -----
+let geocodeMarker = null;
+let geocodeDebounce = null;
+async function runGeocode() {
+  const q = els.inputGeocode.value.trim();
+  if (!q) return;
+  setSummary(`住所検索中…  「${q}」`, "muted");
+  try {
+    const url = "https://msearch.gsi.go.jp/address-search/AddressSearch?q=" + encodeURIComponent(q);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const arr = await res.json();
+    if (!arr.length) { setSummary(`「${q}」は見つかりませんでした`, "warn"); return; }
+    const top = arr[0];
+    const [lng, lat] = top.geometry.coordinates;
+    const title = top.properties.title || q;
+    if (geocodeMarker) mapper.map.removeLayer(geocodeMarker);
+    geocodeMarker = L.marker([lat, lng]).addTo(mapper.map);
+    geocodeMarker.bindPopup(`<strong>${title}</strong><br/>${lat.toFixed(5)}, ${lng.toFixed(5)}`).openPopup();
+    mapper.map.setView([lat, lng], Math.max(mapper.map.getZoom(), 13));
+    setSummary(`${title}  (${lat.toFixed(4)}, ${lng.toFixed(4)})  該当 ${arr.length} 件`, "success");
+  } catch (e) {
+    setSummary("住所検索失敗: " + e.message, "error");
+  }
+}
+els.inputGeocode.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); runGeocode(); }
+});
+els.inputGeocode.addEventListener("change", runGeocode);
 
 function toggleTheme() {
   const next = document.body.classList.toggle("dark");
