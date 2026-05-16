@@ -1786,18 +1786,36 @@ function runCrossTab() {
   els.ctResult.querySelectorAll(".ct-cell").forEach((td) => {
     const ri = parseInt(td.dataset.row, 10);
     const ci = parseInt(td.dataset.col, 10);
-    td.addEventListener("mouseenter", () => {
-      const hits = new Set();
+    // Helper: ids that fall into this (ri, ci) cell.
+    const cellIds = () => {
+      const out = [];
       for (let k = 0; k < state.dataset.rows.length; k++) {
         const rv = rowVals[k], cv = colVals[k];
         if (!Number.isFinite(rv) || !Number.isFinite(cv)) continue;
         const r2 = clamp(classifyValue(rv, rowBreaks), 0, bins - 1);
         const c2 = clamp(classifyValue(cv, colBreaks), 0, bins - 1);
-        if (r2 === ri && c2 === ci) hits.add(state.dataset.rows[k].key);
+        if (r2 === ri && c2 === ci) out.push(state.dataset.rows[k].key);
       }
-      mapper.markOutliers(hits);
-    });
+      return out;
+    };
+    td.addEventListener("mouseenter", () => mapper.markOutliers(new Set(cellIds())));
     td.addEventListener("mouseleave", () => mapper.clearOutlierMarks());
+    // Cycle 255: Shift+click on a crosstab cell bulk-pins its members.
+    td.addEventListener("click", (ev) => {
+      if (!ev.shiftKey) return;
+      ev.preventDefault();
+      const ids = cellIds();
+      if (!ids.length) { setSummary("該当セルに地域がありません", "warn"); return; }
+      if (!(state.pinnedScatterIds instanceof Set)) state.pinnedScatterIds = new Set();
+      let added = 0;
+      for (const id of ids) if (!state.pinnedScatterIds.has(id)) { state.pinnedScatterIds.add(id); added++; }
+      if (!added) { setSummary("該当セルは全件ピン済みでした", "muted"); return; }
+      syncScatterPinBtn();
+      drawScatter();
+      if (typeof refreshTable === "function") refreshTable();
+      mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
+      setSummary(`セル(${ri + 1},${ci + 1}) から ${added} 件を新規ピン留め（計 ${state.pinnedScatterIds.size} 件）`, "success");
+    });
   });
 }
 
@@ -4375,6 +4393,7 @@ function showHelpModal() {
       <span>件数クリック</span><span>該当クラス地域名をクリップボードへ</span>
       <span>swatch Shift+クリック</span><span>クラスメンバー全件を一括ピン留め</span>
       <span>ヒスト bar Shift+クリック</span><span>bin 内の地域を一括ピン留め</span>
+      <span>クロス集計セル Shift+クリック</span><span>セルに該当する地域を一括ピン留め</span>
 
       <strong>テーブル</strong><span></span>
       <span>📋 列</span><span>列の表示/非表示 + 並び替え（↑/↓）</span>
