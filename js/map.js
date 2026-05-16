@@ -232,6 +232,43 @@ export class MandaraMap {
   }
 
   /**
+   * Render text labels at each feature centroid: "name\nvalue".
+   * Inspired by MANDARA's 「文字モード / ラベル表示モード」.
+   *
+   * @param valueMap Map<id, number|null>
+   * @param fieldName  current data field (used for unit suffix)
+   * @param opts.showName  also show feature name (default true)
+   */
+  applyLabels(valueMap, fieldName, opts = {}) {
+    this.symbolLayer.clearLayers();
+    if (!this.layer || !valueMap) return;
+    const showName = opts.showName !== false;
+    const unit = extractUnit(fieldName || "");
+    this.layer.eachLayer((lyr) => {
+      const f = lyr.feature;
+      let lat, lng;
+      try {
+        const c = lyr.getBounds().getCenter();
+        lat = c.lat; lng = c.lng;
+      } catch {
+        return;
+      }
+      const v = valueMap.get(f.properties.id);
+      const name = this._nameFor(f.properties);
+      const val = Number.isFinite(v) ? `${formatNum(v)}${unit ? " " + unit : ""}` : "—";
+      const html = `<div class="map-label">${showName ? `<span class="ml-name">${escapeHtml(name)}</span><br/>` : ""}<span class="ml-val">${escapeHtml(val)}</span></div>`;
+      const icon = L.divIcon({
+        className: "map-label-icon",
+        html,
+        iconSize: null,
+        iconAnchor: [0, 0],
+      });
+      const m = L.marker([lat, lng], { icon, interactive: false });
+      m.addTo(this.symbolLayer);
+    });
+  }
+
+  /**
    * Town-level (chocho) plot: each entry is { town, lat, lng, koaza, id }.
    * Renders as CircleMarkers in the symbol layer. Tooltip on hover.
    * Optional valueMap / classified colors will paint each town by its value.

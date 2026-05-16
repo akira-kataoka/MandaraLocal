@@ -746,12 +746,14 @@ function refresh() {
     mapper.applyChoropleth(state.valueMap, state.breaks, state.colors, state.field);
   }
 
-  // proportional symbols / dot density
+  // proportional symbols / dot density / labels
   if (state.mode === "symbol" || state.mode === "both") {
     mapper.applyProportionalSymbols(state.valueMap, { maxRadiusPx: state.maxR });
   } else if (state.mode === "dot") {
     const unit = Math.max(1, parseFloat(els.inputDotUnit.value || "10000"));
     mapper.applyDotDensity(state.geojson, state.valueMap, unit);
+  } else if (state.mode === "label") {
+    mapper.applyLabels(state.valueMap, state.field);
   } else {
     mapper.clearSymbols();
   }
