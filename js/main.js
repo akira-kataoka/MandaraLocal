@@ -168,6 +168,7 @@ const els = {
   selectMeshLevel: $("select-mesh-level"),
   btnDraw:      $("btn-draw"),
   btnClearPins: $("btn-clear-pins"),
+  btnInstall:   $("btn-install"),
   inputGeocode: $("input-geocode"),
   btnTheme:     $("btn-theme"),
   selectScene:  $("select-scene"),
@@ -2200,6 +2201,29 @@ mapper.onPinChange((ids) => {
   }
 });
 els.btnClearPins.addEventListener("click", () => mapper.clearPins());
+
+// ----- PWA install banner -----
+let deferredInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  els.btnInstall.hidden = false;
+});
+els.btnInstall.addEventListener("click", async () => {
+  if (!deferredInstallPrompt) {
+    setSummary("既にインストール済み、または対応ブラウザではありません。Safariなら共有→ホーム画面に追加。", "muted");
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  if (outcome === "accepted") setSummary("ホーム画面に追加されました 🎉", "success");
+  deferredInstallPrompt = null;
+  els.btnInstall.hidden = true;
+});
+window.addEventListener("appinstalled", () => {
+  els.btnInstall.hidden = true;
+  setSummary("インストール完了。ホーム画面/デスクトップから起動できます", "success");
+});
 
 const fdDiv = document.getElementById("feature-detail");
 const fdName = document.getElementById("fd-name");
