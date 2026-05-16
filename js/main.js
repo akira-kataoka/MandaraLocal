@@ -198,6 +198,7 @@ const els = {
   scatterX:     $("scatter-x"),
   scatterY:     $("scatter-y"),
   scatterColorBy: $("scatter-color-by"),
+  scatterLabelBy: $("scatter-label-by"),
   scatterSizeBy:   $("scatter-size-by"),
   chkScatterStats: $("chk-scatter-stats"),
   chkScatterCi:    $("chk-scatter-ci"),
@@ -1690,6 +1691,7 @@ els.scatterX.addEventListener("change", drawScatter);
 els.scatterY.addEventListener("change", drawScatter);
 els.scatterColorBy?.addEventListener("change", drawScatter);
 els.scatterSizeBy?.addEventListener("change", drawScatter);
+els.scatterLabelBy?.addEventListener("change", drawScatter);
 els.chkScatterStats?.addEventListener("change", drawScatter);
 els.chkScatterCi?.addEventListener("change", drawScatter);
 els.chkScatterPi?.addEventListener("change", drawScatter);
@@ -6116,6 +6118,18 @@ function populateScatterSelectors(fields) {
     }
     if (fields.includes(prev)) els.scatterSizeBy.value = prev;
   }
+  // Cycle 206: label-by selector — picks an arbitrary column whose value
+  // replaces the default name() label per point.
+  if (els.scatterLabelBy) {
+    const prev = els.scatterLabelBy.value;
+    els.scatterLabelBy.innerHTML = '<option value="">— 地域名（既定）—</option>';
+    for (const f of fields) {
+      const o = document.createElement("option");
+      o.value = f; o.textContent = f;
+      els.scatterLabelBy.appendChild(o);
+    }
+    if (fields.includes(prev)) els.scatterLabelBy.value = prev;
+  }
   drawScatter();
 }
 
@@ -6134,7 +6148,18 @@ function drawScatter() {
     const idx = classifyValue(v, state.breaks);
     return idx < 0 ? null : state.colors[idx];
   };
-  const names = state.dataset.rows.map(r => r.name || ("#" + r.key));
+  // Cycle 206: if user picked a label column, substitute its values for the
+  // default region name. Numeric values are passed through formatNum for a
+  // legible label; null/empty cells fall back to the region name so the
+  // point isn't unlabelled.
+  const labelByField = els.scatterLabelBy?.value || "";
+  const names = labelByField
+    ? state.dataset.rows.map(r => {
+        const v = r.values[labelByField];
+        if (v == null || v === "") return r.name || ("#" + r.key);
+        return typeof v === "number" ? formatNum(v) : String(v);
+      })
+    : state.dataset.rows.map(r => r.name || ("#" + r.key));
   // Optional 3rd-variable categorical coloring. If the chosen column is numeric,
   // bin into quartile labels (Q1/Q2/Q3/Q4) so it still renders as discrete series.
   const colorByField = els.scatterColorBy?.value || "";

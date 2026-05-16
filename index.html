@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=205" />
+  <link rel="stylesheet" href="css/style.css?v=206" />
 </head>
 <body>
   <header class="app-header">
@@ -566,6 +566,10 @@
           <select id="scatter-size-by"><option value="">— なし（固定）—</option></select>
         </div>
         <div class="form-row">
+          <label for="scatter-label-by">ラベル列</label>
+          <select id="scatter-label-by" title="散布図のポイントラベルに使う列（既定: 地域名）"><option value="">— 地域名（既定）—</option></select>
+        </div>
+        <div class="form-row">
           <button id="btn-scatter-clear-overlays" class="btn" style="font-size:11px" title="統計オーバーレイ・参照線・ジッター・LOWESS などを全て解除">⛒ オーバーレイ一括クリア</button>
         </div>
         <div class="form-row inline">
@@ -842,7 +846,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=205"></script>
+  <script type="module" src="js/main.js?v=206"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
