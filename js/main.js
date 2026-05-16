@@ -1470,6 +1470,72 @@ $("hist-csv")?.addEventListener("click", () => {
 $("scatter-svg-btn")?.addEventListener("click", () => downloadSvg(els.scatterSvg, `scatter_${safeName(els.scatterX.value)}_vs_${safeName(els.scatterY.value)}.svg`));
 $("box-svg")?.addEventListener("click", () => downloadSvg(els.boxplotSvg, `boxplot_${safeName(state.field)}.svg`));
 
+// Cycle 205: boxplot 5-number summary CSV. When the scatter color-by column
+// is set to a categorical field (2-N groups), emit one row per group; else
+// a single overall row. Mirrors the on-screen grouped boxplot logic.
+$("box-csv")?.addEventListener("click", () => {
+  if (!state.dataset || !state.field) {
+    setSummary("Boxplot CSV: データセットを読み込んでください", "warn"); return;
+  }
+  const colorByField = els.scatterColorBy?.value || "";
+  // helper: 5-number summary + mean/sd/outliers for a single value array
+  const summarize = (vals) => {
+    const s = computeStats(vals);
+    if (s.n === 0) return null;
+    const lo = s.q1 - 1.5 * s.iqr;
+    const hi = s.q3 + 1.5 * s.iqr;
+    let outliers = 0;
+    for (const x of vals) {
+      if (!Number.isFinite(x)) continue;
+      if (x < lo || x > hi) outliers++;
+    }
+    return { ...s, outliers };
+  };
+  const rows = [];
+  if (colorByField && colorByField !== state.field) {
+    // Grouped: bucket by category, then summarize.
+    const gm = new Map();
+    for (const r of state.dataset.rows) {
+      const yv = r.values[state.field];
+      if (!Number.isFinite(yv)) continue;
+      const c = r.values[colorByField];
+      if (c == null || c === "") continue;
+      const key = String(c);
+      if (!gm.has(key)) gm.set(key, []);
+      gm.get(key).push(yv);
+    }
+    rows.push(["category", "n", "min", "q1", "median", "q3", "max", "iqr", "mean", "sd", "outliers"]);
+    for (const [name, arr] of gm.entries()) {
+      const s = summarize(arr); if (!s) continue;
+      rows.push([name, s.n, s.min, s.q1, s.median, s.q3, s.max, s.iqr, s.mean, s.std, s.outliers]);
+    }
+  } else {
+    const arr = state.dataset.rows.map(r => r.values[state.field]);
+    const s = summarize(arr);
+    if (!s) { setSummary("Boxplot CSV: 有効な数値がありません", "warn"); return; }
+    rows.push(["field", "n", "min", "q1", "median", "q3", "max", "iqr", "mean", "sd", "outliers"]);
+    rows.push([state.field, s.n, s.min, s.q1, s.median, s.q3, s.max, s.iqr, s.mean, s.std, s.outliers]);
+  }
+  if (rows.length < 2) {
+    setSummary("Boxplot CSV: 出力する行がありません", "warn"); return;
+  }
+  // Quote any cell that contains a comma / quote / newline (category names mostly).
+  const esc = (c) => {
+    const s = String(c ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = rows.map(r => r.map(esc).join(",")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const suffix = colorByField && colorByField !== state.field ? `_by_${safeName(colorByField)}` : "";
+  a.href = url;
+  a.download = `boxplot_${safeName(state.field)}${suffix}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`Boxplot CSV: ${rows.length - 1} 行を保存`, "success");
+});
+
 function runCrossTab() {
   if (!state.dataset) return;
   const rowF = els.ctRow.value, colF = els.ctCol.value;

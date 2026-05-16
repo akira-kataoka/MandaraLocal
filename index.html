@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=204" />
+  <link rel="stylesheet" href="css/style.css?v=205" />
 </head>
 <body>
   <header class="app-header">
@@ -505,6 +505,7 @@
         <svg id="boxplot-svg" viewBox="0 0 280 140" preserveAspectRatio="xMidYMid meet"></svg>
         <div class="form-row">
           <button id="box-svg" class="btn">SVGで保存</button>
+          <button id="box-csv" class="btn" title="5数要約・外れ値件数をCSV出力（色分け列指定時はグループ別行）">📊 CSV</button>
         </div>
       </section>
 
@@ -841,7 +842,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=204"></script>
+  <script type="module" src="js/main.js?v=205"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
