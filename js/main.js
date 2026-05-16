@@ -2565,9 +2565,10 @@ function refresh() {
     if (!out) {
       setSummary("LISA を計算できません（有効データが少ない or 重心が取得できない）", "warn");
     } else {
+      state.lisaResult = out;
       mapper.applyColorMap(out.colorById, state.field);
-      renderLisaLegend(els.legendBox, out);
-      renderLisaLegend(els.overlayLegend, out);
+      renderLisaLegend(els.legendBox, out, true);
+      renderLisaLegend(els.overlayLegend, out, false);
       els.overlay.hidden = false;
       els.overlayTitle.textContent = `LISA: ${state.field}`;
       const src = (els.inputDataSource?.value || "").trim();
@@ -3714,8 +3715,12 @@ function runLisa() {
   // Build colored output. Pseudo p = (count + 1) / (PERM + 1).
   const ALPHA = 0.05;
   const colorById = new Map();
+  const details = [];
   let sigCount = 0;
   const catTally = { HH: 0, LL: 0, HL: 0, LH: 0, NS: 0 };
+  // Build a id → name lookup from current dataset for export richness.
+  const nameById = new Map();
+  for (const r of state.dataset.rows) nameById.set(r.key, r.name || `#${r.key}`);
   for (let i = 0; i < n; i++) {
     const p = (counts[i] + 1) / (PERM + 1);
     const isSig = p < ALPHA;
@@ -3728,8 +3733,17 @@ function runLisa() {
     catTally[cat]++;
     if (isSig) sigCount++;
     colorById.set(items[i].id, LISA_COLORS[cat]);
+    details.push({
+      id: items[i].id,
+      name: nameById.get(items[i].id) || `#${items[i].id}`,
+      value: items[i].v,
+      zScore: z[i],
+      localMoranI: obs[i],
+      pValue: p,
+      category: cat,
+    });
   }
-  return { colorById, globalI, n, sigCount, catTally, perm: PERM, alpha: ALPHA };
+  return { colorById, globalI, n, sigCount, catTally, perm: PERM, alpha: ALPHA, details, field: state.field };
 }
 
 function haversineDist(lat1, lng1, lat2, lng2) {
@@ -3741,7 +3755,7 @@ function haversineDist(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function renderLisaLegend(container, result) {
+function renderLisaLegend(container, result, withExport = false) {
   container.innerHTML = "";
   const { globalI, n, sigCount, catTally, perm, alpha } = result;
   const wrap = document.createElement("div");
@@ -3774,7 +3788,53 @@ function renderLisaLegend(container, result) {
     row.appendChild(lab);
     wrap.appendChild(row);
   }
+  if (withExport) {
+    const btnRow = document.createElement("div");
+    btnRow.style.cssText = "margin-top:6px;";
+    const btn = document.createElement("button");
+    btn.className = "btn";
+    btn.style.fontSize = "11px";
+    btn.textContent = "📥 LISA結果をCSV出力";
+    btn.addEventListener("click", exportLisaCsv);
+    btnRow.appendChild(btn);
+    wrap.appendChild(btnRow);
+  }
   container.appendChild(wrap);
+}
+
+function exportLisaCsv() {
+  const r = state.lisaResult;
+  if (!r || !r.details) { setSummary("先に LISA を実行してください", "warn"); return; }
+  const fmt = (v, d = 6) => (v == null || !Number.isFinite(v)) ? "" : v.toFixed(d);
+  const lines = [
+    ["id", "地域", `値 (${r.field})`, "z-score", "Local Moran's I", "p値", "カテゴリ"].map(csvEscape).join(","),
+  ];
+  for (const d of r.details) {
+    lines.push([
+      String(d.id), d.name, fmt(d.value, 3), fmt(d.zScore, 4),
+      fmt(d.localMoranI, 4), fmt(d.pValue, 4), d.category,
+    ].map(csvEscape).join(","));
+  }
+  // Append summary block
+  lines.push("");
+  lines.push(["統計", "値"].map(csvEscape).join(","));
+  lines.push(["全体 Moran's I", fmt(r.globalI, 4)].map(csvEscape).join(","));
+  lines.push(["n", String(r.n)].map(csvEscape).join(","));
+  lines.push(["有意件数 (p < " + r.alpha + ")", String(r.sigCount)].map(csvEscape).join(","));
+  lines.push(["順列回数", String(r.perm)].map(csvEscape).join(","));
+  for (const k of ["HH", "LL", "HL", "LH", "NS"]) {
+    lines.push([k + " 件数", String(r.catTally[k] || 0)].map(csvEscape).join(","));
+  }
+  const csv = "﻿" + lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const safe = (v) => String(v).replace(/[\s\\/:*?"<>|]+/g, "_");
+  a.href = url;
+  a.download = `lisa_${safe(r.field || "field")}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`LISA結果を ${a.download} として保存しました（${r.n}件）`, "success");
 }
 
 function renderBivariateLegend(container, palette9, fieldX, fieldY) {
