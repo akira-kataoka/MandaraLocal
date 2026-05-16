@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=201" />
+  <link rel="stylesheet" href="css/style.css?v=202" />
 </head>
 <body>
   <header class="app-header">
@@ -301,6 +301,7 @@
         </div>
         <div class="form-row inline">
           <label><input type="checkbox" id="chk-reverse" /> 色を反転</label>
+          <button id="btn-reset-custom-colors" class="btn" type="button" style="margin-left:auto;padding:2px 8px;font-size:11px" title="凡例で個別変更した色を破棄し、選択中パレットの既定色に戻す" hidden>🎨 カラーをリセット</button>
         </div>
         <div id="palette-preview" class="palette-preview"></div>
       </section>
@@ -836,7 +837,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=201"></script>
+  <script type="module" src="js/main.js?v=202"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

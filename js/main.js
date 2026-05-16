@@ -127,6 +127,7 @@ const els = {
   suggestMethod:  $("suggest-method"),
   selectPalette:$("select-palette"),
   chkReverse:   $("chk-reverse"),
+  btnResetCustomColors: $("btn-reset-custom-colors"),
   palettePreview: $("palette-preview"),
   panelStats:   $("panel-stats"),
   statsTable:   $("stats-table"),
@@ -966,6 +967,24 @@ els.selectPalette.addEventListener("change", () => {
   delete state.customColors[state.palette];
   updatePalettePreview();
   refresh();
+  syncResetColorBtn();
+});
+
+// Cycle 202: one-click reset of legend swatch overrides for the current
+// palette. Hidden when there is nothing to undo so the button never lies.
+function syncResetColorBtn() {
+  if (!els.btnResetCustomColors) return;
+  const overrides = state.customColors?.[state.palette];
+  const hasAny = overrides && Object.keys(overrides).length > 0;
+  els.btnResetCustomColors.hidden = !hasAny;
+}
+els.btnResetCustomColors?.addEventListener("click", () => {
+  const overrides = state.customColors?.[state.palette];
+  if (!overrides || !Object.keys(overrides).length) return;
+  if (!confirm(`「${state.palette}」パレットの個別色変更 ${Object.keys(overrides).length} 件を破棄しますか？`)) return;
+  delete state.customColors[state.palette];
+  refresh();
+  syncResetColorBtn();
 });
 els.chkReverse.addEventListener("change", () => {
   state.reverse = els.chkReverse.checked;
@@ -1010,6 +1029,8 @@ els.selectLegendFs?.addEventListener("change", () => {
 });
 // Apply previously-saved value on startup
 applyLegendFs(state.legendFs || "m");
+// Sync reset-color button visibility on initial load (restores from prior session).
+setTimeout(() => { try { syncResetColorBtn(); } catch {} }, 0);
 if (els.selectLegendFs && state.legendFs) els.selectLegendFs.value = state.legendFs;
 
 // Cycle 198: legend break-value precision (auto / 0..3 decimals).
@@ -4858,6 +4879,7 @@ function refresh() {
       if (!state.customColors[state.palette]) state.customColors[state.palette] = {};
       state.customColors[state.palette][idx] = hex;
       refresh();
+      syncResetColorBtn();
     },
     onBreakEdit: (idx, newUpper) => {
       // Convert current breaks to manual mode: keep all but replace breaks[idx+1] with newUpper.
