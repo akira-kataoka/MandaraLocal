@@ -153,6 +153,7 @@ const els = {
   selectLegendFs:  $("select-legend-fs"),
   panelTable:   $("panel-table"),
   tableSearch:  $("table-search"),
+  tableSearchInfo: $("table-search-info"),
   panelHist:    $("panel-histogram"),
   histBins:     $("hist-bins"),
   chkHistOverlay: $("chk-hist-overlay"),
@@ -4946,9 +4947,30 @@ function getTableRows() {
 els.tableSearch?.addEventListener("input", () => {
   // Re-render only the table, not the entire panel set.
   if (state.dataset) {
-    renderTable(els.tableWrap, getTableRows(), state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+    const filtered = getTableRows();
+    renderTable(els.tableWrap, filtered, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
+    updateTableSearchInfo(filtered.length);
   }
 });
+
+// Show "N 件中 M 件マッチ" / "該当なし" only when the search box is non-empty.
+function updateTableSearchInfo(matchedCount) {
+  if (!els.tableSearchInfo) return;
+  const q = (els.tableSearch?.value || "").trim();
+  if (!q || !state.dataset) {
+    els.tableSearchInfo.hidden = true;
+    return;
+  }
+  const total = state.dataset.rows.length;
+  if (matchedCount === 0) {
+    els.tableSearchInfo.style.color = "#b91c1c";
+    els.tableSearchInfo.textContent = `「${q}」に該当する地域はありません（全 ${total} 件中）`;
+  } else {
+    els.tableSearchInfo.style.color = "var(--muted)";
+    els.tableSearchInfo.textContent = `「${q}」 — 全 ${total} 件中 ${matchedCount} 件マッチ`;
+  }
+  els.tableSearchInfo.hidden = false;
+}
 
 function onTableRowHover(id, isOn) {
   if (isOn) mapper.highlightById(id);
