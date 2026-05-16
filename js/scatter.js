@@ -269,6 +269,23 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     svgEl.appendChild(labels);
   }
 
+  // X=0 / Y=0 zero reference lines (Cycle 158) — only when the axis range
+  // crosses zero, and only in linear space (log axes don't include 0).
+  if (opts.zeroLines) {
+    if (!logX && xMin < 0 && xMax > 0) {
+      svgEl.appendChild(el("line", {
+        x1: pxAt(0), y1: PAD.top, x2: pxAt(0), y2: H - PAD.bottom,
+        stroke: "#94a3b8", "stroke-width": 1, "stroke-dasharray": "3,2",
+      }));
+    }
+    if (!logY && yMin < 0 && yMax > 0) {
+      svgEl.appendChild(el("line", {
+        x1: PAD.left, y1: pyAt(0), x2: W - PAD.right, y2: pyAt(0),
+        stroke: "#94a3b8", "stroke-width": 1, "stroke-dasharray": "3,2",
+      }));
+    }
+  }
+
   // Y=X reference line (Cycle 153) — clipped to the overlap of the X and Y
   // ranges. Drawn early so the regression line stays on top.
   if (opts.yEqualsX) {

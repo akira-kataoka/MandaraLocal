@@ -190,6 +190,7 @@ const els = {
   chkScatterCi:    $("chk-scatter-ci"),
   chkScatterPi:    $("chk-scatter-pi"),
   chkScatterYx:    $("chk-scatter-yx"),
+  chkScatterZero:  $("chk-scatter-zero"),
   scatterLabels:   $("scatter-labels"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
@@ -1471,6 +1472,7 @@ els.chkScatterStats?.addEventListener("change", drawScatter);
 els.chkScatterCi?.addEventListener("change", drawScatter);
 els.chkScatterPi?.addEventListener("change", drawScatter);
 els.chkScatterYx?.addEventListener("change", drawScatter);
+els.chkScatterZero?.addEventListener("change", drawScatter);
 els.scatterLabels?.addEventListener("change", drawScatter);
 els.scatterDegree?.addEventListener("change", drawScatter);
 els.chkScatterLogX.addEventListener("change", drawScatter);
@@ -4640,6 +4642,7 @@ function drawScatter() {
     regCI: !!els.chkScatterCi?.checked,
     regPI: !!els.chkScatterPi?.checked,
     yEqualsX: !!els.chkScatterYx?.checked,
+    zeroLines: !!els.chkScatterZero?.checked,
     labels: els.scatterLabels?.value || "outliers",
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
     onBrush: (ids) => {
