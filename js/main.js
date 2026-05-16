@@ -4821,6 +4821,9 @@ els.btnSvg.addEventListener("click", () => {
 // ----- Handlers -----
 function onDatasetReady(ds, label) {
   state.dataset = ds;
+  // Cycle 209: snapshot the CSV-original columns so we can later distinguish
+  // derived columns (those added after load) and let users delete only them.
+  state.dataset.originalFields = ds.fields.slice();
   state.filteredKeys = null;
   state.starredFields = new Set();
   // Cycle 200: reset column visibility for a fresh dataset so previously-hidden
@@ -5401,7 +5404,9 @@ function buildTableColPicker() {
   head.appendChild(all); head.appendChild(none); head.appendChild(reset);
   els.tableColPicker.appendChild(head);
   // Cycle 201: render in current ordered view so ↑/↓ feels intuitive.
+  // Cycle 209: derived columns (added after load) get a delete button.
   const ordered = getOrderedFields();
+  const originals = new Set(state.dataset.originalFields || state.dataset.fields);
   for (let i = 0; i < ordered.length; i++) {
     const f = ordered[i];
     const row = document.createElement("div");
@@ -5425,10 +5430,48 @@ function buildTableColPicker() {
     const lab = document.createElement("label");
     lab.style.cssText = "flex:1;cursor:pointer;margin-left:2px";
     lab.appendChild(cb);
-    lab.appendChild(document.createTextNode(" " + f));
+    const isDerived = !originals.has(f);
+    const text = document.createTextNode(" " + (isDerived ? "✱ " : "") + f);
+    lab.appendChild(text);
     row.appendChild(up); row.appendChild(dn); row.appendChild(lab);
+    if (isDerived) {
+      const del = document.createElement("button");
+      del.type = "button"; del.textContent = "×";
+      del.title = "派生列を削除";
+      del.style.cssText = "padding:0 5px;font-size:11px;color:#dc2626;font-weight:700";
+      del.addEventListener("click", () => deleteDerivedField(f));
+      row.appendChild(del);
+    }
     els.tableColPicker.appendChild(row);
   }
+}
+// Cycle 209: remove a derived (post-load) column from the dataset. Confirms
+// the action, then patches every consumer that may be pointing at the field
+// (state.field / inputs / scatter X & Y) so nothing dangles.
+function deleteDerivedField(name) {
+  if (!state.dataset) return;
+  const originals = new Set(state.dataset.originalFields || []);
+  if (originals.has(name)) {
+    setSummary(`「${name}」はCSV元の列のため削除できません`, "warn"); return;
+  }
+  if (!confirm(`派生列「${name}」を削除しますか？\n(CSV再読込で復活します)`)) return;
+  // Drop from dataset.fields and every row.values
+  state.dataset.fields = state.dataset.fields.filter(f => f !== name);
+  for (const r of state.dataset.rows) delete r.values[name];
+  state.hiddenColumns.delete(name);
+  state.starredFields?.delete(name);
+  if (state.columnOrder) state.columnOrder = state.columnOrder.filter(f => f !== name);
+  // Auto-pivot any selector currently pointing at the doomed column.
+  const fallback = state.dataset.fields[0];
+  if (state.field === name && fallback) state.field = fallback;
+  for (const sel of [els.selectField, els.scatterX, els.scatterY, els.scatterColorBy, els.scatterSizeBy, els.scatterLabelBy]) {
+    if (sel && sel.value === name) sel.value = fallback || "";
+  }
+  populateFieldSelects();
+  if (state.dataset.fields.length >= 2) populateScatterSelectors(state.dataset.fields);
+  buildTableColPicker();
+  refresh();
+  setSummary(`派生列「${name}」を削除しました（残り${state.dataset.fields.length}列）`, "success");
 }
 // Swap a column with its neighbor (dir=-1 up, +1 down). Promotes the implicit
 // dataset order to an explicit columnOrder on first reorder.
