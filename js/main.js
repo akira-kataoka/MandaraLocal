@@ -4068,6 +4068,12 @@ function buildAnalysisMarkdown() {
   if (sourceVal) meta.push(`データ出典: ${sourceVal}`);
   for (const m of meta) lines.push(`*${m}*`);
   lines.push(`*生成: ${new Date().toLocaleString("ja-JP")}*`);
+  // Cycle 245: list the user's starred fields so reviewers see which columns
+  // the analyst flagged as important.
+  if (state.starredFields instanceof Set && state.starredFields.size) {
+    lines.push("");
+    lines.push(`**お気に入り列 (★)**: ${[...state.starredFields].join(", ")}`);
+  }
   lines.push("");
   if (!state.dataset) {
     lines.push("_データセット未読込_");
