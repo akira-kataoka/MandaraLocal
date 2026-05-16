@@ -4,6 +4,9 @@
 都道府県・市町村データから階級区分図（コロプレス図）・比例シンボル図を作れます。
 
 🌐 **公開デモ**: https://akira-kataoka.github.io/MandaraNext/
+🎉 **100コミット達成**（2026-05-16） — MANDARA 全機能 + v2拡張機能を完全実装
+
+📘 **詳しい使い方**: [docs/USAGE.html](docs/USAGE.html) / [ROADMAP.md](ROADMAP.md)
 
 > 参考: 谷 謙二氏 [MANDARA](https://ktgis.net/mandara/) — 本プロジェクトは独立したオープン実装で、ライセンス・ソースコードは無関係です。
 

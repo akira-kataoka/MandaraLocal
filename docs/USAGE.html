@@ -2,74 +2,163 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MandaraNext 使い方</title>
 <style>
-  body { font-family: "Hiragino Sans","Yu Gothic","Meiryo",system-ui,sans-serif; max-width: 760px; margin: 24px auto; padding: 0 16px; color: #1f2937; line-height: 1.7; }
-  h1 { border-bottom: 2px solid #2563eb; padding-bottom: 6px; }
-  h2 { margin-top: 1.6em; color: #1e40af; }
-  code, pre { background: #f1f5f9; border-radius: 4px; padding: 2px 6px; font-family: Consolas, monospace; }
+  body { font-family: "Hiragino Sans","Yu Gothic","Meiryo",system-ui,sans-serif; max-width: 840px; margin: 24px auto; padding: 0 16px; color: #1f2937; line-height: 1.7; background: #fafafa; }
+  h1 { border-bottom: 3px solid #2563eb; padding-bottom: 6px; }
+  h2 { margin-top: 1.8em; color: #1e40af; border-left: 4px solid #2563eb; padding-left: 8px; }
+  h3 { margin-top: 1.2em; color: #1e293b; }
+  code, pre, kbd { background: #f1f5f9; border-radius: 4px; padding: 2px 6px; font-family: Consolas, monospace; font-size: 90%; }
   pre { padding: 10px; overflow-x: auto; }
-  table { border-collapse: collapse; margin: 10px 0; }
+  table { border-collapse: collapse; margin: 10px 0; width: 100%; }
   th, td { border: 1px solid #cbd5e1; padding: 6px 10px; text-align: left; }
   th { background: #e0e7ff; }
   .tip { background: #ecfeff; border-left: 4px solid #06b6d4; padding: 8px 12px; margin: 12px 0; }
+  .note { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 8px 12px; margin: 12px 0; }
+  kbd { background: #1e293b; color: #f1f5f9; }
 </style>
 </head>
 <body>
 <h1>MandaraNext 使い方</h1>
 
+<p><strong>公開URL</strong>: <a href="https://akira-kataoka.github.io/MandaraNext/">https://akira-kataoka.github.io/MandaraNext/</a></p>
+
 <h2>1. 起動</h2>
-<p>Windowsなら <code>start.bat</code> をダブルクリック。Mac/Linuxなら <code>python3 scripts/serve.py</code>。<br/>
-ブラウザで <code>http://localhost:8765</code> が自動で開きます。</p>
 
-<h2>2. データを読み込む</h2>
-<p>左サイドバー「データ読み込み」から:</p>
-<ul>
-  <li><strong>サンプルデータを読み込む</strong> — 2020年国勢調査ベースの人口・面積・高齢化率データ</li>
-  <li><strong>CSVファイルを開く</strong> — 自分のCSVをアップロード</li>
-</ul>
+<h3>Webから (推奨)</h3>
+<p>上記URLにアクセスするだけ。PWA対応なので <kbd>📲 アプリ化</kbd> ボタンでデスクトップ/ホーム画面に追加してオフラインでも使えます。</p>
 
-<h2>3. CSV形式</h2>
+<h3>ローカルから</h3>
+<pre>cd MandaraLocal
+python scripts/serve.py
+# http://localhost:8765/ が開く</pre>
+
+<h2>2. 5つの分析レベル</h2>
 <table>
-  <tr><th>列</th><th>意味</th><th>例</th></tr>
-  <tr><td>1列目</td><td>都道府県名 or コード(1〜47)</td><td><code>東京都</code>, <code>13</code>, <code>Tokyo</code></td></tr>
-  <tr><td>2列目以降</td><td>数値データ（複数列OK）</td><td><code>14047594</code></td></tr>
+  <tr><th>レベル</th><th>件数</th><th>備考</th></tr>
+  <tr><td>都道府県</td><td>47</td><td>同梱</td></tr>
+  <tr><td>市町村</td><td>1,742</td><td>同梱・93.8%日本語名対応</td></tr>
+  <tr><td>町丁目</td><td>動的</td><td>Geolonia API で市区町村ごとに取得</td></tr>
+  <tr><td>Shapefile</td><td>任意</td><td>.shp+.dbf を zip でアップロード</td></tr>
+  <tr><td>緯度経度CSV</td><td>任意</td><td>列名から lat/lng 自動認識</td></tr>
 </table>
 
-<pre>都道府県,人口,面積
-北海道,5224614,78421
-青森県,1237984,9646
-...</pre>
+<h2>3. データの読み込み</h2>
 
-<div class="tip">
-カンマ区切り、UTF-8推奨。空欄・「-」・「NA」は欠損として扱われ、地図上ではグレー表示されます。
-</div>
+<h3>サンプル</h3>
+<p>「サンプルデータを読み込む」ボタン。レベルに応じて適切なCSVが読まれます。</p>
 
-<h2>4. 階級区分の選び方</h2>
+<h3>自前データ</h3>
+<p>CSV / Excel (.xlsx, .xls) どちらでも対応。1列目=地域、2列目以降=数値。</p>
+
+<h3>テンプレートDL</h3>
+<p>「テンプレートCSVをDL」で 47行 or 1,742行の空テンプレが落ちます。Excelで開いて数値だけ入れて再読込。</p>
+
+<h3>追加マージ</h3>
+<p>「＋ 追加CSV (マージ)」で別のCSV/Excelを同じ地域キーで結合可能。複数指標を組み合わせた多変量分析に。</p>
+
+<h2>4. 14モードの主題図</h2>
 <table>
-  <tr><th>方法</th><th>特徴</th><th>向くケース</th></tr>
-  <tr><td>等量区分（分位数）</td><td>各クラスの件数がほぼ同じ</td><td>分布の偏りに左右されず比較したい</td></tr>
-  <tr><td>等値区分（等間隔）</td><td>値の幅で等分</td><td>絶対値の差を視覚化したい</td></tr>
-  <tr><td>自然区分（Jenks）</td><td>クラス内分散最小化</td><td>データのまとまり（自然な切れ目）を尊重</td></tr>
+  <tr><th>モード</th><th>説明</th></tr>
+  <tr><td>階級区分図</td><td>塗り分け (Choropleth)</td></tr>
+  <tr><td>比例シンボル</td><td>円のサイズで量を表現</td></tr>
+  <tr><td>塗り分け+円</td><td>両重ね</td></tr>
+  <tr><td>ドット分布図</td><td>1ドット=N単位</td></tr>
+  <tr><td>ラベル表示</td><td>各地域に値テキスト</td></tr>
+  <tr><td>円グラフ</td><td>複数列の構成比</td></tr>
+  <tr><td>棒グラフ</td><td>複数列の比較</td></tr>
+  <tr><td>等値線図</td><td>IDW内挿で連続グラデーション</td></tr>
+  <tr><td>階級記号図</td><td>離散サイズ・ランク明確</td></tr>
+  <tr><td>カートグラム</td><td>面積=値で変形</td></tr>
+  <tr><td>ハッチ図</td><td>SVGパターン・印刷モノクロ対応</td></tr>
+  <tr><td>矢印図</td><td>値を方位°として回転</td></tr>
 </table>
 
-<h2>5. 色パレットの使い分け</h2>
+<h2>5. 階級区分の方法</h2>
 <ul>
-  <li><strong>YlOrRd / Blues / Greens 等</strong> — 連続的（小→大）。一般的な分布データに。</li>
-  <li><strong>RdYlBu / Spectral</strong> — 発散型。基準値（平均、ゼロ等）からの上下を示すデータに。</li>
-  <li><strong>Viridis</strong> — 色覚多様性対応。プレゼン資料に推奨。</li>
+  <li><strong>等量区分（分位数）</strong> — 各クラスの件数を均等に</li>
+  <li><strong>等値区分（等間隔）</strong> — 値の幅で等分</li>
+  <li><strong>自然区分（Jenks）</strong> — クラス内分散最小化</li>
+  <li><strong>手動区分</strong> — 任意の境界値をカンマ区切り入力</li>
+  <li><strong>対数スケール</strong> — 歪んだ分布の見栄えを改善</li>
 </ul>
 
-<h2>6. エクスポート</h2>
+<h2>6. 分析機能</h2>
 <ul>
-  <li><strong>PNG出力</strong> — 現在の地図画面をそのまま画像に。ベースタイル付き。</li>
-  <li><strong>SVG出力</strong> — 都道府県境界のみ。Illustrator / Inkscapeで再編集可。</li>
+  <li><strong>基本統計</strong> — 平均/中央値/Q1/Q3/IQR/標準偏差/CV/歪度/尖度/最頻値</li>
+  <li><strong>外れ値検出</strong> — IQR×1.5、上方/下方リスト</li>
+  <li><strong>派生列</strong> — A÷B などその場で算出</li>
+  <li><strong>属性検索</strong> — AND/OR/NOT を組み合わせた条件絞り込み</li>
+  <li><strong>距離測定</strong> — 2点クリックで大圏距離</li>
+  <li><strong>面積測定</strong> — 多角形クリック→ダブルクリックで確定</li>
+  <li><strong>空間検索（バッファ）</strong> — クリック点+半径で内側強調</li>
+  <li><strong>標準偏差楕円</strong> — 点分布の方向性可視化</li>
+  <li><strong>クロス集計</strong> — 2列の頻度マトリクス</li>
+  <li><strong>ヒストグラム</strong> — 分布の形状</li>
+  <li><strong>散布図</strong> — ピアソンr・R²・回帰直線・地図と色同期</li>
+  <li><strong>時系列再生</strong> — 年次データを自動アニメーション</li>
+  <li><strong>時空間派生</strong> — 2時点の差分/増減率を派生列に</li>
 </ul>
 
-<h2>7. WEB公開</h2>
-<p>このディレクトリ全体をそのまま静的サイトホスティングにアップロードするだけです。<br/>
-GitHub Pages の場合、リポジトリの Settings → Pages → ブランチを <code>main</code> に設定すれば公開完了。</p>
+<h2>7. インタラクション</h2>
+<p>5つの双方向クロスハイライト：</p>
+<ol>
+  <li>凡例ホバー → 地図の同階級地域</li>
+  <li>散布図ホバー/クリック → 地図 (ズーム可)</li>
+  <li>データ表 行ホバー → 地図</li>
+  <li>ヒストグラム ホバー → 地図 (同bin)</li>
+  <li>クロス集計セル ホバー → 地図 (rowBin×colBin)</li>
+</ol>
+<p>地図クリックで詳細パネル。<kbd>Shift</kbd>+クリックで複数ピン留め。</p>
 
-<p><a href="../index.html">← アプリに戻る</a></p>
+<h2>8. キーボードショートカット</h2>
+<table>
+  <tr><td><kbd>?</kbd></td><td>ヘルプ表示</td></tr>
+  <tr><td><kbd>D</kbd></td><td>ダーク切替</td></tr>
+  <tr><td><kbd>/</kbd></td><td>住所検索フォーカス</td></tr>
+  <tr><td><kbd>S</kbd></td><td>サンプル読込</td></tr>
+  <tr><td><kbd>M</kbd>/<kbd>A</kbd>/<kbd>B</kbd></td><td>距離/面積/バッファ</td></tr>
+  <tr><td><kbd>P</kbd>/<kbd>K</kbd>/<kbd>G</kbd></td><td>PNG/KML/GeoJSON 出力</td></tr>
+  <tr><td><kbd>Space</kbd></td><td>時系列 再生/停止</td></tr>
+  <tr><td><kbd>←</kbd>/<kbd>→</kbd></td><td>時系列 1ステップ</td></tr>
+  <tr><td><kbd>Esc</kbd></td><td>ツールOFF・解除</td></tr>
+</table>
+
+<h2>9. 出力（9形式）</h2>
+<ul>
+  <li><strong>PNG</strong> — 地図全体 / 散布図単体 / ヒストグラム単体</li>
+  <li><strong>SVG</strong> — タイトル+凡例つきベクター</li>
+  <li><strong>PDF</strong> — A4横向き</li>
+  <li><strong>アニメーションGIF</strong> — 時系列をループ化</li>
+  <li><strong>KML</strong> — Google Earth で開く</li>
+  <li><strong>GeoJSON</strong> — QGIS/ArcGIS用 (派生列も含む)</li>
+  <li><strong>CSV</strong> — データ全体 / テンプレート</li>
+  <li><strong>シーンJSON</strong> — 設定をファイルで共有</li>
+  <li><strong>URL共有</strong> — 設定をリンクで共有 (🔗ボタン)</li>
+</ul>
+
+<h2>10. シーン (設定の保存)</h2>
+<ul>
+  <li><strong>💾 保存</strong> — 現在の設定を名前付きで localStorage に保存</li>
+  <li><strong>セレクタ</strong> — サンプル4種 + マイシーン</li>
+  <li><strong>⬇ エクスポート / ⬆ インポート</strong> — チーム間で配布</li>
+  <li><strong>🔗 URL共有</strong> — クリップボードにリンクコピー</li>
+</ul>
+
+<h2>11. 編集ツール</h2>
+<ul>
+  <li><strong>住所検索</strong> — 国土地理院 API で住所→地図ピン</li>
+  <li><strong>市町村検索</strong> — 市町村レベルで日本語/カナ/英語 部分一致</li>
+  <li><strong>メッシュ生成</strong> — JIS X 0410 1次/2次/3次</li>
+  <li><strong>✏ 描画</strong> — ポリゴン/ライン/円/マーカーを自由に描いて GeoJSON 出力</li>
+</ul>
+
+<h2>12. ヒント</h2>
+<div class="tip">対象列の隣に「派生列を作る」を開けば 「人口÷面積=人口密度」のような計算列を1秒で追加。地図/散布図/ヒストグラム すべてで利用可。</div>
+<div class="tip">主題図モードを「カートグラム」にすると、人口の多い県が原型のまま巨大化する変形地図に。プレゼン映え抜群。</div>
+<div class="note">町丁目モードは初回のみ Geolonia API への通信が必要。一度ロードすればキャッシュされます。</div>
+
+<p style="margin-top:2em"><a href="../index.html">← アプリに戻る</a></p>
 </body>
 </html>
