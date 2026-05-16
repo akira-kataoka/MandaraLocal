@@ -1553,8 +1553,36 @@ function runMultipleRegression() {
   const pF = F != null
     ? regularizedBeta(dfResid / (dfResid + dfModel * F), dfResid / 2, dfModel / 2)
     : null;
+  // 95% CI of coefficients (Cycle 141, normal approximation).
+  const ciLo = coeffs.map((c, i) => c - 1.96 * se[i]);
+  const ciHi = coeffs.map((c, i) => c + 1.96 * se[i]);
+  // VIF (Variance Inflation Factor) for each X (skip intercept at index 0).
+  // VIF_i = 1 / (1 - R²_i) where R²_i comes from regressing X_i on the others.
+  const vif = new Array(p).fill(null); // intercept stays null
+  if (xFields.length >= 2) {
+    for (let xi = 0; xi < xFields.length; xi++) {
+      // Build a sub-design without column xi+1 (preserve intercept)
+      const sub = X.map(row => row.filter((_, c) => c !== xi + 1));
+      const yi = X.map(row => row[xi + 1]);
+      const SubT = transposeMat(sub);
+      const SubTSub = matMul(SubT, sub);
+      const SubTy = matVec(SubT, yi);
+      const subInv = invertMat(SubTSub);
+      if (!subInv) continue;
+      const subCoeffs = matVec(subInv, SubTy);
+      const subYhat = sub.map(row => row.reduce((s, v, k) => s + v * subCoeffs[k], 0));
+      let subSse = 0, subSst = 0;
+      const subMean = yi.reduce((s, v) => s + v, 0) / yi.length;
+      for (let k = 0; k < yi.length; k++) {
+        subSse += (yi[k] - subYhat[k]) ** 2;
+        subSst += (yi[k] - subMean) ** 2;
+      }
+      const subR2 = subSst > 0 ? 1 - subSse / subSst : 0;
+      if (subR2 < 1) vif[xi + 1] = 1 / (1 - subR2);
+    }
+  }
   state.mrResult = {
-    yField, xFields, coeffs, se, tStats, pValues,
+    yField, xFields, coeffs, se, tStats, pValues, ciLo, ciHi, vif,
     n, p, R2, adjR2, F, pF, dfModel, dfResid, residualSE: Math.sqrt(sigma2),
     labels: ["(Intercept)", ...xFields],
   };
@@ -1566,17 +1594,29 @@ function renderMrResult(r) {
   const fmt = (v, d = 4) => (v == null || !Number.isFinite(v)) ? "—" : v.toFixed(d);
   const sigMark = (p) => p == null ? "" : p < 0.001 ? " ***" : p < 0.01 ? " **" : p < 0.05 ? " *" : "";
   const pFmt = (p) => p == null ? "—" : p < 0.001 ? "<0.001" : p.toFixed(3);
+  const vifCell = (v) => {
+    if (v == null) return "—";
+    const txt = v.toFixed(2);
+    if (v >= 10) return `<span style="color:#dc2626;font-weight:700" title="多重共線性が強い">${txt}</span>`;
+    if (v >= 5)  return `<span style="color:#d97706" title="多重共線性が中程度">${txt}</span>`;
+    return txt;
+  };
   let html = "<table><thead><tr>" +
-    "<th>変数</th><th>係数</th><th>SE</th><th>t</th><th>p</th>" +
+    "<th>変数</th><th>係数</th><th>SE</th><th>95%CI</th><th>t</th><th>p</th><th>VIF</th>" +
     "</tr></thead><tbody>";
   r.labels.forEach((lbl, i) => {
     const sig = r.pValues[i] != null && r.pValues[i] < 0.05;
+    const ci = (r.ciLo[i] != null && r.ciHi[i] != null)
+      ? `[${fmt(r.ciLo[i], 3)}, ${fmt(r.ciHi[i], 3)}]`
+      : "—";
     html += `<tr class="${sig ? "is-sig" : ""}">` +
       `<td>${escapeHtmlText(lbl)}</td>` +
       `<td class="num">${fmt(r.coeffs[i], 6)}</td>` +
       `<td class="num">${fmt(r.se[i], 6)}</td>` +
+      `<td class="num" style="font-size:10px">${ci}</td>` +
       `<td class="num">${fmt(r.tStats[i], 2)}</td>` +
       `<td class="num">${pFmt(r.pValues[i])}${sigMark(r.pValues[i])}</td>` +
+      `<td class="num">${vifCell(r.vif?.[i])}</td>` +
       `</tr>`;
   });
   html += "</tbody></table>";
@@ -1593,9 +1633,14 @@ els.mrCsv?.addEventListener("click", () => {
   const r = state.mrResult;
   if (!r) { setSummary("先に「回帰を計算」してください", "warn"); return; }
   const fmt = (v, d = 6) => (v == null || !Number.isFinite(v)) ? "" : v.toFixed(d);
-  const lines = [["変数", "係数", "SE", "t", "p"].map(csvEscape).join(",")];
+  const lines = [["変数", "係数", "SE", "95%CI 下", "95%CI 上", "t", "p", "VIF"].map(csvEscape).join(",")];
   r.labels.forEach((lbl, i) => {
-    lines.push([lbl, fmt(r.coeffs[i]), fmt(r.se[i]), fmt(r.tStats[i], 4), fmt(r.pValues[i], 6)].map(csvEscape).join(","));
+    lines.push([
+      lbl, fmt(r.coeffs[i]), fmt(r.se[i]),
+      fmt(r.ciLo?.[i]), fmt(r.ciHi?.[i]),
+      fmt(r.tStats[i], 4), fmt(r.pValues[i], 6),
+      r.vif?.[i] == null ? "" : r.vif[i].toFixed(4),
+    ].map(csvEscape).join(","));
   });
   lines.push("");
   lines.push(["統計", "値"].map(csvEscape).join(","));
