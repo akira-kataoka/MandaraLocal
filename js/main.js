@@ -194,6 +194,13 @@ const els = {
   scatterLabels:   $("scatter-labels"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
+  panelHc:         $("panel-hclust"),
+  hcXList:         $("hc-x-list"),
+  hcLinkage:       $("hc-linkage"),
+  hcK:             $("hc-k"),
+  hcRun:           $("hc-run"),
+  hcAdd:           $("hc-add"),
+  hcResult:        $("hc-result"),
   panelPca:        $("panel-pca"),
   pcaXList:        $("pca-x-list"),
   pcaRun:          $("pca-run"),
@@ -2411,6 +2418,242 @@ function buildScreePlot(r) {
 
 els.pcaRun?.addEventListener("click", runPca);
 
+// ----- Hierarchical clustering (Cycle 160) -----
+function populateHcSelectors(fields) {
+  if (!els.hcXList) return;
+  const prevChecked = new Set([...els.hcXList.querySelectorAll("input:checked")].map(el => el.value));
+  els.hcXList.innerHTML = "";
+  for (const f of fields) {
+    const label = document.createElement("label");
+    label.style.cssText = "display:block;padding:1px 0;";
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.value = f;
+    if (prevChecked.has(f)) cb.checked = true;
+    label.appendChild(cb);
+    label.append(" " + f);
+    els.hcXList.appendChild(label);
+  }
+}
+
+function runHierarchical() {
+  if (!state.dataset) return;
+  const xFields = [...els.hcXList.querySelectorAll("input:checked")].map(el => el.value);
+  if (xFields.length < 1) { setSummary("少なくとも 1 つの変数 X を選んでください", "warn"); return; }
+  const linkage = els.hcLinkage?.value || "ward";
+  const cutK = parseInt(els.hcK?.value || "3", 10) || 3;
+  // Build standardized matrix
+  const rawPoints = [];
+  const keys = [];
+  for (const r of state.dataset.rows) {
+    const row = [];
+    let ok = true;
+    for (const xf of xFields) {
+      const v = r.values[xf];
+      if (!Number.isFinite(v)) { ok = false; break; }
+      row.push(v);
+    }
+    if (ok) { rawPoints.push(row); keys.push(r.key); }
+  }
+  const n = rawPoints.length;
+  const d = xFields.length;
+  if (n < 2) { setSummary(`サンプル不足 (n=${n})`, "warn"); return; }
+  if (n > 600) { setSummary(`サンプル多すぎ (n=${n})、600 件以下にしてください`, "warn"); return; }
+  const mean = new Array(d).fill(0);
+  for (const p of rawPoints) for (let j = 0; j < d; j++) mean[j] += p[j];
+  for (let j = 0; j < d; j++) mean[j] /= n;
+  const sd = new Array(d).fill(0);
+  for (const p of rawPoints) for (let j = 0; j < d; j++) sd[j] += (p[j] - mean[j]) ** 2;
+  for (let j = 0; j < d; j++) sd[j] = Math.sqrt(sd[j] / Math.max(1, n - 1)) || 1;
+  const Z = rawPoints.map(p => p.map((v, j) => (v - mean[j]) / sd[j]));
+  // Initial distance matrix (squared Euclidean for Ward)
+  const distSq = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; s += d * d; } return s; };
+  const D = Array.from({ length: n }, () => new Array(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      D[i][j] = D[j][i] = Math.sqrt(distSq(Z[i], Z[j]));
+    }
+  }
+  // Cluster state: each cluster has an id, a member array, and a size.
+  const clusters = new Map();
+  for (let i = 0; i < n; i++) clusters.set(i, { members: [i], size: 1, id: i });
+  let nextId = n;
+  const merges = []; // [{ id, leftId, rightId, height, size }]
+  const distFn = makeDistFn(linkage);
+  // Active cluster IDs
+  let activeIds = [...clusters.keys()];
+  while (activeIds.length > 1) {
+    // Find the pair (i,j) with smallest distance
+    let bestI = activeIds[0], bestJ = activeIds[1];
+    let bestD = Infinity;
+    for (let a = 0; a < activeIds.length; a++) {
+      for (let b = a + 1; b < activeIds.length; b++) {
+        const ia = activeIds[a], ib = activeIds[b];
+        const dist = D[ia] ? D[ia][ib] : null;
+        if (dist != null && dist < bestD) { bestD = dist; bestI = ia; bestJ = ib; }
+      }
+    }
+    // Merge bestI + bestJ → newId
+    const cI = clusters.get(bestI);
+    const cJ = clusters.get(bestJ);
+    const newId = nextId++;
+    const newSize = cI.size + cJ.size;
+    clusters.set(newId, { members: [...cI.members, ...cJ.members], size: newSize, id: newId });
+    merges.push({ id: newId, leftId: bestI, rightId: bestJ, height: bestD, size: newSize });
+    // Update distances using Lance-Williams formula
+    const D_new = {};
+    for (const ak of activeIds) {
+      if (ak === bestI || ak === bestJ) continue;
+      const c = clusters.get(ak);
+      const dIK = D[bestI][ak];
+      const dJK = D[bestJ][ak];
+      const dIJ = bestD;
+      let dNK;
+      if (linkage === "single") dNK = Math.min(dIK, dJK);
+      else if (linkage === "complete") dNK = Math.max(dIK, dJK);
+      else if (linkage === "average") dNK = (cI.size * dIK + cJ.size * dJK) / (cI.size + cJ.size);
+      else { // ward
+        const total = cI.size + cJ.size + c.size;
+        dNK = Math.sqrt(((cI.size + c.size) * dIK * dIK + (cJ.size + c.size) * dJK * dJK - c.size * dIJ * dIJ) / total);
+      }
+      D_new[ak] = dNK;
+    }
+    // Materialize new row/col
+    D[newId] = [];
+    for (const ak of Object.keys(D_new)) {
+      const k = parseInt(ak, 10);
+      D[newId][k] = D_new[k];
+      D[k][newId] = D_new[k];
+    }
+    activeIds = activeIds.filter(x => x !== bestI && x !== bestJ);
+    activeIds.push(newId);
+  }
+  // Cut into K clusters: roll back the last (n-1) - (K-1) merges
+  const allMerges = merges.slice();  // length n-1
+  const cutAt = Math.max(0, n - cutK);
+  // Apply merges up to cutAt; remaining clusters at that point = K clusters
+  const parent = new Map();
+  for (let i = 0; i < n; i++) parent.set(i, i);
+  const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+  for (let m = 0; m < cutAt; m++) {
+    const mm = allMerges[m];
+    parent.set(find(mm.leftId), mm.id);
+    parent.set(find(mm.rightId), mm.id);
+    parent.set(mm.id, mm.id);
+  }
+  // Group n leaf items by their root
+  const rootMap = new Map();  // rootId → clusterIndex
+  const assignments = new Array(n).fill(-1);
+  for (let i = 0; i < n; i++) {
+    const root = find(i);
+    if (!rootMap.has(root)) rootMap.set(root, rootMap.size);
+    assignments[i] = rootMap.get(root);
+  }
+  const Kfinal = rootMap.size;
+  state.hcResult = { xFields, n, K: Kfinal, linkage, keys, assignments, merges: allMerges };
+  renderHcResult(state.hcResult);
+  if (els.hcAdd) els.hcAdd.disabled = false;
+}
+
+function makeDistFn(linkage) {
+  // Returned function not actually used in the merge loop (Lance-Williams
+  // handles distance updates inline). Kept here for future-proofing.
+  return null;
+}
+
+function renderHcResult(r) {
+  if (!els.hcResult) return;
+  const sizes = new Array(r.K).fill(0);
+  for (const a of r.assignments) sizes[a]++;
+  let html = `<div class="mr-summary">階層: ${r.linkage}, n=${r.n}, カット K=${r.K}, マージ数=${r.merges.length}</div>`;
+  html += "<table style='margin-top:6px'><thead><tr><th>クラスタ</th><th>件数</th><th>割合</th></tr></thead><tbody>";
+  for (let k = 0; k < r.K; k++) {
+    html += `<tr><td>${k + 1}</td><td class="num">${sizes[k]}</td><td class="num">${(sizes[k] / r.n * 100).toFixed(1)}%</td></tr>`;
+  }
+  html += "</tbody></table>";
+  html += buildDendrogram(r);
+  els.hcResult.innerHTML = html;
+}
+
+// Render the dendrogram as an SVG. Leaves are ordered by depth-first traversal
+// so the tree is planar (no crossing branches).
+function buildDendrogram(r) {
+  const W = 320, H = 220, PAD = { top: 8, right: 8, bottom: 22, left: 28 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+  const n = r.n;
+  if (n < 2 || r.merges.length === 0) return "";
+  // Determine each cluster's children (leaves stay as leaves)
+  const children = new Map();
+  for (const m of r.merges) children.set(m.id, [m.leftId, m.rightId]);
+  // DFS in-order from the root (last merge) to lay leaves left→right
+  const rootId = r.merges[r.merges.length - 1].id;
+  const leafX = new Map();
+  let cursor = 0;
+  function dfs(id) {
+    const c = children.get(id);
+    if (!c) { leafX.set(id, cursor++); return; }
+    dfs(c[0]); dfs(c[1]);
+  }
+  dfs(rootId);
+  // X position of internal nodes = midpoint of their two children's X positions
+  const nodeX = new Map();
+  for (const [k, v] of leafX.entries()) nodeX.set(k, v);
+  for (const m of r.merges) {
+    const xl = nodeX.get(m.leftId);
+    const xr = nodeX.get(m.rightId);
+    nodeX.set(m.id, (xl + xr) / 2);
+  }
+  // Y position = merge height (linear scaling)
+  const maxH = Math.max(...r.merges.map(m => m.height));
+  const px = (x) => PAD.left + (x / (n - 1)) * innerW;
+  const py = (h) => PAD.top + innerH - (h / maxH) * innerH;
+  let svg = `<div style="margin-top:6px;font-size:11px;font-weight:600">デンドログラム</div>`;
+  svg += `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="background:#fff;border:1px solid #e2e8f0">`;
+  // Reference horizontal cut line at K
+  const cutAt = n - r.K;
+  if (cutAt > 0 && cutAt < r.merges.length) {
+    const cutH = r.merges[cutAt].height;
+    svg += `<line x1="${PAD.left}" y1="${py(cutH)}" x2="${W - PAD.right}" y2="${py(cutH)}" stroke="#dc2626" stroke-width="1" stroke-dasharray="3,2"/>`;
+    svg += `<text x="${W - PAD.right - 2}" y="${py(cutH) - 2}" font-size="9" text-anchor="end" fill="#dc2626">K=${r.K}</text>`;
+  }
+  // Draw merges as U-shaped brackets
+  for (const m of r.merges) {
+    const xl = px(nodeX.get(m.leftId));
+    const xr = px(nodeX.get(m.rightId));
+    const yL = py(children.get(m.leftId)  ? r.merges.find(mm => mm.id === m.leftId).height  : 0);
+    const yR = py(children.get(m.rightId) ? r.merges.find(mm => mm.id === m.rightId).height : 0);
+    const yT = py(m.height);
+    svg += `<polyline points="${xl.toFixed(1)},${yL.toFixed(1)} ${xl.toFixed(1)},${yT.toFixed(1)} ${xr.toFixed(1)},${yT.toFixed(1)} ${xr.toFixed(1)},${yR.toFixed(1)}" fill="none" stroke="#1e3a8a" stroke-width="1"/>`;
+  }
+  // Axis labels
+  svg += `<text x="${W / 2}" y="${H - 6}" font-size="9" text-anchor="middle" fill="#475569">観測 (n=${n}, 葉)</text>`;
+  svg += `<text x="4" y="${PAD.top + innerH / 2}" font-size="9" fill="#475569">距離</text>`;
+  svg += `</svg>`;
+  return svg;
+}
+
+els.hcRun?.addEventListener("click", runHierarchical);
+
+els.hcAdd?.addEventListener("click", () => {
+  const r = state.hcResult;
+  if (!r || !state.dataset) return;
+  let name = `階層クラスタ_K${r.K}`;
+  let suffix = 2;
+  while (state.dataset.fields.includes(name)) name = `階層クラスタ_K${r.K}_${suffix++}`;
+  const idx = new Map(r.keys.map((k, i) => [k, r.assignments[i]]));
+  for (const row of state.dataset.rows) {
+    const a = idx.get(row.key);
+    row.values[name] = a == null ? null : (a + 1);
+  }
+  state.dataset.fields.push(name);
+  populateFieldSelects();
+  if (state.dataset.fields.length >= 2) populateScatterSelectors(state.dataset.fields);
+  state.field = name;
+  els.selectField.value = name;
+  refresh();
+  setSummary(`列「${name}」を追加して地図に表示しました`, "success");
+});
+
 els.pcaCsv?.addEventListener("click", () => {
   const r = state.pcaResult;
   if (!r) { setSummary("先に PCA を実行してください", "warn"); return; }
@@ -3639,6 +3882,10 @@ function onDatasetReady(ds, label) {
       els.panelPca.hidden = false;
       populatePcaSelectors(ds.fields);
     }
+    if (els.panelHc) {
+      els.panelHc.hidden = false;
+      populateHcSelectors(ds.fields);
+    }
     populateScatterSelectors(ds.fields);
   } else {
     els.panelScatter.hidden = true;
@@ -3646,6 +3893,7 @@ function onDatasetReady(ds, label) {
     if (els.panelMr) els.panelMr.hidden = true;
     if (els.panelKm) els.panelKm.hidden = true;
     if (els.panelPca) els.panelPca.hidden = true;
+    if (els.panelHc) els.panelHc.hidden = true;
   }
   // Pre-populate pie field options for the new dataset
   populatePieFields();
