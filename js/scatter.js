@@ -203,6 +203,62 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     svgEl.appendChild(eqEl);
   }
 
+  // Statistical overlay: centroid + IQR box (on raw values; positioned via px/py).
+  if (opts.statsOverlay) {
+    const quantile = (arr, p) => {
+      const a = arr.slice().sort((u, w) => u - w);
+      const idx = (a.length - 1) * p;
+      const lo = Math.floor(idx), hi = Math.ceil(idx);
+      return lo === hi ? a[lo] : a[lo] + (a[hi] - a[lo]) * (idx - lo);
+    };
+    const mx = x.reduce((a, b) => a + b, 0) / x.length;
+    const my = y.reduce((a, b) => a + b, 0) / y.length;
+    const xQ1 = quantile(x, 0.25), xQ3 = quantile(x, 0.75);
+    const yQ1 = quantile(y, 0.25), yQ3 = quantile(y, 0.75);
+    const overlay = el("g", { class: "scatter-stat-overlay" });
+    // IQR box: middle-50% data envelope.
+    if (Number.isFinite(xQ1) && Number.isFinite(yQ1)) {
+      const x1 = px(xQ1), x2 = px(xQ3);
+      const y1 = py(yQ3), y2 = py(yQ1);
+      const rect = el("rect", {
+        x: Math.min(x1, x2), y: Math.min(y1, y2),
+        width: Math.abs(x2 - x1), height: Math.abs(y2 - y1),
+        fill: "rgba(220,38,38,0.05)", stroke: "#dc2626",
+        "stroke-width": 0.6, "stroke-dasharray": "2,2",
+      });
+      overlay.appendChild(rect);
+    }
+    // Mean cross lines.
+    const mxPx = px(mx), myPx = py(my);
+    if (mxPx >= PAD.left && mxPx <= W - PAD.right) {
+      const ln = el("line", {
+        x1: mxPx, y1: PAD.top, x2: mxPx, y2: H - PAD.bottom,
+        stroke: "#dc2626", "stroke-width": 0.8, "stroke-dasharray": "3,2",
+      });
+      overlay.appendChild(ln);
+    }
+    if (myPx >= PAD.top && myPx <= H - PAD.bottom) {
+      const ln = el("line", {
+        x1: PAD.left, y1: myPx, x2: W - PAD.right, y2: myPx,
+        stroke: "#dc2626", "stroke-width": 0.8, "stroke-dasharray": "3,2",
+      });
+      overlay.appendChild(ln);
+    }
+    // Centroid marker (◇ diamond).
+    const dx = 5;
+    const diamond = el("polygon", {
+      points: `${mxPx},${myPx - dx} ${mxPx + dx},${myPx} ${mxPx},${myPx + dx} ${mxPx - dx},${myPx}`,
+      fill: "#dc2626", stroke: "#fff", "stroke-width": 1.5,
+    });
+    overlay.appendChild(diamond);
+    const lab = el("text", {
+      x: mxPx + 7, y: myPx - 5, "font-size": 9, "font-weight": 700, fill: "#dc2626",
+    });
+    lab.textContent = "(X̄,Ȳ)";
+    overlay.appendChild(lab);
+    svgEl.appendChild(overlay);
+  }
+
   // Series legend (bottom-right, drawn inside the SVG so PNG export captures it).
   if (catMap && catMap.size > 0) {
     const entries = [...catMap.entries()];
