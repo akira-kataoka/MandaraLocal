@@ -330,10 +330,12 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       });
       labels.appendChild(ring);
       // Cycle 271: show the 1-indexed pin order at the center of the ring.
+      // Cycle 293: scale with the chart's axis font size so it grows on L.
       if (pinNo) {
+        const pinNumFs = Math.max(6, tickFs - 2);
         const numText = el("text", {
-          x: cx.toFixed(1), y: (cy + 2).toFixed(1),
-          "text-anchor": "middle", "font-size": "7", "font-weight": "700",
+          x: cx.toFixed(1), y: (cy + pinNumFs / 3).toFixed(1),
+          "text-anchor": "middle", "font-size": String(pinNumFs), "font-weight": "700",
           fill: pinColor, "pointer-events": "none",
         });
         numText.textContent = String(pinNo);
