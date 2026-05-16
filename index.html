@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=76" />
+  <link rel="stylesheet" href="css/style.css?v=77" />
 </head>
 <body>
   <header class="app-header">
@@ -98,7 +98,7 @@
         </div>
         <div class="form-row" id="row-latlng-upload" hidden>
           <label for="latlng-file" class="btn btn-secondary file-label">緯度経度CSV を開く</label>
-          <input type="file" id="latlng-file" accept=".csv,.txt" hidden />
+          <input type="file" id="latlng-file" accept=".csv,.txt,.tsv,.xlsx,.xls" hidden />
         </div>
         <div class="form-row hint" id="hint-latlng" hidden>
           列名に「緯度/lat/latitude」「経度/lng/longitude」を含めれば自動認識します。
@@ -112,15 +112,15 @@
           <button id="btn-load-sample" class="btn btn-primary">サンプルデータを読み込む</button>
         </div>
         <div class="form-row">
-          <label for="csv-file" class="btn btn-secondary file-label">CSVファイルを開く</label>
-          <input type="file" id="csv-file" accept=".csv,.txt" hidden />
+          <label for="csv-file" class="btn btn-secondary file-label">CSV / Excel を開く</label>
+          <input type="file" id="csv-file" accept=".csv,.txt,.tsv,.xlsx,.xls" hidden />
         </div>
         <div class="form-row">
           <button id="btn-download-template" class="btn">テンプレートCSVをDL</button>
         </div>
         <div class="form-row">
           <label for="csv-merge" class="btn btn-secondary file-label" title="現在のデータに別CSVの列を地域キーでマージ">＋ 追加CSV (マージ)</label>
-          <input type="file" id="csv-merge" accept=".csv,.txt" hidden />
+          <input type="file" id="csv-merge" accept=".csv,.txt,.tsv,.xlsx,.xls" hidden />
         </div>
         <div class="form-row hint">
           1列目: 都道府県名 または 都道府県コード(1〜47)<br />
@@ -475,11 +475,12 @@
   <script src="https://unpkg.com/wanakana@5.3.1/wanakana.min.js"></script>
   <script src="https://unpkg.com/d3-delaunay@6.0.4/dist/d3-delaunay.min.js"></script>
   <script src="https://unpkg.com/d3-contour@4.0.2/dist/d3-contour.min.js"></script>
+  <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/polygon-clipping@0.15.7/dist/polygon-clipping.umd.js"></script>
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=76"></script>
+  <script type="module" src="js/main.js?v=77"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

@@ -182,6 +182,16 @@ export function normalizeToPrefCode(raw) {
 }
 
 export async function loadCsvFile(file, opts = {}) {
+  const name = (file.name || "").toLowerCase();
+  if ((name.endsWith(".xlsx") || name.endsWith(".xls")) && typeof XLSX !== "undefined") {
+    // Excel: convert first sheet to CSV and feed to the standard parser
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array" });
+    const firstSheet = wb.Sheets[wb.SheetNames[0]];
+    if (!firstSheet) throw new Error("Excel: シートが見つかりません");
+    const csv = XLSX.utils.sheet_to_csv(firstSheet);
+    return parseCsvText(csv, opts);
+  }
   const text = await file.text();
   return parseCsvText(text, opts);
 }
