@@ -558,6 +558,31 @@ body.dark .map-subtitle {
   border-color: #334155;
 }
 
+.minimap {
+  position: absolute;
+  bottom: 48px;
+  right: 12px;
+  width: 130px;
+  height: 110px;
+  background: #fff;
+  border: 2px solid #1e293b;
+  border-radius: 4px;
+  z-index: 650;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+.minimap[hidden] { display: none; }
+.minimap .leaflet-control-attribution { display: none; }
+.minimap .leaflet-control-zoom { display: none; }
+.minimap .leaflet-control-layers { display: none; }
+.minimap-viewport {
+  stroke: #dc2626;
+  stroke-width: 2;
+  fill: rgba(220, 38, 38, 0.12);
+  pointer-events: none;
+}
+body.dark .minimap { border-color: #f1f5f9; background: #0f172a; }
+
 .cursor-coords {
   position: absolute;
   bottom: 22px;

@@ -74,8 +74,10 @@ const els = {
   chkShowScale:  $("chk-show-scale"),
   chkShowNorth:  $("chk-show-north"),
   chkShowCoords: $("chk-show-coords"),
+  chkShowMinimap: $("chk-show-minimap"),
   northArrow:    $("north-arrow"),
   cursorCoords:  $("cursor-coords"),
+  minimap:       $("minimap"),
   dataSummary:  $("data-summary"),
   panelField:   $("panel-field"),
   selectField:  $("select-field"),
@@ -876,6 +878,59 @@ mapper.map.on("mousemove", (e) => {
 mapper.map.on("mouseout", () => {
   if (els.cursorCoords) els.cursorCoords.hidden = true;
 });
+// Minimap (overview navigator). Lazy-initialised the first time it's shown.
+let _minimap = null;
+let _minimapViewportRect = null;
+function ensureMinimap() {
+  if (_minimap || !els.minimap) return _minimap;
+  _minimap = L.map(els.minimap, {
+    center: [37.5, 137.5],
+    zoom: 4,
+    minZoom: 3,
+    maxZoom: 7,
+    zoomControl: false,
+    attributionControl: false,
+    dragging: false,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    boxZoom: false,
+    keyboard: false,
+    touchZoom: false,
+    tap: false,
+  });
+  L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/blank/{z}/{x}/{y}.png", {
+    maxZoom: 14,
+  }).addTo(_minimap);
+  _minimapViewportRect = L.rectangle(mapper.map.getBounds(), {
+    color: "#dc2626", weight: 2, fillColor: "#dc2626", fillOpacity: 0.12,
+    className: "minimap-viewport", interactive: false,
+  }).addTo(_minimap);
+  // Click recenter
+  _minimap.on("click", (e) => {
+    mapper.map.setView(e.latlng, mapper.map.getZoom());
+  });
+  // Sync viewport rect to main map view
+  const sync = () => {
+    if (!_minimap || !_minimapViewportRect) return;
+    _minimapViewportRect.setBounds(mapper.map.getBounds());
+  };
+  mapper.map.on("moveend zoomend", sync);
+  sync();
+  return _minimap;
+}
+
+els.chkShowMinimap?.addEventListener("change", () => {
+  if (!els.minimap) return;
+  if (els.chkShowMinimap.checked) {
+    els.minimap.hidden = false;
+    ensureMinimap();
+    // Leaflet needs invalidateSize after the container becomes visible
+    setTimeout(() => _minimap?.invalidateSize(), 50);
+  } else {
+    els.minimap.hidden = true;
+  }
+});
+
 els.cursorCoords?.addEventListener("click", async () => {
   const t = els.cursorCoords.textContent;
   if (!t) return;
@@ -1472,6 +1527,7 @@ function snapshotCurrent() {
     showScale: !!els.chkShowScale?.checked,
     showNorth: !!els.chkShowNorth?.checked,
     showCoords: !!els.chkShowCoords?.checked,
+    showMinimap: !!els.chkShowMinimap?.checked,
     legendPos: els.selectLegendPos?.value || "br",
     legendFreeLeft: els.overlay?.style.left || "",
     legendFreeTop:  els.overlay?.style.top  || "",
@@ -1576,6 +1632,10 @@ els.selectScene.addEventListener("change", async () => {
   if (snap.showCoords !== undefined && els.chkShowCoords) {
     els.chkShowCoords.checked = !!snap.showCoords;
     els.chkShowCoords.dispatchEvent(new Event("change"));
+  }
+  if (snap.showMinimap !== undefined && els.chkShowMinimap) {
+    els.chkShowMinimap.checked = !!snap.showMinimap;
+    els.chkShowMinimap.dispatchEvent(new Event("change"));
   }
   if (snap.legendPos !== undefined && els.selectLegendPos) {
     els.selectLegendPos.value = snap.legendPos;
