@@ -65,6 +65,7 @@ const els = {
   csvMerge:     $("csv-merge"),
   btnTemplate:  $("btn-download-template"),
   btnPaste:     $("btn-paste"),
+  btnDataReset: $("btn-data-reset"),
   inputDataSource: $("input-data-source"),
   inputMapTitle: $("input-map-title"),
   mapTitle:      $("map-title"),
@@ -3242,6 +3243,47 @@ els.btnPaste?.addEventListener("click", async () => {
   } catch (e) {
     setSummary("ペースト失敗: " + e.message, "error");
   }
+});
+
+els.btnDataReset?.addEventListener("click", () => {
+  if (!state.dataset) {
+    setSummary("クリアするデータがありません", "warn"); return;
+  }
+  if (!confirm("現在のデータセットと全ての分析結果を消去しますか？\n（地図データは保持されます）")) return;
+  // Clear dataset and derived analysis results.
+  state.dataset = null;
+  state.field = null;
+  state.fieldB = null;
+  state.valueMap = null;
+  state.filteredKeys = null;
+  state.breaks = [];
+  state.colors = [];
+  state.scatterStats = null;
+  state.mrResult = null;
+  state.kmResult = null;
+  state.hcResult = null;
+  state.pcaResult = null;
+  state.lisaResult = null;
+  state.corrMatrix = null;
+  state.crosstab = null;
+  // Reset map visuals
+  mapper.resetColors?.();
+  mapper.clearSymbols?.();
+  mapper.clearHighlight?.();
+  mapper.clearOutlierMarks?.();
+  // Hide all dependent panels
+  const panelsToHide = [
+    els.panelField, els.panelClass, els.panelStats, els.panelLegend, els.panelTable,
+    els.panelHist, els.panelBox, els.panelCt, els.panelScatter, els.panelTs,
+    els.panelCorrMatrix, els.panelMr, els.panelKm, els.panelPca, els.panelHc, els.panelSplom,
+  ];
+  for (const p of panelsToHide) if (p) p.hidden = true;
+  if (els.overlay) els.overlay.hidden = true;
+  if (els.overlayB) els.overlayB.hidden = true;
+  if (els.dataSummary) els.dataSummary.textContent = "";
+  if (els.dataQuality) els.dataQuality.innerHTML = "";
+  if (els.fieldList) els.fieldList.innerHTML = "";
+  setSummary("データセットをクリアしました。新しい CSV を読み込んでください", "success");
 });
 els.btnCsv.addEventListener("click", exportCurrentCsv);
 els.btnPdf.addEventListener("click", async () => {

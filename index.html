@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=166" />
+  <link rel="stylesheet" href="css/style.css?v=167" />
 </head>
 <body>
   <header class="app-header">
@@ -124,6 +124,7 @@
         <div class="form-row">
           <button id="btn-download-template" class="btn">テンプレートCSVをDL</button>
           <button id="btn-paste" class="btn" title="クリップボード (Excelからコピーした内容) を読込">📋 ペースト</button>
+          <button id="btn-data-reset" class="btn" style="margin-left:auto;color:#b91c1c" title="現在のデータと分析結果を消去">🗑 クリア</button>
         </div>
         <div class="form-row">
           <label for="input-data-source">出典</label>
@@ -794,7 +795,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=166"></script>
+  <script type="module" src="js/main.js?v=167"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
