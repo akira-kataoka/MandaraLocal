@@ -87,8 +87,17 @@ export function renderLegend(container, breaks, colors, options = {}) {
     const sw = document.createElement("span");
     sw.className = "legend-swatch";
     sw.style.background = colors[i];
-    sw.title = "ダブルクリックで色を変更";
+    sw.title = "ダブルクリックで色を変更 / Shift+クリックでクラスを一括ピン";
     sw.style.cursor = "pointer";
+    // Cycle 252: Shift+single-click on a swatch promotes every region in that
+    // class to a scatter pin. Plain click is reserved for hover/pickers.
+    if (typeof options.onClassPin === "function") {
+      sw.addEventListener("click", (ev) => {
+        if (!ev.shiftKey) return;
+        ev.preventDefault();
+        options.onClassPin(i);
+      });
+    }
     if (typeof options.onColorPick === "function") {
       sw.addEventListener("dblclick", () => {
         const inp = document.createElement("input");

@@ -4372,6 +4372,7 @@ function showHelpModal() {
       <span>swatch ダブルクリック</span><span>そのクラスの色をカラーピッカーで変更</span>
       <span>境界値ダブルクリック</span><span>クラス上限値を手入力（manual mode に切替）</span>
       <span>件数クリック</span><span>該当クラス地域名をクリップボードへ</span>
+      <span>swatch Shift+クリック</span><span>クラスメンバー全件を一括ピン留め</span>
 
       <strong>テーブル</strong><span></span>
       <span>📋 列</span><span>列の表示/非表示 + 並び替え（↑/↓）</span>
@@ -5735,6 +5736,7 @@ function refresh() {
       if (ev.type === "mouseenter") mapper.highlightByClass(idx);
     },
     onClassClick: (idx) => copyClassMembers(idx),
+    onClassPin: (idx) => pinClassMembers(idx),
     onColorPick: (idx, hex) => {
       if (!state.customColors[state.palette]) state.customColors[state.palette] = {};
       state.customColors[state.palette][idx] = hex;
@@ -6539,6 +6541,28 @@ els.btnStatsExport?.addEventListener("click", exportAllStatsCsv);
 
 // Copy region list from a single class to clipboard (Cycle 188). Lets the
 // user drill into "which 5 prefectures fall into the top class".
+// Cycle 252: bulk-pin every region whose classified value falls in the given
+// legend class index. Adds to the existing pin set (union, not replace).
+function pinClassMembers(classIdx) {
+  if (!state.dataset || !state.valueMap || !state.breaks) return;
+  const ids = [];
+  for (const r of state.dataset.rows) {
+    const v = state.valueMap.get(r.key);
+    if (!Number.isFinite(v)) continue;
+    if (classifyValue(v, state.breaks) === classIdx) ids.push(r.key);
+  }
+  if (!ids.length) { setSummary(`第${classIdx + 1}階級に該当する地域はありません`, "warn"); return; }
+  if (!(state.pinnedScatterIds instanceof Set)) state.pinnedScatterIds = new Set();
+  let added = 0;
+  for (const id of ids) if (!state.pinnedScatterIds.has(id)) { state.pinnedScatterIds.add(id); added++; }
+  if (!added) { setSummary(`第${classIdx + 1}階級は全てピン済みでした`, "muted"); return; }
+  syncScatterPinBtn();
+  drawScatter();
+  if (typeof refreshTable === "function") refreshTable();
+  mapper.markPinned(state.pinnedScatterIds, els.scatterPinColor?.value);
+  setSummary(`第${classIdx + 1}階級から ${added} 件を新規ピン留め（計 ${state.pinnedScatterIds.size} 件）`, "success");
+}
+
 async function copyClassMembers(classIdx) {
   if (!state.dataset || !state.valueMap || !state.breaks) return;
   const members = [];
