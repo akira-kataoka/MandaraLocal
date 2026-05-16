@@ -2196,7 +2196,69 @@ function renderPcaResult(r) {
   }
   html += `</tbody></table>`;
   html += buildScreePlot(r);
+  html += buildBiplot(r);
   els.pcaResult.innerHTML = html;
+}
+
+// PCA biplot (Cycle 149): PC1 vs PC2 with sample points and variable arrows.
+function buildBiplot(r) {
+  if (r.d < 2) return "";
+  const W = 320, H = 260, PAD = { top: 16, right: 16, bottom: 28, left: 36 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+  // PC1 / PC2 scores
+  const pc1 = r.scores.map(s => s[0]);
+  const pc2 = r.scores.map(s => s[1]);
+  // Loadings for PC1 / PC2
+  const l1 = r.loadings.map(L => L[0]);
+  const l2 = r.loadings.map(L => L[1]);
+  // Use combined ranges so points + arrows fit
+  const sMax = Math.max(...pc1.map(Math.abs), ...pc2.map(Math.abs));
+  const lMax = Math.max(...l1.map(Math.abs), ...l2.map(Math.abs)) || 1;
+  // Scale arrows to ~70% of plot half-width
+  const arrowScale = (sMax * 0.7) / lMax;
+  const ext = sMax * 1.1;
+  const px = (v) => PAD.left + ((v + ext) / (2 * ext)) * innerW;
+  const py = (v) => PAD.top + innerH - ((v + ext) / (2 * ext)) * innerH;
+  let svg = `<div style="margin-top:6px;font-size:11px;font-weight:600">バイプロット (PC1 × PC2)</div>`;
+  svg += `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="background:#fff;border:1px solid #e2e8f0">`;
+  // Frame
+  svg += `<rect x="${PAD.left}" y="${PAD.top}" width="${innerW}" height="${innerH}" fill="none" stroke="#cbd5e1"/>`;
+  // 0-axis cross
+  svg += `<line x1="${PAD.left}" y1="${py(0)}" x2="${W - PAD.right}" y2="${py(0)}" stroke="#94a3b8" stroke-dasharray="2,2"/>`;
+  svg += `<line x1="${px(0)}" y1="${PAD.top}" x2="${px(0)}" y2="${H - PAD.bottom}" stroke="#94a3b8" stroke-dasharray="2,2"/>`;
+  // Sample points (light grey)
+  for (let i = 0; i < pc1.length; i++) {
+    svg += `<circle cx="${px(pc1[i]).toFixed(1)}" cy="${py(pc2[i]).toFixed(1)}" r="2.5" fill="rgba(71,85,105,0.45)"/>`;
+  }
+  // Variable arrows + labels
+  for (let i = 0; i < r.d; i++) {
+    const ex = l1[i] * arrowScale, ey = l2[i] * arrowScale;
+    const x1 = px(0), y1 = py(0);
+    const x2 = px(ex), y2 = py(ey);
+    // Arrow shaft
+    svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#dc2626" stroke-width="1.4"/>`;
+    // Arrow head (small triangle)
+    const ang = Math.atan2(y2 - y1, x2 - x1);
+    const ah = 5;
+    const hx1 = x2 - ah * Math.cos(ang - 0.4);
+    const hy1 = y2 - ah * Math.sin(ang - 0.4);
+    const hx2 = x2 - ah * Math.cos(ang + 0.4);
+    const hy2 = y2 - ah * Math.sin(ang + 0.4);
+    svg += `<polygon points="${x2.toFixed(1)},${y2.toFixed(1)} ${hx1.toFixed(1)},${hy1.toFixed(1)} ${hx2.toFixed(1)},${hy2.toFixed(1)}" fill="#dc2626"/>`;
+    // Label
+    const lx = x2 + 4 * Math.cos(ang);
+    const ly = y2 + 4 * Math.sin(ang) + 3;
+    const name = r.xFields[i].length > 10 ? r.xFields[i].slice(0, 9) + "…" : r.xFields[i];
+    svg += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="9" font-weight="600" fill="#1e293b">${escapeHtmlText(name)}</text>`;
+  }
+  // Axis labels with variance explained
+  const pc1Pct = (r.ratios[0] * 100).toFixed(1);
+  const pc2Pct = (r.ratios[1] * 100).toFixed(1);
+  svg += `<text x="${W / 2}" y="${H - 8}" font-size="10" text-anchor="middle" fill="#475569">PC1 (${pc1Pct}%)</text>`;
+  svg += `<text x="12" y="${PAD.top + innerH / 2}" font-size="10" fill="#475569" transform="rotate(-90 12 ${PAD.top + innerH / 2})">PC2 (${pc2Pct}%)</text>`;
+  svg += `</svg>`;
+  return svg;
 }
 
 function buildScreePlot(r) {
