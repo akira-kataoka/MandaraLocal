@@ -14,7 +14,7 @@ const PAD = { top: 10, right: 12, bottom: 24, left: 36 };
  * @param bins    bin count (default 10, clamped 3..30)
  * @returns { n, binCount, max }
  */
-export function renderHistogram(svgEl, values, label, bins = 10) {
+export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = null) {
   svgEl.innerHTML = "";
   const v = values.filter(x => Number.isFinite(x));
   const n = v.length;
@@ -72,15 +72,23 @@ export function renderHistogram(svgEl, values, label, bins = 10) {
     const bw = (innerW / k) - barGap * 2;
     const by = y(c);
     const bh = (H - PAD.bottom) - by;
+    const lo = min + i * width;
+    const hi = lo + width;
     const rect = el("rect", {
       x: bx, y: by, width: bw, height: bh,
       class: "hist-bar",
+      "data-bin-idx": String(i),
+      "data-bin-lo": String(lo),
+      "data-bin-hi": String(hi),
     });
-    const lo = min + i * width;
-    const hi = lo + width;
     const tip = el("title");
     tip.textContent = `${formatNum(lo)} 〜 ${formatNum(hi)}: ${c}件`;
     rect.appendChild(tip);
+    if (onBinHover) {
+      rect.style.cursor = "pointer";
+      rect.addEventListener("mouseenter", () => onBinHover(lo, hi, i, true));
+      rect.addEventListener("mouseleave", () => onBinHover(lo, hi, i, false));
+    }
     bars.appendChild(rect);
   });
   svgEl.appendChild(bars);

@@ -753,11 +753,7 @@ els.filterOp.addEventListener("change", () => {
 els.btnFilterApply.addEventListener("click", applyAttributeFilter);
 els.btnFilterClear.addEventListener("click", clearAttributeFilter);
 els.ctRun.addEventListener("click", runCrossTab);
-els.histBins.addEventListener("change", () => {
-  if (!state.dataset || !state.field) return;
-  const values = state.dataset.rows.map(r => r.values[state.field]);
-  renderHistogram(els.histSvg, values, state.field, parseInt(els.histBins.value, 10) || 10);
-});
+els.histBins.addEventListener("change", () => { refresh(); });
 
 function runCrossTab() {
   if (!state.dataset) return;
@@ -1357,10 +1353,20 @@ function refresh() {
   // Data table
   renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover);
 
-  // Histogram
+  // Histogram with bin → map highlight link
   if (els.histSvg) {
     const bins = parseInt(els.histBins.value, 10) || 10;
-    renderHistogram(els.histSvg, values, state.field, bins);
+    renderHistogram(els.histSvg, values, state.field, bins, (lo, hi, idx, isOn) => {
+      if (!isOn) { mapper.clearOutlierMarks(); return; }
+      const hits = new Set();
+      const isLastBin = idx === bins - 1;
+      for (const r of state.dataset.rows) {
+        const x = r.values[state.field];
+        if (!Number.isFinite(x)) continue;
+        if (x >= lo && (isLastBin ? x <= hi : x < hi)) hits.add(r.key);
+      }
+      mapper.markOutliers(hits);
+    });
   }
 
   // Outlier highlight
