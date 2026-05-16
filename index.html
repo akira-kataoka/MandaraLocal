@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=75" />
+  <link rel="stylesheet" href="css/style.css?v=76" />
 </head>
 <body>
   <header class="app-header">
@@ -258,6 +258,10 @@
           <label><input type="checkbox" id="chk-sde" /> 標準偏差楕円を表示</label>
         </div>
         <div id="sde-info" class="data-summary" style="font-size:11px"></div>
+        <details style="margin-top:6px;font-size:11px">
+          <summary style="cursor:pointer;color:var(--accent)">データ品質チェック</summary>
+          <div id="data-quality" style="margin-top:4px"></div>
+        </details>
         <div id="outlier-list" class="outlier-list"></div>
         <details class="derived" style="margin-top:8px">
           <summary>属性検索 (条件で絞り込み)</summary>
@@ -386,6 +390,7 @@
         <div class="form-row inline">
           <label><input type="checkbox" id="chk-scatter-logx" /> X軸を対数</label>
           <label style="margin-left:8px"><input type="checkbox" id="chk-scatter-logy" /> Y軸を対数</label>
+          <button id="scatter-swap" class="btn" style="margin-left:auto;padding:2px 8px;font-size:11px" title="X⇔Y入替">⇄</button>
         </div>
         <div class="form-row">
           <label for="scatter-x">X軸</label>
@@ -474,7 +479,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=75"></script>
+  <script type="module" src="js/main.js?v=76"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

@@ -122,6 +122,8 @@ const els = {
   histSvg:      $("histogram-svg"),
   histPng:      $("hist-png"),
   scatterPng:   $("scatter-png"),
+  scatterSwap:  $("scatter-swap"),
+  dataQuality:  $("data-quality"),
   panelCt:      $("panel-crosstab"),
   ctRow:        $("ct-row"),
   ctCol:        $("ct-col"),
@@ -1008,6 +1010,14 @@ els.scatterX.addEventListener("change", drawScatter);
 els.scatterY.addEventListener("change", drawScatter);
 els.chkScatterLogX.addEventListener("change", drawScatter);
 els.chkScatterLogY.addEventListener("change", drawScatter);
+els.scatterSwap?.addEventListener("click", () => {
+  const x = els.scatterX.value, y = els.scatterY.value;
+  els.scatterX.value = y; els.scatterY.value = x;
+  // also swap log toggles
+  const lx = els.chkScatterLogX.checked, ly = els.chkScatterLogY.checked;
+  els.chkScatterLogX.checked = ly; els.chkScatterLogY.checked = lx;
+  drawScatter();
+});
 els.btnDerived.addEventListener("click", addDerivedField);
 els.btnTemplate.addEventListener("click", downloadTemplate);
 els.btnCsv.addEventListener("click", exportCurrentCsv);
@@ -1711,6 +1721,8 @@ function onDatasetReady(ds, label) {
   }
   // Pre-populate pie field options for the new dataset
   populatePieFields();
+  // Data-quality summary per column
+  renderDataQuality();
   // Detect time series
   setupTimeSeriesPanel();
 
@@ -2059,6 +2071,32 @@ function tsStop() {
   tsState.timer = null;
   els.tsPlay.hidden = false;
   els.tsStop.hidden = true;
+}
+
+function renderDataQuality() {
+  if (!els.dataQuality || !state.dataset) return;
+  const total = state.dataset.rows.length;
+  const lines = state.dataset.fields.map((f) => {
+    let n = 0, missing = 0;
+    let mn = Infinity, mx = -Infinity;
+    for (const r of state.dataset.rows) {
+      const v = r.values[f];
+      if (Number.isFinite(v)) {
+        n++; if (v < mn) mn = v; if (v > mx) mx = v;
+      } else missing++;
+    }
+    const missingPct = (missing / total) * 100;
+    const flag =
+      missingPct >= 50 ? "🟥" :
+      missingPct >= 20 ? "🟧" :
+      missingPct > 0  ? "🟨" : "🟩";
+    return `<tr><td>${flag}</td><td>${escapeHtmlText(f)}</td><td>${n}件</td><td>${missing}件 (${missingPct.toFixed(0)}%)</td></tr>`;
+  });
+  els.dataQuality.innerHTML =
+    `<table style="font-size:11px;border-collapse:collapse;width:100%">` +
+    `<thead><tr><th></th><th style="text-align:left">列</th><th>有効</th><th>欠損</th></tr></thead>` +
+    `<tbody>${lines.join("")}</tbody></table>` +
+    `<div style="margin-top:4px;color:var(--muted)">🟩 0% / 🟨 〜20% / 🟧 20-50% / 🟥 50%以上欠損</div>`;
 }
 
 function renderPieLegend(container, fields, colors, title) {
