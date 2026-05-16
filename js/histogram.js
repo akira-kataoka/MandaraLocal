@@ -28,7 +28,7 @@ export function renderHistogram(svgEl, values, label, bins = 10, onBinHover = nu
   const groups = (opts.groups && opts.groups.length >= 2 && opts.groups.length <= 4) ? opts.groups : null;
   if (groups) {
     // Cycle 262: facet (small multiples) when requested, else default overlay.
-    if (opts.facet) return renderFacetHistogram(svgEl, groups, label, bins, logX);
+    if (opts.facet) return renderFacetHistogram(svgEl, groups, label, bins, logX, opts);
     return renderGroupHistogram(svgEl, groups, label, bins, logX);
   }
   // When log axis is requested, only positive values are usable.
@@ -271,7 +271,7 @@ function el(tag, attrs = {}) {
 // vertically with the number of groups so each panel has a fair share of
 // vertical real-estate. X axis is shared (min/max across all groups), Y
 // axis is per-group so single-mode comparison stays readable.
-function renderFacetHistogram(svgEl, groups, label, bins, logX) {
+function renderFacetHistogram(svgEl, groups, label, bins, logX, opts = {}) {
   const filtered = groups.map(g => ({
     name: g.name,
     v: g.values.filter(x => Number.isFinite(x) && (!logX || x > 0)),
@@ -331,10 +331,27 @@ function renderFacetHistogram(svgEl, groups, label, bins, logX) {
       const bx = PAD.left + i * barW;
       const bh = (c / maxCount) * facetH;
       const by = facetBottom - bh;
-      svgEl.appendChild(el("rect", {
+      const sLo = sMin + i * width;
+      const sHi = sLo + width;
+      const lo = logX ? Math.pow(10, sLo) : sLo;
+      const hi = logX ? Math.pow(10, sHi) : sHi;
+      const rect = el("rect", {
         x: bx, y: by, width: Math.max(0.5, barW - 0.4), height: bh,
         fill: color, "fill-opacity": "0.6", stroke: color, "stroke-width": 0.4,
-      }));
+      });
+      const tip = el("title");
+      tip.textContent = `${formatNum(lo)} 〜 ${formatNum(hi)}: ${c}件`;
+      rect.appendChild(tip);
+      // Cycle 263: Shift+click bin → bulk-pin via opts.onBinClick.
+      if (typeof opts.onBinClick === "function") {
+        rect.style.cursor = "pointer";
+        rect.addEventListener("click", (ev) => {
+          if (!ev.shiftKey) return;
+          ev.preventDefault();
+          opts.onBinClick(lo, hi, i);
+        });
+      }
+      svgEl.appendChild(rect);
     });
     // Right-side max count text
     svgEl.appendChild(text(W - PAD.right + 2, facetTop + 8, `max=${maxCount}`, "start"));
