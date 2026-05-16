@@ -101,6 +101,11 @@ html, body {
   padding: 12px;
 }
 
+/* Zen mode (Cycle 169): hide sidebar to give the map full width. */
+body.zen-mode .sidebar { display: none; }
+body.zen-mode .map-wrap { width: 100%; }
+body.zen-mode #btn-zen { background: #1e3a8a; color: #fff; }
+
 .panel {
   background: #fff;
   border: 1px solid var(--border);

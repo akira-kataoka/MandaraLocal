@@ -265,6 +265,7 @@ const els = {
   btnInstall:   $("btn-install"),
   inputGeocode: $("input-geocode"),
   btnTheme:     $("btn-theme"),
+  btnZen:       $("btn-zen"),
   selectScene:  $("select-scene"),
   btnSceneSave: $("btn-scene-save"),
   btnSceneDelete: $("btn-scene-delete"),
@@ -3275,6 +3276,20 @@ els.btnOverlayClear?.addEventListener("click", () => {
   setSummary(`${before} 個のオーバーレイを削除しました`, "success");
 });
 
+// Zen mode (Cycle 169): hide sidebar so the map fills the viewport. Toggled
+// via header button, Z key, or Esc when active.
+function toggleZenMode() {
+  document.body.classList.toggle("zen-mode");
+  const on = document.body.classList.contains("zen-mode");
+  if (els.btnZen) els.btnZen.textContent = on ? "⛶ 解除" : "⛶ 全画面";
+  setTimeout(() => {
+    mapper.map.invalidateSize();
+    if (mapperB) mapperB.map.invalidateSize();
+  }, 80);
+  setSummary(on ? "Zenモード（地図全画面） / Esc または Z で解除" : "Zenモード解除", "muted");
+}
+els.btnZen?.addEventListener("click", toggleZenMode);
+
 els.btnDataReset?.addEventListener("click", () => {
   if (!state.dataset) {
     setSummary("クリアするデータがありません", "warn"); return;
@@ -3503,6 +3518,9 @@ document.addEventListener("keydown", (e) => {
       mapper.map.zoomOut();
       e.preventDefault();
       break;
+    case "z": case "Z":
+      toggleZenMode();
+      break;
     case " ":
       if (!els.panelTs.hidden) {
         if (tsState.timer) tsStop(); else tsPlay();
@@ -3523,6 +3541,7 @@ document.addEventListener("keydown", (e) => {
       break;
     case "Escape":
       if (!kbdHelp.hidden) { kbdHelp.hidden = true; break; }
+      if (document.body.classList.contains("zen-mode")) { toggleZenMode(); break; }
       if (measureOn) toggleMeasure(false);
       if (areaOn) toggleArea(false);
       if (bufferOn) toggleBuffer(false);
