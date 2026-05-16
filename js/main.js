@@ -185,6 +185,7 @@ const els = {
   chkScatterStats: $("chk-scatter-stats"),
   chkScatterCi:    $("chk-scatter-ci"),
   scatterLabels:   $("scatter-labels"),
+  scatterCsv:      $("scatter-csv"),
   chkScatterLogX: $("chk-scatter-logx"),
   chkScatterLogY: $("chk-scatter-logy"),
   scatterCorr:  $("scatter-correlation"),
@@ -1363,6 +1364,39 @@ els.scatterSwap?.addEventListener("click", () => {
   const lx = els.chkScatterLogX.checked, ly = els.chkScatterLogY.checked;
   els.chkScatterLogX.checked = ly; els.chkScatterLogY.checked = lx;
   drawScatter();
+});
+
+els.scatterCsv?.addEventListener("click", () => {
+  const s = state.scatterStats;
+  if (!s || s.r == null) { setSummary("先に散布図を描画してください", "warn"); return; }
+  const fmt = (v, d = 4) => (v == null || !Number.isFinite(v)) ? "" : v.toFixed(d);
+  const lines = [
+    ["項目", "値"].map(csvEscape).join(","),
+    ["X軸", s.xf].map(csvEscape).join(","),
+    ["Y軸", s.yf].map(csvEscape).join(","),
+    ["log変換 (X)", s.logX ? "あり" : "なし"].map(csvEscape).join(","),
+    ["log変換 (Y)", s.logY ? "あり" : "なし"].map(csvEscape).join(","),
+    ["有効サンプル数 n", String(s.n)].map(csvEscape).join(","),
+    ["ピアソン相関 r", fmt(s.r)].map(csvEscape).join(","),
+    ["r 95%CI 下限", fmt(s.rCI?.[0])].map(csvEscape).join(","),
+    ["r 95%CI 上限", fmt(s.rCI?.[1])].map(csvEscape).join(","),
+    ["スピアマン順位相関 ρ", fmt(s.rho)].map(csvEscape).join(","),
+    ["ρ 95%CI 下限", fmt(s.rhoCI?.[0])].map(csvEscape).join(","),
+    ["ρ 95%CI 上限", fmt(s.rhoCI?.[1])].map(csvEscape).join(","),
+    ["決定係数 R²", fmt(s.r2)].map(csvEscape).join(","),
+    ["回帰係数 slope", fmt(s.slope, 6)].map(csvEscape).join(","),
+    ["切片 intercept", fmt(s.intercept, 6)].map(csvEscape).join(","),
+  ];
+  const csv = "﻿" + lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const safe = (v) => String(v).replace(/[\s\\/:*?"<>|]+/g, "_");
+  a.href = url;
+  a.download = `scatter_stats_${safe(s.xf)}_vs_${safe(s.yf)}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setSummary(`散布図統計を ${a.download} として保存しました`, "success");
 });
 els.btnDerived.addEventListener("click", addDerivedField);
 function batchStandardise(kind) {
@@ -3144,13 +3178,19 @@ function drawScatter() {
       };
     }
   }
-  const { r, rho, rCI, rhoCI, n } = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick, {
+  const scatterResult = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick, {
     logX: els.chkScatterLogX.checked,
     logY: els.chkScatterLogY.checked,
     statsOverlay: !!els.chkScatterStats?.checked,
     regCI: !!els.chkScatterCi?.checked,
     labels: els.scatterLabels?.value || "outliers",
   }, colorFor, names, categoryFor);
+  const { r, rho, rCI, rhoCI, n, slope, intercept, r2 } = scatterResult;
+  state.scatterStats = {
+    xf, yf, n, r, rCI, rho, rhoCI, slope, intercept, r2,
+    logX: !!els.chkScatterLogX?.checked, logY: !!els.chkScatterLogY?.checked,
+  };
+  if (els.scatterCsv) els.scatterCsv.disabled = (r == null);
   if (r == null) {
     els.scatterCorr.textContent = `n=${n} — 相関係数を計算できません`;
     return;
