@@ -95,11 +95,14 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   axis.appendChild(text(8, PAD.top + innerH / 2, yLabel, "middle", { transform: `rotate(-90, 8, ${PAD.top + innerH / 2})` }));
   svgEl.appendChild(axis);
 
-  // points
+  // points (sizeFor from opts gives variable radius for bubble-chart mode)
+  const sizeFn = typeof opts.sizeFor === "function" ? opts.sizeFor : null;
   const pts = el("g");
   for (const [vx, vy, fid] of pairs) {
-    const c = circle(px(vx), py(vy), 3, "point");
+    const r0 = sizeFn && fid != null ? sizeFn(fid) : 3;
+    const c = circle(px(vx), py(vy), r0, "point");
     if (fid != null) c.setAttribute("data-id", String(fid));
+    c.__baseR = r0;
     // Priority: categoryFor (when set) overrides map-class colorFor.
     let appliedColor = null;
     if (catMap && fid != null) {
@@ -119,12 +122,12 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     if (onHover && fid != null) {
       c.addEventListener("mouseenter", () => {
         c.classList.add("is-hot");
-        c.setAttribute("r", "5");
+        c.setAttribute("r", String(Math.max(5, r0 + 2)));
         onHover(fid, true);
       });
       c.addEventListener("mouseleave", () => {
         c.classList.remove("is-hot");
-        c.setAttribute("r", "3");
+        c.setAttribute("r", String(r0));
         onHover(fid, false);
       });
       if (onSelect) {

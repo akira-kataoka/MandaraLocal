@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=134" />
+  <link rel="stylesheet" href="css/style.css?v=135" />
 </head>
 <body>
   <header class="app-header">
@@ -520,6 +520,10 @@
           <label for="scatter-color-by">色分け列</label>
           <select id="scatter-color-by"><option value="">— なし（地図色）—</option></select>
         </div>
+        <div class="form-row">
+          <label for="scatter-size-by">サイズ列</label>
+          <select id="scatter-size-by"><option value="">— なし（固定）—</option></select>
+        </div>
         <div class="form-row inline">
           <label><input type="checkbox" id="chk-scatter-stats" /> 統計オーバーレイ（重心 + IQR）</label>
         </div>
@@ -653,7 +657,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=134"></script>
+  <script type="module" src="js/main.js?v=135"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

@@ -184,6 +184,7 @@ const els = {
   scatterX:     $("scatter-x"),
   scatterY:     $("scatter-y"),
   scatterColorBy: $("scatter-color-by"),
+  scatterSizeBy:   $("scatter-size-by"),
   chkScatterStats: $("chk-scatter-stats"),
   chkScatterCi:    $("chk-scatter-ci"),
   scatterLabels:   $("scatter-labels"),
@@ -1367,6 +1368,7 @@ function clearAttributeFilter() {
 els.scatterX.addEventListener("change", drawScatter);
 els.scatterY.addEventListener("change", drawScatter);
 els.scatterColorBy?.addEventListener("change", drawScatter);
+els.scatterSizeBy?.addEventListener("change", drawScatter);
 els.chkScatterStats?.addEventListener("change", drawScatter);
 els.chkScatterCi?.addEventListener("change", drawScatter);
 els.scatterLabels?.addEventListener("change", drawScatter);
@@ -3393,6 +3395,16 @@ function populateScatterSelectors(fields) {
     }
     if (fields.includes(prev)) els.scatterColorBy.value = prev;
   }
+  if (els.scatterSizeBy) {
+    const prev = els.scatterSizeBy.value;
+    els.scatterSizeBy.innerHTML = '<option value="">— なし（固定）—</option>';
+    for (const f of fields) {
+      const o = document.createElement("option");
+      o.value = f; o.textContent = f;
+      els.scatterSizeBy.appendChild(o);
+    }
+    if (fields.includes(prev)) els.scatterSizeBy.value = prev;
+  }
   drawScatter();
 }
 
@@ -3442,6 +3454,22 @@ function drawScatter() {
       };
     }
   }
+  // Size-by-field: third dimension as point radius (3..10 px).
+  const sizeField = els.scatterSizeBy?.value || "";
+  let sizeFor = null;
+  if (sizeField) {
+    const sizeMap = new Map(state.dataset.rows.map(r => [r.key, r.values[sizeField]]));
+    const sizeVals = [...sizeMap.values()].filter(v => Number.isFinite(v));
+    if (sizeVals.length >= 2) {
+      const smn = Math.min(...sizeVals), smx = Math.max(...sizeVals);
+      const range = smx - smn || 1;
+      sizeFor = (id) => {
+        const v = sizeMap.get(id);
+        if (!Number.isFinite(v)) return 3;
+        return 3 + 7 * ((v - smn) / range);
+      };
+    }
+  }
   const scatterResult = renderScatter(els.scatterSvg, xs, ys, xf, yf, ids, onScatterHover, onScatterClick, {
     logX: els.chkScatterLogX.checked,
     logY: els.chkScatterLogY.checked,
@@ -3453,6 +3481,7 @@ function drawScatter() {
       mapper.markOutliers(ids);
       setSummary(`${ids.size} 件を地図でハイライト中（散布図 brush 選択）`, "success");
     },
+    sizeFor,
   }, colorFor, names, categoryFor);
   const { r, rho, rCI, rhoCI, n, slope, intercept, r2, degree, coeffs, polyR2, sse, aic, bic } = scatterResult;
   state.scatterStats = {
