@@ -18,7 +18,7 @@ export function getSortState() {
  * @param fields    dataset.fields
  * @param onRowHover (id, isOn) -> void
  */
-export function renderTable(container, rows, fields, onRowHover, onCellEdit = null, onRowDelete = null) {
+export function renderTable(container, rows, fields, onRowHover, onCellEdit = null, onRowDelete = null, onRowClick = null) {
   container.innerHTML = "";
   if (!rows.length || !fields.length) return;
 
@@ -102,6 +102,15 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
       tr.addEventListener("mouseenter", () => onRowHover(r.key, true));
       tr.addEventListener("mouseleave", () => onRowHover(r.key, false));
     }
+    if (onRowClick) {
+      tr.addEventListener("click", (e) => {
+        // Don't trigger when the click was on the row-delete button or on an
+        // editable cell's <input> (cell edit takes priority).
+        const t = e.target;
+        if (t.closest("button") || t.tagName === "INPUT") return;
+        onRowClick(r.key);
+      });
+    }
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);
@@ -128,7 +137,7 @@ export function renderTable(container, rows, fields, onRowHover, onCellEdit = nu
     el.addEventListener("click", () => {
       if (sortState.field === key) sortState.asc = !sortState.asc;
       else { sortState.field = key; sortState.asc = numeric ? false : true; }
-      renderTable(container, rows, fields, onRowHover, onCellEdit, onRowDelete);
+      renderTable(container, rows, fields, onRowHover, onCellEdit, onRowDelete, onRowClick);
     });
     if (numeric) el.style.textAlign = "right";
     return el;

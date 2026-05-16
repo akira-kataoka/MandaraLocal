@@ -4491,7 +4491,7 @@ function refresh() {
       parts.push(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`);
       els.overlayFooter.textContent = parts.join(" · ");
       renderStats(values);
-      renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete);
+      renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
       saveSettings(state);
       return;
     }
@@ -4520,7 +4520,7 @@ function refresh() {
       parts.push(`MandaraNext · ${new Date().toLocaleDateString("ja-JP")}`);
       els.overlayFooter.textContent = parts.join(" · ");
       renderStats(values);
-      renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete);
+      renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
       saveSettings(state);
       return;
     }
@@ -4663,7 +4663,7 @@ function refresh() {
   }
 
   // Data table — with inline editing
-  renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete);
+  renderTable(els.tableWrap, state.dataset.rows, state.dataset.fields, onTableRowHover, onCellEdit, onRowDelete, onTableRowClick);
 
   // Box plot
   if (els.boxplotSvg) {
@@ -4840,6 +4840,12 @@ function applyOutlierHighlight(values) {
 function onTableRowHover(id, isOn) {
   if (isOn) mapper.highlightById(id);
   else      mapper.clearHighlight();
+}
+
+function onTableRowClick(id) {
+  // Pan + zoom the map to the clicked region (Cycle 179).
+  if (state.level === "chocho") return; // town points: no polygon to zoom to
+  mapper.zoomToFeature?.(id);
 }
 
 function onCellEdit(id, field, newValue) {
