@@ -224,10 +224,11 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     ? opts.labels
     : "outliers";
   // Pre-compute top-N index set when in top-y / top-x mode so the candidate
-  // filter below is O(1) per pair.
+  // filter below is O(1) per pair. Cycle 199: N is now user-configurable.
   let topNSet = null;
   if (labelMode === "top-y" || labelMode === "top-x") {
-    const N = 10;
+    const requestedN = Number.isFinite(opts.labelTopN) ? Math.floor(opts.labelTopN) : 10;
+    const N = Math.max(1, Math.min(50, requestedN));
     const useY = labelMode === "top-y";
     const idxs = pairs.map((_, i) => i)
       .filter(i => Number.isFinite(pairs[i][useY ? 1 : 0]));

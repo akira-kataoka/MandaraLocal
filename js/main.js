@@ -203,6 +203,7 @@ const els = {
   chkScatterJitter: $("chk-scatter-jitter"),
   chkScatterLowess: $("chk-scatter-lowess"),
   scatterLabels:   $("scatter-labels"),
+  scatterLabelN:   $("scatter-label-n"),
   scatterDegree:   $("scatter-degree"),
   scatterCsv:      $("scatter-csv"),
   scatterDataCsv:  $("scatter-data-csv"),
@@ -1540,6 +1541,8 @@ document.getElementById("btn-scatter-clear-overlays")?.addEventListener("click",
   }
 });
 els.scatterLabels?.addEventListener("change", drawScatter);
+els.scatterLabelN?.addEventListener("change", drawScatter);
+els.scatterLabelN?.addEventListener("input", drawScatter);
 els.scatterDegree?.addEventListener("change", drawScatter);
 els.chkScatterLogX.addEventListener("change", drawScatter);
 els.chkScatterLogY.addEventListener("change", drawScatter);
@@ -5924,6 +5927,7 @@ function drawScatter() {
     jitter: !!els.chkScatterJitter?.checked,
     lowess: !!els.chkScatterLowess?.checked,
     labels: els.scatterLabels?.value || "outliers",
+    labelTopN: parseInt(els.scatterLabelN?.value || "10", 10) || 10,
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
     onBrush: (ids) => {
       mapper.markOutliers(ids);
