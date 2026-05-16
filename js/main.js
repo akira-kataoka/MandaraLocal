@@ -166,6 +166,7 @@ const els = {
   btnSceneDelete: $("btn-scene-delete"),
   btnSceneExport: $("btn-scene-export"),
   fileSceneImport: $("file-scene-import"),
+  btnSceneShareUrl: $("btn-scene-share-url"),
 };
 
 // ----- Restore prior session settings -----
@@ -1097,6 +1098,65 @@ els.btnSceneExport.addEventListener("click", () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   setSummary(`${keys.length} シーンを書き出しました`, "success");
 });
+
+// ----- URL-hash sharing -----
+function snapshotToHash(snap) {
+  const json = JSON.stringify(snap);
+  // base64url safe
+  const b64 = btoa(unescape(encodeURIComponent(json)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return "#s=" + b64;
+}
+function hashToSnapshot(hash) {
+  if (!hash || !hash.startsWith("#s=")) return null;
+  try {
+    const b64 = hash.slice(3).replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "=".repeat((4 - b64.length % 4) % 4);
+    return JSON.parse(decodeURIComponent(escape(atob(padded))));
+  } catch { return null; }
+}
+
+els.btnSceneShareUrl.addEventListener("click", async () => {
+  const snap = snapshotCurrent();
+  const url = location.origin + location.pathname + snapshotToHash(snap);
+  try {
+    await navigator.clipboard.writeText(url);
+    setSummary("共有URLをクリップボードにコピーしました", "success");
+  } catch {
+    prompt("以下のURLをコピーして共有してください:", url);
+  }
+});
+
+// On boot, if a snapshot hash is present, apply it after the level has loaded.
+(async function applyHashSnapshot() {
+  const snap = hashToSnapshot(location.hash);
+  if (!snap) return;
+  // Defer to allow initial applyLevel() to run first
+  await new Promise(r => setTimeout(r, 300));
+  if (snap.level && snap.level !== state.level) {
+    if (snap.chochoPref) state.chochoPref = snap.chochoPref;
+    if (snap.chochoMuni) state.chochoMuni = snap.chochoMuni;
+    await applyLevel(snap.level);
+  }
+  for (const k of ["classes","method","palette","reverse","mode","maxR","compare","field","fieldB"]) {
+    if (snap[k] !== undefined) state[k] = snap[k];
+  }
+  if (snap.method)  els.selectMethod.value = snap.method;
+  if (snap.palette) els.selectPalette.value = snap.palette;
+  if (snap.classes) els.inputClasses.value = snap.classes;
+  if (snap.mode)    els.selectMode.value = snap.mode;
+  if (snap.maxR)    els.inputMaxR.value = snap.maxR;
+  if (snap.reverse !== undefined) els.chkReverse.checked = !!snap.reverse;
+  if (snap.compare !== undefined) els.chkCompare.checked = !!snap.compare;
+  if (snap.manualBreaks !== undefined) els.inputManualBreaks.value = snap.manualBreaks;
+  if (snap.prefFilter !== undefined && els.selectPrefFilter) els.selectPrefFilter.value = snap.prefFilter;
+  els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both" || state.mode === "graduated");
+  els.rowDotUnit.hidden = state.mode !== "dot";
+  els.rowManualBreaks.hidden = state.method !== "manual";
+  if (state.field && els.selectField) els.selectField.value = state.field;
+  if (state.dataset) refresh();
+  setSummary("URLから設定を復元しました", "success");
+})();
 
 els.fileSceneImport.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
