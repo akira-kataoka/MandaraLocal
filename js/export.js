@@ -5,16 +5,19 @@
 /**
  * Use html-to-image to capture the live map div as a PNG.
  */
-export async function exportPng(mapEl, filename = "mandara_map.png") {
+export async function exportPng(mapEl, filename = "mandara_map.png", opts = {}) {
   if (typeof htmlToImage === "undefined") {
     alert("html-to-image ライブラリの読み込みに失敗しました。ネットワーク接続を確認してください。");
     return;
   }
+  const pixelRatio = Number.isFinite(opts.pixelRatio) && opts.pixelRatio >= 1
+    ? Math.min(8, opts.pixelRatio)
+    : 2;
   // The leaflet panes can have transform: translate3d → captured fine by html-to-image.
   // We embed CORS-friendly tiles only (OSM, GSI). filter() drops controls if desired.
   const dataUrl = await htmlToImage.toPng(mapEl, {
     cacheBust: true,
-    pixelRatio: 2,
+    pixelRatio,
     backgroundColor: "#ffffff",
     filter: (node) => {
       // Exclude leaflet zoom/layer controls from the export, keep attribution.
@@ -26,6 +29,7 @@ export async function exportPng(mapEl, filename = "mandara_map.png") {
     },
   });
   triggerDownload(dataUrl, filename);
+  return { pixelRatio };
 }
 
 /**

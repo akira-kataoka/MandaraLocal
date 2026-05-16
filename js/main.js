@@ -189,6 +189,7 @@ const els = {
   overlayTitle:   $("overlay-title"),
   overlayLegend:  $("overlay-legend"),
   overlayFooter:  $("overlay-footer"),
+  selectExportDpi: $("select-export-dpi"),
   btnPng:       $("btn-export-png"),
   btnSvg:       $("btn-export-svg"),
   btnCsv:       $("btn-export-csv"),
@@ -225,8 +226,14 @@ const els = {
   if (saved.classes) els.inputClasses.value  = saved.classes;
   if (saved.maxR)    els.inputMaxR.value     = saved.maxR;
   if (saved.reverse !== undefined) els.chkReverse.checked = !!saved.reverse;
+  if (saved.exportDpi && els.selectExportDpi) els.selectExportDpi.value = String(saved.exportDpi);
   els.rowSymbolSize.hidden = state.mode === "choropleth";
 })();
+
+els.selectExportDpi?.addEventListener("change", () => {
+  state.exportDpi = parseInt(els.selectExportDpi.value, 10) || 2;
+  saveSettings(state);
+});
 updatePalettePreview();
 
 // ----- Map -----
@@ -1369,8 +1376,9 @@ els.btnPdf.addEventListener("click", async () => {
   setSummary("PDF を生成中…", "muted");
   try {
     const wrap = document.querySelector(".map-wrap");
+    const dpi = parseInt(els.selectExportDpi?.value || "2", 10) || 2;
     const dataUrl = await htmlToImage.toPng(wrap, {
-      pixelRatio: 2, backgroundColor: "#ffffff",
+      pixelRatio: dpi, backgroundColor: "#ffffff",
       filter: (n) => !(n.classList && (n.classList.contains("leaflet-control-zoom") || n.classList.contains("leaflet-control-layers"))),
     });
     const { jsPDF } = window.jspdf;
@@ -2136,10 +2144,14 @@ function csvEscape(v) {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-els.btnPng.addEventListener("click", () => {
+els.btnPng.addEventListener("click", async () => {
   const wrap = document.querySelector(".map-wrap");
-  const fname = `mandara_${(state.field || "map").replace(/\s+/g, "_")}.png`;
-  exportPng(wrap, fname);
+  const dpi = parseInt(els.selectExportDpi?.value || "2", 10) || 2;
+  const dpiTag = dpi !== 2 ? `_${dpi}x` : "";
+  const fname = `mandara_${(state.field || "map").replace(/\s+/g, "_")}${dpiTag}.png`;
+  if (dpi >= 3) setSummary(`高解像度 ${dpi}x で書き出し中…（数秒お待ちください）`, "muted");
+  await exportPng(wrap, fname, { pixelRatio: dpi });
+  if (dpi >= 3) setSummary(`PNG (${dpi}x) を ${fname} として保存しました`, "success");
 });
 els.btnSvg.addEventListener("click", () => {
   if (!state.geojson) {

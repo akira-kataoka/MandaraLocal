@@ -14,13 +14,19 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=103" />
+  <link rel="stylesheet" href="css/style.css?v=104" />
 </head>
 <body>
   <header class="app-header">
     <h1>MandaraNext</h1>
     <span class="subtitle">地理情報分析支援システム</span>
     <div class="header-actions">
+      <select id="select-export-dpi" class="btn" title="エクスポート解像度" style="padding:4px 6px;">
+        <option value="1">1x</option>
+        <option value="2" selected>2x</option>
+        <option value="3">3x</option>
+        <option value="4">4x (高品質)</option>
+      </select>
       <button id="btn-export-png" class="btn">PNG出力</button>
       <button id="btn-export-svg" class="btn">SVG出力</button>
       <button id="btn-export-csv" class="btn">データCSV出力</button>
@@ -578,7 +584,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=103"></script>
+  <script type="module" src="js/main.js?v=104"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
