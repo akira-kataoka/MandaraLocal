@@ -80,6 +80,13 @@ html, body {
 .app-header .subtitle {
   font-size: 12px;
   opacity: 0.7;
+  /* Cycle 315: keep subtitle on a single line; previously flex shrink could
+     collapse it into vertical character stacking. */
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+@media (max-width: 900px) {
+  .app-header .subtitle { display: none; }
 }
 .app-header .header-actions {
   margin-left: auto;

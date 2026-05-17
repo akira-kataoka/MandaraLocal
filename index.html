@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=314" />
+  <link rel="stylesheet" href="css/style.css?v=315" />
 </head>
 <body>
   <header class="app-header">
@@ -173,7 +173,7 @@
           <button id="btn-data-reset" class="btn" style="margin-left:auto;color:#b91c1c" title="現在のデータと分析結果を消去">🗑 クリア</button>
         </div>
         <div class="form-row">
-          <label for="overlay-file" class="btn" style="font-size:11px" title="補助境界線・POI を地図に重ねる">+ オーバーレイ (GeoJSON)</label>
+          <label for="overlay-file" class="btn" style="font-size:11px;background:#dbeafe;border-color:#93c5fd;color:#1e3a8a;font-weight:600" title="境界線（e-Stat小地域など）・POI を地図に重ねる ＝ 真の町丁目境界はここから">🗺 + オーバーレイ (GeoJSON)</label>
           <input type="file" id="overlay-file" accept=".geojson,.json" hidden />
           <button id="btn-overlay-clear" class="btn" style="font-size:11px;color:#b91c1c">オーバーレイ削除</button>
         </div>
@@ -945,7 +945,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=314"></script>
+  <script type="module" src="js/main.js?v=315"></script>
   <script>
     // Cycle 302: PWA is fully disabled until we re-design caching. Aggressively
     // wipe any leftover SW + Cache Storage so previously installed builds can't
