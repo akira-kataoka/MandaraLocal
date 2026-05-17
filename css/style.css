@@ -86,7 +86,34 @@ html, body {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 6px;
+  justify-content: flex-end;
 }
+/* Cycle 301: group header buttons with a thin divider so the long toolbar
+   is scannable instead of a 30-button blob. */
+.app-header .hg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 0;
+  border-right: 1px solid rgba(255,255,255,0.18);
+  position: relative;
+}
+.app-header .hg:last-child { border-right: none; padding-right: 0; }
+.app-header .hg::before {
+  content: attr(data-label);
+  position: absolute;
+  top: -10px;
+  left: 0;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  opacity: 0.55;
+  color: var(--header-fg);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.app-header { padding-top: 18px; }
 
 .app-main {
   display: flex;

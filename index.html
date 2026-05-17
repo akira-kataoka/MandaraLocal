@@ -14,58 +14,70 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=300" />
+  <link rel="stylesheet" href="css/style.css?v=301" />
 </head>
 <body>
   <header class="app-header">
     <h1>MandaraNext <span id="app-version-badge" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px"></span></h1>
     <span class="subtitle">地理情報分析支援システム</span>
     <div class="header-actions">
-      <select id="select-export-dpi" class="btn" title="エクスポート解像度" style="padding:4px 6px;">
-        <option value="1">1x</option>
-        <option value="2" selected>2x</option>
-        <option value="3">3x</option>
-        <option value="4">4x (高品質)</option>
-      </select>
-      <button id="btn-export-png" class="btn">PNG出力</button>
-      <button id="btn-export-svg" class="btn">SVG出力</button>
-      <button id="btn-export-csv" class="btn">データCSV出力</button>
-      <button id="btn-export-kml" class="btn" title="Google Earth で開ける KML 形式で書き出し">KML出力</button>
-      <button id="btn-export-geojson" class="btn" title="QGIS/ArcGIS で開ける GeoJSON 形式で書き出し">GeoJSON出力</button>
-      <button id="btn-export-pdf" class="btn" title="印刷向け A4 PDF を生成">PDF出力</button>
-      <button id="btn-measure" class="btn" title="距離測定 (2点クリック)">📏 距離</button>
-      <button id="btn-area" class="btn" title="面積測定 (クリックで頂点追加・ダブルクリックで確定)">📐 面積</button>
-      <button id="btn-buffer" class="btn" title="バッファ検索 (クリック点から指定半径内を強調)">🎯 バッファ</button>
-      <input type="number" id="input-buffer-km" min="0.1" max="500" step="0.5" value="10"
-             style="width:60px;font-size:12px;padding:4px 6px;" title="バッファ半径 (km)" />
-      <input id="input-geocode" type="search" placeholder="住所/地名で検索 (例: 渋谷駅)" list="geocode-results"
-             style="width:180px;font-size:12px;padding:4px 8px;" title="国土地理院 AddressSearch APIで住所→座標を検索（候補から選択も可）" />
-      <datalist id="geocode-results"></datalist>
-      <button id="btn-draw" class="btn" title="自由描画 (ライン・ポリゴン・マーカー)">✏ 描画</button>
-      <button id="btn-mesh" class="btn" title="日本標準地域メッシュを表示">🔲 メッシュ</button>
-      <button id="btn-clear-pins" class="btn" title="Shift+クリックで地域をピン留めできます。ここで全解除" hidden>📍 解除</button>
-      <select id="select-mesh-level" style="font-size:12px;padding:4px 6px;">
-        <option value="1">1次 (80km)</option>
-        <option value="2" selected>2次 (10km)</option>
-        <option value="3">3次 (1km)</option>
-      </select>
-      <select id="select-scene" title="保存済シーン" style="font-size:12px;padding:4px 6px;max-width:120px">
-        <option value="">— シーン —</option>
-      </select>
-      <button id="btn-scene-save" class="btn" title="現在の設定をシーンとして保存">💾 保存</button>
-      <button id="btn-scene-export" class="btn" title="全シーンを JSON で書き出し">⬇</button>
-      <label class="btn" for="file-scene-import" title="シーンJSONを読み込み" style="cursor:pointer">⬆<input type="file" id="file-scene-import" accept=".json" hidden /></label>
-      <button id="btn-scene-share-url" class="btn" title="現在の設定をURLで共有 (リンクをコピー)">🔗</button>
-      <button id="btn-scene-qr" class="btn" title="共有URLをQRコードで表示（スマホから読み取り用）">📱</button>
-      <button id="btn-scene-delete" class="btn" title="選択中のシーンを削除" hidden>🗑</button>
-      <button id="btn-install" class="btn" title="このアプリをホーム画面/デスクトップに追加" hidden>📲 アプリ化</button>
-      <button id="btn-copy-results" class="btn" title="現在の分析結果を Markdown でクリップボードへ [Ctrl/⌘+Shift+M]">📋 結果コピー</button>
-      <button id="btn-copy-results-txt" class="btn" title="同じ結果を平文（Word/メール向け）でクリップボードへ [Ctrl/⌘+Shift+T]">📋 平文</button>
-      <button id="btn-zen" class="btn" title="Zenモード（サイドバー非表示で地図を全画面） [Z]">⛶ 全画面</button>
-      <button id="btn-theme" class="btn" title="ダークモード切替">🌗</button>
-      <button id="btn-view-reset" class="btn" title="ビュー状態をクリア（ピン・フィルタ・列ピッカー・お気に入り・カスタム色）。データセットとシーン保存は維持">🧹</button>
-      <button id="btn-help" class="btn" title="ショートカット一覧を表示 [?]">❓</button>
-      <a href="docs/USAGE.html" class="btn-link" target="_blank">使い方</a>
+      <span class="hg" data-label="出力">
+        <select id="select-export-dpi" class="btn" title="エクスポート解像度" style="padding:4px 6px;">
+          <option value="1">1x</option>
+          <option value="2" selected>2x</option>
+          <option value="3">3x</option>
+          <option value="4">4x (高品質)</option>
+        </select>
+        <button id="btn-export-png" class="btn">PNG</button>
+        <button id="btn-export-svg" class="btn">SVG</button>
+        <button id="btn-export-csv" class="btn">CSV</button>
+        <button id="btn-export-kml" class="btn" title="Google Earth で開ける KML 形式で書き出し">KML</button>
+        <button id="btn-export-geojson" class="btn" title="QGIS/ArcGIS で開ける GeoJSON 形式で書き出し">GeoJSON</button>
+        <button id="btn-export-pdf" class="btn" title="印刷向け A4 PDF を生成">PDF</button>
+      </span>
+      <span class="hg" data-label="地図ツール">
+        <button id="btn-measure" class="btn" title="距離測定 (2点クリック)">📏</button>
+        <button id="btn-area" class="btn" title="面積測定 (クリックで頂点追加・ダブルクリックで確定)">📐</button>
+        <button id="btn-buffer" class="btn" title="バッファ検索 (クリック点から指定半径内を強調)">🎯</button>
+        <input type="number" id="input-buffer-km" min="0.1" max="500" step="0.5" value="10"
+               style="width:50px;font-size:12px;padding:4px 6px;" title="バッファ半径 (km)" />
+        <button id="btn-draw" class="btn" title="自由描画 (ライン・ポリゴン・マーカー)">✏</button>
+        <button id="btn-mesh" class="btn" title="日本標準地域メッシュを表示">🔲</button>
+        <select id="select-mesh-level" style="font-size:12px;padding:4px 6px;" title="メッシュ次数">
+          <option value="1">1次 (80km)</option>
+          <option value="2" selected>2次 (10km)</option>
+          <option value="3">3次 (1km)</option>
+        </select>
+      </span>
+      <span class="hg" data-label="検索">
+        <input id="input-geocode" type="search" placeholder="住所/地名 検索" list="geocode-results"
+               style="width:170px;font-size:12px;padding:4px 8px;" title="国土地理院 AddressSearch APIで住所→座標を検索（候補から選択も可）" />
+        <datalist id="geocode-results"></datalist>
+      </span>
+      <span class="hg" data-label="シーン">
+        <select id="select-scene" title="保存済シーン" style="font-size:12px;padding:4px 6px;max-width:140px">
+          <option value="">— シーン —</option>
+        </select>
+        <button id="btn-scene-save" class="btn" title="現在の設定をシーンとして保存">💾</button>
+        <button id="btn-scene-share-url" class="btn" title="現在の設定をURLで共有 (リンクをコピー)">🔗</button>
+        <button id="btn-scene-qr" class="btn" title="共有URLをQRコードで表示（スマホから読み取り用）">📱</button>
+        <button id="btn-scene-export" class="btn" title="全シーンを JSON で書き出し">⬇</button>
+        <label class="btn" for="file-scene-import" title="シーンJSONを読み込み" style="cursor:pointer">⬆<input type="file" id="file-scene-import" accept=".json" hidden /></label>
+        <button id="btn-scene-delete" class="btn" title="選択中のシーンを削除" hidden>🗑</button>
+        <button id="btn-clear-pins" class="btn" title="Shift+クリックで地域をピン留めできます。ここで全解除" hidden>📍</button>
+      </span>
+      <span class="hg" data-label="結果">
+        <button id="btn-copy-results" class="btn" title="現在の分析結果を Markdown でクリップボードへ [Ctrl/⌘+Shift+M]">📋 MD</button>
+        <button id="btn-copy-results-txt" class="btn" title="同じ結果を平文（Word/メール向け）でクリップボードへ [Ctrl/⌘+Shift+T]">📋 平文</button>
+      </span>
+      <span class="hg" data-label="表示">
+        <button id="btn-install" class="btn" title="このアプリをホーム画面/デスクトップに追加" hidden>📲</button>
+        <button id="btn-zen" class="btn" title="Zenモード（サイドバー非表示で地図を全画面） [Z]">⛶</button>
+        <button id="btn-theme" class="btn" title="ダークモード切替">🌗</button>
+        <button id="btn-view-reset" class="btn" title="ビュー状態をクリア（ピン・フィルタ・列ピッカー・お気に入り・カスタム色）。データセットとシーン保存は維持">🧹</button>
+        <button id="btn-help" class="btn" title="ショートカット一覧を表示 [?]">❓</button>
+        <a href="docs/USAGE.html" class="btn-link" target="_blank">使い方</a>
+      </span>
     </div>
   </header>
 
@@ -904,11 +916,25 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=300"></script>
+  <script type="module" src="js/main.js?v=301"></script>
   <script>
+    // Cycle 301: emergency reset for users stuck on cached broken builds.
+    // Wipe the old SW + caches first, then register the new v2 SW so the next
+    // page load is guaranteed to fetch fresh HTML/JS over the network.
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("service-worker.js").catch(() => {});
+      window.addEventListener("load", async () => {
+        try {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        } catch {}
+        try {
+          if (window.caches) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+          }
+        } catch {}
+        // Re-register the cleaned SW after a short delay (best-effort).
+        setTimeout(() => navigator.serviceWorker.register("service-worker.js").catch(() => {}), 1500);
       });
     }
   </script>
