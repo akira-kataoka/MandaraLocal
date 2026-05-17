@@ -55,12 +55,6 @@ const els = {
   rowChochoMuni:    $("row-chocho-muni"),
   rowChochoCells:   $("row-chocho-cells"),
   chkChochoCells:   $("chk-chocho-cells"),
-  // Cycle 306: re-render town plot whenever the cell toggle changes.
-  _chochoCellsInit: (() => {
-    const cb = document.getElementById("chk-chocho-cells");
-    if (cb) cb.addEventListener("change", () => { if (typeof refresh === "function") refresh(); });
-    return true;
-  })(),
   selectChoMuni:    $("select-cho-muni"),
   rowShapeUpload:   $("row-shape-upload"),
   shapeFile:        $("shape-file"),
@@ -4461,7 +4455,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "307"; // bumped each polish cycle
+const APP_VERSION = "308"; // bumped each polish cycle
 // Cycle 303: close header dropdowns when clicking elsewhere. Leaflet's
 // invalidateSize call happens further below where `mapper` is in scope.
 try {
@@ -5792,6 +5786,12 @@ function onDatasetReady(ds, label) {
 
   refresh();
 }
+
+// Cycle 308: explicit listener for the Voronoi-cell toggle. Registered after
+// refresh() is declared so the closure reliably points to the right function.
+els.chkChochoCells?.addEventListener("change", () => {
+  if (state.level === "chocho" && state.dataset) refresh();
+});
 
 function refresh() {
   if (!state.dataset || !state.field) return;
