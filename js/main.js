@@ -53,6 +53,14 @@ const els = {
   rowChocho:        $("row-chocho"),
   selectChoPref:    $("select-cho-pref"),
   rowChochoMuni:    $("row-chocho-muni"),
+  rowChochoCells:   $("row-chocho-cells"),
+  chkChochoCells:   $("chk-chocho-cells"),
+  // Cycle 306: re-render town plot whenever the cell toggle changes.
+  _chochoCellsInit: (() => {
+    const cb = document.getElementById("chk-chocho-cells");
+    if (cb) cb.addEventListener("change", () => { if (typeof refresh === "function") refresh(); });
+    return true;
+  })(),
   selectChoMuni:    $("select-cho-muni"),
   rowShapeUpload:   $("row-shape-upload"),
   shapeFile:        $("shape-file"),
@@ -563,6 +571,7 @@ async function enterChochoMode() {
   els.rowPrefFilter.hidden = true;
   els.rowChocho.hidden = false;
   els.rowChochoMuni.hidden = false;
+  if (els.rowChochoCells) els.rowChochoCells.hidden = false;
   els.mapSearch.hidden = true;
   state.muniIndex = null;
 
@@ -620,6 +629,7 @@ async function applyLevel(level) {
   // then let the active branch reveal what it needs.
   els.rowChocho.hidden = true;
   els.rowChochoMuni.hidden = true;
+  if (els.rowChochoCells) els.rowChochoCells.hidden = true;
   els.rowPrefFilter.hidden = true;
   els.rowShapeUpload.hidden = true;
   els.rowShapeKey.hidden = true;
@@ -4451,7 +4461,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "305"; // bumped each polish cycle
+const APP_VERSION = "306"; // bumped each polish cycle
 // Cycle 303: close header dropdowns when clicking elsewhere. Leaflet's
 // invalidateSize call happens further below where `mapper` is in scope.
 try {
@@ -5806,7 +5816,7 @@ function refresh() {
 
   // chocho mode: just paint town circles by value
   if (state.level === "chocho") {
-    mapper.applyTownPlot(state.chochoTowns, state.valueMap, state.breaks, state.colors, state.field);
+    mapper.applyTownPlot(state.chochoTowns, state.valueMap, state.breaks, state.colors, state.field, { showCells: els.chkChochoCells ? els.chkChochoCells.checked : true });
     const naFlag = hasMissing(values);
     const chochoCounts = new Array(state.colors.length).fill(0);
     for (const v of values) {

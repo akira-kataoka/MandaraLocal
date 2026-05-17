@@ -846,7 +846,9 @@ export class MandaraMap {
 
     // === Voronoi pseudo-polygons, clipped to the convex hull of the points
     //     so cells don't run across the entire bbox (looks much more natural). ===
-    if (useClassifiedColor && typeof d3 !== "undefined" && d3.Delaunay && towns.length >= 3) {
+    // Cycle 306: skip the Voronoi mesh entirely when opts.showCells === false
+    // so the user can see clean center-point markers (no rough approximation).
+    if (opts?.showCells !== false && useClassifiedColor && typeof d3 !== "undefined" && d3.Delaunay && towns.length >= 3) {
       const pts = towns.filter(t => Number.isFinite(t.lat) && Number.isFinite(t.lng));
       const coords = pts.map(t => [t.lng, t.lat]);
       const xs = coords.map(p => p[0]), ys = coords.map(p => p[1]);
