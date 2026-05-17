@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=298" />
+  <link rel="stylesheet" href="css/style.css?v=299" />
 </head>
 <body>
   <header class="app-header">
@@ -38,8 +38,9 @@
       <button id="btn-buffer" class="btn" title="バッファ検索 (クリック点から指定半径内を強調)">🎯 バッファ</button>
       <input type="number" id="input-buffer-km" min="0.1" max="500" step="0.5" value="10"
              style="width:60px;font-size:12px;padding:4px 6px;" title="バッファ半径 (km)" />
-      <input id="input-geocode" type="search" placeholder="住所/地名で検索 (例: 渋谷駅)"
-             style="width:180px;font-size:12px;padding:4px 8px;" title="国土地理院 AddressSearch APIで住所→座標を検索" />
+      <input id="input-geocode" type="search" placeholder="住所/地名で検索 (例: 渋谷駅)" list="geocode-results"
+             style="width:180px;font-size:12px;padding:4px 8px;" title="国土地理院 AddressSearch APIで住所→座標を検索（候補から選択も可）" />
+      <datalist id="geocode-results"></datalist>
       <button id="btn-draw" class="btn" title="自由描画 (ライン・ポリゴン・マーカー)">✏ 描画</button>
       <button id="btn-mesh" class="btn" title="日本標準地域メッシュを表示">🔲 メッシュ</button>
       <button id="btn-clear-pins" class="btn" title="Shift+クリックで地域をピン留めできます。ここで全解除" hidden>📍 解除</button>
@@ -903,7 +904,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=298"></script>
+  <script type="module" src="js/main.js?v=299"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

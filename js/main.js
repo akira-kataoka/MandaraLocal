@@ -4445,7 +4445,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "298"; // bumped each polish cycle (Cycle 287-297 を巻き戻し)
+const APP_VERSION = "299"; // bumped each polish cycle
 // Cycle 285: 600ms green pulse on clipboard / save success to give the user
 // immediate visual feedback in addition to setSummary().
 function flashBtn(el) {
@@ -5490,7 +5490,49 @@ async function runGeocode() {
 els.inputGeocode.addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); runGeocode(); }
 });
-els.inputGeocode.addEventListener("change", runGeocode);
+// Cycle 299: populate <datalist> with up to 15 candidates while typing, and
+// jump directly to the chosen location when the user picks one from the list.
+let geocodeCandidates = new Map();
+els.inputGeocode.addEventListener("input", () => {
+  clearTimeout(geocodeDebounce);
+  geocodeDebounce = setTimeout(async () => {
+    const q = els.inputGeocode.value.trim();
+    if (q.length < 2) return;
+    try {
+      const url = "https://msearch.gsi.go.jp/address-search/AddressSearch?q=" + encodeURIComponent(q);
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const arr = await res.json();
+      const dl = document.getElementById("geocode-results");
+      if (!dl) return;
+      dl.innerHTML = "";
+      geocodeCandidates = new Map();
+      for (const item of arr.slice(0, 15)) {
+        const title = item.properties?.title;
+        const coords = item.geometry?.coordinates;
+        if (!title || !coords) continue;
+        const [lng, lat] = coords;
+        geocodeCandidates.set(title, { lat, lng });
+        const o = document.createElement("option");
+        o.value = title;
+        dl.appendChild(o);
+      }
+    } catch {}
+  }, 250);
+});
+els.inputGeocode.addEventListener("change", () => {
+  const q = els.inputGeocode.value.trim();
+  if (geocodeCandidates && geocodeCandidates.has(q)) {
+    const { lat, lng } = geocodeCandidates.get(q);
+    if (geocodeMarker) mapper.map.removeLayer(geocodeMarker);
+    geocodeMarker = L.marker([lat, lng]).addTo(mapper.map);
+    geocodeMarker.bindPopup(`<strong>${q}</strong><br/>${lat.toFixed(5)}, ${lng.toFixed(5)}`).openPopup();
+    mapper.map.setView([lat, lng], Math.max(mapper.map.getZoom(), 13));
+    setSummary(`${q}  (${lat.toFixed(4)}, ${lng.toFixed(4)})`, "success");
+    return;
+  }
+  runGeocode();
+});
 
 function toggleTheme() {
   const next = document.body.classList.toggle("dark");
