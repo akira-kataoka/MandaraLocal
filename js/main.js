@@ -4,18 +4,18 @@
 
 // Cycle 309: cache-bust every internal module so browser-cached older
 // builds can't shadow the latest map.js / histogram.js etc.
-import { parseCsvText, loadCsvFile, loadSampleCsv, buildValueLookup, buildMuniIndex, buildTownIndex } from "./data.js?v=316";
-import { computeBreaks, classifyValue } from "./classification.js?v=316";
-import { getPalette } from "./color.js?v=316";
-import { computeStats, formatNum, detectOutliers } from "./stats.js?v=316";
-import { renderLegend } from "./legend.js?v=316";
-import { MandaraMap } from "./map.js?v=316";
-import { exportPng, exportSvg, exportKml } from "./export.js?v=316";
-import { loadSettings, saveSettings } from "./settings.js?v=316";
-import { renderScatter } from "./scatter.js?v=316";
-import { renderHistogram } from "./histogram.js?v=316";
-import { renderBoxplot, renderGroupedBoxplot } from "./boxplot.js?v=316";
-import { renderTable, getSortState } from "./table.js?v=316";
+import { parseCsvText, loadCsvFile, loadSampleCsv, buildValueLookup, buildMuniIndex, buildTownIndex } from "./data.js?v=317";
+import { computeBreaks, classifyValue } from "./classification.js?v=317";
+import { getPalette } from "./color.js?v=317";
+import { computeStats, formatNum, detectOutliers } from "./stats.js?v=317";
+import { renderLegend } from "./legend.js?v=317";
+import { MandaraMap } from "./map.js?v=317";
+import { exportPng, exportSvg, exportKml } from "./export.js?v=317";
+import { loadSettings, saveSettings } from "./settings.js?v=317";
+import { renderScatter } from "./scatter.js?v=317";
+import { renderHistogram } from "./histogram.js?v=317";
+import { renderBoxplot, renderGroupedBoxplot } from "./boxplot.js?v=317";
+import { renderTable, getSortState } from "./table.js?v=317";
 
 // ----- State -----
 const state = {
@@ -4457,7 +4457,21 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "316"; // bumped each polish cycle
+const APP_VERSION = "317"; // bumped each polish cycle
+// Cycle 317: collapse / expand every sidebar panel at once.
+(() => {
+  try {
+    const collapse = document.getElementById("btn-panels-collapse");
+    const expand   = document.getElementById("btn-panels-expand");
+    const allPanels = () => document.querySelectorAll(".sidebar .panel");
+    collapse?.addEventListener("click", () => {
+      allPanels().forEach((p) => { if (!p.hidden) p.classList.add("collapsed"); });
+    });
+    expand?.addEventListener("click", () => {
+      allPanels().forEach((p) => p.classList.remove("collapsed"));
+    });
+  } catch (e) { console.warn("panel batch toggle init failed", e); }
+})();
 // Cycle 303: close header dropdowns when clicking elsewhere. Leaflet's
 // invalidateSize call happens further below where `mapper` is in scope.
 try {

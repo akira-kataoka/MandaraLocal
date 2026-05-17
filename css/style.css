@@ -209,6 +209,18 @@ body.zen-mode .sidebar { display: none; }
 body.zen-mode .map-wrap { width: 100%; }
 body.zen-mode #btn-zen { background: #1e3a8a; color: #fff; }
 
+/* Cycle 317: sidebar utility row (collapse-all / expand-all). */
+.sidebar-controls {
+  display: flex;
+  gap: 6px;
+  margin: 0 -4px 8px -4px;
+}
+.sidebar-controls .btn {
+  flex: 1;
+  font-size: 11px;
+  padding: 4px 6px;
+}
+
 /* Cycle 316: stronger focus ring across form controls + softer hover state on
    buttons so keyboard users see where they are. */
 .form-row input:focus-visible,
