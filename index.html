@@ -21,7 +21,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=318" />
+  <link rel="stylesheet" href="css/style.css?v=319" />
 </head>
 <body>
   <header class="app-header">
@@ -936,6 +936,19 @@
     </section>
   </main>
 
+  <footer class="app-footer">
+    <div class="footer-left">
+      <strong>MandaraNext</strong> <span id="app-footer-version"></span> ·
+      <a href="https://github.com/akira-kataoka/MandaraNext" target="_blank" rel="noopener">GitHub</a> ·
+      <a href="docs/USAGE.html" target="_blank">使い方</a> ·
+      <a href="https://github.com/akira-kataoka/MandaraNext/blob/main/ROADMAP.md" target="_blank" rel="noopener">ROADMAP</a>
+    </div>
+    <div class="footer-right">
+      地図: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> / <a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">地理院タイル</a>
+      ・境界: <a href="https://github.com/wmgeolonia/japanese-addresses" target="_blank" rel="noopener">Geolonia CC-BY 4.0</a>
+    </div>
+  </footer>
+
   <!-- Libraries via CDN (ESM-free, work with file:// + local server) -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
@@ -956,7 +969,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=318"></script>
+  <script type="module" src="js/main.js?v=319"></script>
   <script>
     // Cycle 302: PWA is fully disabled until we re-design caching. Aggressively
     // wipe any leftover SW + Cache Storage so previously installed builds can't
