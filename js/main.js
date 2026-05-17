@@ -4450,7 +4450,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "303"; // bumped each polish cycle
+const APP_VERSION = "304"; // bumped each polish cycle
 // Cycle 303: close header dropdowns when clicking elsewhere. Leaflet's
 // invalidateSize call happens further below where `mapper` is in scope.
 try {
@@ -7377,7 +7377,7 @@ function drawScatter() {
   }
   const strength = Math.abs(r) >= 0.7 ? "強い" : Math.abs(r) >= 0.4 ? "中程度の" : "弱い";
   const sign = r >= 0 ? "正" : "負";
-  const r2 = (r * r * 100).toFixed(1);
+  const r2pct = (r * r * 100).toFixed(1);
   const ciTxt = (ci) => ci == null
     ? ""
     : ` <small style="color:var(--muted)">[${ci[0].toFixed(3)}, ${ci[1].toFixed(3)}]</small>`;
@@ -7415,7 +7415,7 @@ function drawScatter() {
       welchInfo += ` <br/>${summary}`;
     }
   }
-  els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong>${ciTxt(rCI)} （${strength}${sign}の相関）${rhoTxt}${note} · 決定係数 R²=${r2}%${polyInfo}${welchInfo}`;
+  els.scatterCorr.innerHTML = `n=${n} · ピアソン相関 <strong>r=${r.toFixed(3)}</strong>${ciTxt(rCI)} （${strength}${sign}の相関）${rhoTxt}${note} · 決定係数 R²=${r2pct}%${polyInfo}${welchInfo}`;
 
   // Cycle 224: silent Simpson's paradox detection. Whenever a color-by
   // category column is set, quietly compute per-group slopes and prepend an
