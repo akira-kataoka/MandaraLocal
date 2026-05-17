@@ -14,70 +14,92 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=302" />
+  <link rel="stylesheet" href="css/style.css?v=303" />
 </head>
 <body>
   <header class="app-header">
     <h1>MandaraNext <span id="app-version-badge" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px"></span></h1>
     <span class="subtitle">地理情報分析支援システム</span>
     <div class="header-actions">
-      <span class="hg" data-label="出力">
-        <select id="select-export-dpi" class="btn" title="エクスポート解像度" style="padding:4px 6px;">
-          <option value="1">1x</option>
-          <option value="2" selected>2x</option>
-          <option value="3">3x</option>
-          <option value="4">4x (高品質)</option>
-        </select>
-        <button id="btn-export-png" class="btn">PNG</button>
-        <button id="btn-export-svg" class="btn">SVG</button>
-        <button id="btn-export-csv" class="btn">CSV</button>
-        <button id="btn-export-kml" class="btn" title="Google Earth で開ける KML 形式で書き出し">KML</button>
-        <button id="btn-export-geojson" class="btn" title="QGIS/ArcGIS で開ける GeoJSON 形式で書き出し">GeoJSON</button>
-        <button id="btn-export-pdf" class="btn" title="印刷向け A4 PDF を生成">PDF</button>
-      </span>
-      <span class="hg" data-label="地図ツール">
-        <button id="btn-measure" class="btn" title="距離測定 (2点クリック)">📏</button>
-        <button id="btn-area" class="btn" title="面積測定 (クリックで頂点追加・ダブルクリックで確定)">📐</button>
-        <button id="btn-buffer" class="btn" title="バッファ検索 (クリック点から指定半径内を強調)">🎯</button>
-        <input type="number" id="input-buffer-km" min="0.1" max="500" step="0.5" value="10"
-               style="width:50px;font-size:12px;padding:4px 6px;" title="バッファ半径 (km)" />
-        <button id="btn-draw" class="btn" title="自由描画 (ライン・ポリゴン・マーカー)">✏</button>
-        <button id="btn-mesh" class="btn" title="日本標準地域メッシュを表示">🔲</button>
-        <select id="select-mesh-level" style="font-size:12px;padding:4px 6px;" title="メッシュ次数">
-          <option value="1">1次 (80km)</option>
-          <option value="2" selected>2次 (10km)</option>
-          <option value="3">3次 (1km)</option>
-        </select>
-      </span>
-      <span class="hg" data-label="検索">
+      <details class="hmenu">
+        <summary class="btn hmenu-btn">📤 出力 ▾</summary>
+        <div class="hmenu-popup">
+          <label class="hmenu-row"><span>解像度</span>
+            <select id="select-export-dpi" class="btn" title="エクスポート解像度">
+              <option value="1">1x</option>
+              <option value="2" selected>2x</option>
+              <option value="3">3x</option>
+              <option value="4">4x (高品質)</option>
+            </select>
+          </label>
+          <button id="btn-export-png" class="btn hmenu-item">🖼 PNG出力</button>
+          <button id="btn-export-svg" class="btn hmenu-item">🎨 SVG出力</button>
+          <button id="btn-export-csv" class="btn hmenu-item">📊 データCSV出力</button>
+          <button id="btn-export-kml" class="btn hmenu-item" title="Google Earth で開ける KML 形式で書き出し">🌍 KML出力</button>
+          <button id="btn-export-geojson" class="btn hmenu-item" title="QGIS/ArcGIS で開ける GeoJSON 形式で書き出し">🗺 GeoJSON出力</button>
+          <button id="btn-export-pdf" class="btn hmenu-item" title="印刷向け A4 PDF を生成">📄 PDF出力</button>
+        </div>
+      </details>
+      <details class="hmenu">
+        <summary class="btn hmenu-btn">🧭 地図ツール ▾</summary>
+        <div class="hmenu-popup">
+          <button id="btn-measure" class="btn hmenu-item" title="距離測定 (2点クリック)">📏 距離測定</button>
+          <button id="btn-area" class="btn hmenu-item" title="面積測定 (クリックで頂点追加・ダブルクリックで確定)">📐 面積測定</button>
+          <label class="hmenu-row"><button id="btn-buffer" class="btn" title="バッファ検索 (クリック点から指定半径内を強調)">🎯 バッファ</button>
+            <input type="number" id="input-buffer-km" min="0.1" max="500" step="0.5" value="10"
+                   style="width:60px;font-size:12px;padding:4px 6px;" title="バッファ半径 (km)" />
+            <span style="font-size:11px;color:var(--muted)">km</span>
+          </label>
+          <button id="btn-draw" class="btn hmenu-item" title="自由描画 (ライン・ポリゴン・マーカー)">✏ 自由描画</button>
+          <label class="hmenu-row"><button id="btn-mesh" class="btn" title="日本標準地域メッシュを表示">🔲 メッシュ</button>
+            <select id="select-mesh-level" style="font-size:12px;padding:4px 6px;" title="メッシュ次数">
+              <option value="1">1次 (80km)</option>
+              <option value="2" selected>2次 (10km)</option>
+              <option value="3">3次 (1km)</option>
+            </select>
+          </label>
+        </div>
+      </details>
+      <div class="hg" data-label="検索">
         <input id="input-geocode" type="search" placeholder="住所/地名 検索" list="geocode-results"
-               style="width:170px;font-size:12px;padding:4px 8px;" title="国土地理院 AddressSearch APIで住所→座標を検索（候補から選択も可）" />
+               style="width:200px;font-size:12px;padding:4px 8px;" title="国土地理院 AddressSearch APIで住所→座標を検索（候補から選択も可）" />
         <datalist id="geocode-results"></datalist>
-      </span>
-      <span class="hg" data-label="シーン">
-        <select id="select-scene" title="保存済シーン" style="font-size:12px;padding:4px 6px;max-width:140px">
-          <option value="">— シーン —</option>
-        </select>
-        <button id="btn-scene-save" class="btn" title="現在の設定をシーンとして保存">💾</button>
-        <button id="btn-scene-share-url" class="btn" title="現在の設定をURLで共有 (リンクをコピー)">🔗</button>
-        <button id="btn-scene-qr" class="btn" title="共有URLをQRコードで表示（スマホから読み取り用）">📱</button>
-        <button id="btn-scene-export" class="btn" title="全シーンを JSON で書き出し">⬇</button>
-        <label class="btn" for="file-scene-import" title="シーンJSONを読み込み" style="cursor:pointer">⬆<input type="file" id="file-scene-import" accept=".json" hidden /></label>
-        <button id="btn-scene-delete" class="btn" title="選択中のシーンを削除" hidden>🗑</button>
-        <button id="btn-clear-pins" class="btn" title="Shift+クリックで地域をピン留めできます。ここで全解除" hidden>📍</button>
-      </span>
-      <span class="hg" data-label="結果">
-        <button id="btn-copy-results" class="btn" title="現在の分析結果を Markdown でクリップボードへ [Ctrl/⌘+Shift+M]">📋 MD</button>
-        <button id="btn-copy-results-txt" class="btn" title="同じ結果を平文（Word/メール向け）でクリップボードへ [Ctrl/⌘+Shift+T]">📋 平文</button>
-      </span>
-      <span class="hg" data-label="表示">
-        <button id="btn-install" class="btn" title="このアプリをホーム画面/デスクトップに追加" hidden>📲</button>
-        <button id="btn-zen" class="btn" title="Zenモード（サイドバー非表示で地図を全画面） [Z]">⛶</button>
-        <button id="btn-theme" class="btn" title="ダークモード切替">🌗</button>
-        <button id="btn-view-reset" class="btn" title="ビュー状態をクリア（ピン・フィルタ・列ピッカー・お気に入り・カスタム色）。データセットとシーン保存は維持">🧹</button>
-        <button id="btn-help" class="btn" title="ショートカット一覧を表示 [?]">❓</button>
-        <a href="docs/USAGE.html" class="btn-link" target="_blank">使い方</a>
-      </span>
+      </div>
+      <details class="hmenu">
+        <summary class="btn hmenu-btn">🎬 シーン ▾</summary>
+        <div class="hmenu-popup">
+          <label class="hmenu-row"><span>選択</span>
+            <select id="select-scene" title="保存済シーン" style="font-size:12px;padding:4px 6px;max-width:180px">
+              <option value="">— シーン —</option>
+            </select>
+          </label>
+          <button id="btn-scene-save" class="btn hmenu-item" title="現在の設定をシーンとして保存">💾 現在の状態を保存</button>
+          <button id="btn-scene-share-url" class="btn hmenu-item" title="現在の設定をURLで共有 (リンクをコピー)">🔗 URLで共有</button>
+          <button id="btn-scene-qr" class="btn hmenu-item" title="共有URLをQRコードで表示（スマホから読み取り用）">📱 QRコード表示</button>
+          <button id="btn-scene-export" class="btn hmenu-item" title="全シーンを JSON で書き出し">⬇ JSONで書き出し</button>
+          <label class="btn hmenu-item" for="file-scene-import" title="シーンJSONを読み込み" style="cursor:pointer">⬆ JSONを読み込み<input type="file" id="file-scene-import" accept=".json" hidden /></label>
+          <button id="btn-scene-delete" class="btn hmenu-item" title="選択中のシーンを削除" hidden>🗑 選択中シーンを削除</button>
+          <button id="btn-clear-pins" class="btn hmenu-item" title="Shift+クリックで地域をピン留めできます。ここで全解除" hidden>📍 ピン全解除</button>
+        </div>
+      </details>
+      <details class="hmenu">
+        <summary class="btn hmenu-btn">📋 結果コピー ▾</summary>
+        <div class="hmenu-popup">
+          <button id="btn-copy-results" class="btn hmenu-item" title="現在の分析結果を Markdown でクリップボードへ [Ctrl/⌘+Shift+M]">📋 Markdown形式 [⌘+Shift+M]</button>
+          <button id="btn-copy-results-txt" class="btn hmenu-item" title="同じ結果を平文（Word/メール向け）でクリップボードへ [Ctrl/⌘+Shift+T]">📋 平文 (Word/メール向け) [⌘+Shift+T]</button>
+        </div>
+      </details>
+      <details class="hmenu">
+        <summary class="btn hmenu-btn">⚙ 表示 ▾</summary>
+        <div class="hmenu-popup">
+          <button id="btn-install" class="btn hmenu-item" title="このアプリをホーム画面/デスクトップに追加" hidden>📲 アプリ化</button>
+          <button id="btn-zen" class="btn hmenu-item" title="Zenモード（サイドバー非表示で地図を全画面） [Z]">⛶ 全画面モード [Z]</button>
+          <button id="btn-theme" class="btn hmenu-item" title="ダークモード切替">🌗 ダーク切替</button>
+          <button id="btn-view-reset" class="btn hmenu-item" title="ビュー状態をクリア（ピン・フィルタ・列ピッカー・お気に入り・カスタム色）。データセットとシーン保存は維持">🧹 ビュー状態リセット</button>
+          <button id="btn-help" class="btn hmenu-item" title="ショートカット一覧を表示 [?]">❓ ショートカット [?]</button>
+          <a href="docs/USAGE.html" class="btn hmenu-item" target="_blank" style="text-decoration:none">📖 使い方ドキュメント</a>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -916,7 +938,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=302"></script>
+  <script type="module" src="js/main.js?v=303"></script>
   <script>
     // Cycle 302: PWA is fully disabled until we re-design caching. Aggressively
     // wipe any leftover SW + Cache Storage so previously installed builds can't

@@ -84,14 +84,66 @@ html, body {
 .app-header .header-actions {
   margin-left: auto;
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
+  gap: 8px;
+  align-items: center;
   flex-wrap: wrap;
-  row-gap: 8px;
+  row-gap: 6px;
   justify-content: flex-end;
 }
-/* Cycle 302: each function group becomes a labelled card so the toolbar
-   reads as 6 logical regions rather than a flat strip of 30 buttons. */
+/* Cycle 303: header buttons are now grouped into dropdown menus instead of
+   spread across a 30-button strip. <details> handles open/close natively. */
+.app-header .hmenu {
+  position: relative;
+  display: inline-block;
+}
+.app-header .hmenu > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.app-header .hmenu > summary::-webkit-details-marker { display: none; }
+.app-header .hmenu-btn {
+  font-weight: 600;
+}
+.app-header .hmenu[open] > .hmenu-btn,
+.app-header .hmenu[open] > summary.hmenu-btn {
+  background: #1e3a8a;
+  color: #fff;
+}
+.app-header .hmenu-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+  min-width: 220px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.app-header .hmenu-item {
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+}
+.app-header .hmenu-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+.app-header .hmenu-row > span {
+  min-width: 50px;
+  color: var(--muted);
+}
+/* Keep the inline "検索" group (sole field with no dropdown). */
 .app-header .hg {
   display: inline-flex;
   align-items: center;
@@ -115,9 +167,7 @@ html, body {
   pointer-events: none;
   font-weight: 600;
 }
-.app-header { padding: 8px 16px; align-items: flex-start; }
-.app-header h1 { padding-top: 2px; }
-.app-header .subtitle { padding-top: 6px; }
+.app-header { padding: 8px 16px; align-items: center; }
 
 /* Cycle 302: replace the fixed 100vh-48px math with a real flex column on
    <body> so the map area always fills whatever space the wrapped header

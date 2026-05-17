@@ -339,6 +339,11 @@ updatePalettePreview();
 
 // ----- Map -----
 const mapper  = new MandaraMap("map", els.tooltip);
+// Cycle 303: force Leaflet to recompute the container size after the wrapped
+// header (Cycle 302 body-flex) settles, otherwise the tiles don't paint.
+setTimeout(() => { try { mapper.map.invalidateSize(); } catch {} }, 50);
+setTimeout(() => { try { mapper.map.invalidateSize(); } catch {} }, 400);
+window.addEventListener("resize", () => { try { mapper.map.invalidateSize(); } catch {} });
 let mapperB = null;       // created lazily on compare-on
 let _syncing = false;     // re-entry guard for view sync
 
@@ -4445,7 +4450,16 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "302"; // bumped each polish cycle
+const APP_VERSION = "303"; // bumped each polish cycle
+// Cycle 303: close header dropdowns when clicking elsewhere. Leaflet's
+// invalidateSize call happens further below where `mapper` is in scope.
+try {
+  document.addEventListener("click", (e) => {
+    document.querySelectorAll("details.hmenu[open]").forEach((d) => {
+      if (!d.contains(e.target)) d.removeAttribute("open");
+    });
+  });
+} catch {}
 // Cycle 285: 600ms green pulse on clipboard / save success to give the user
 // immediate visual feedback in addition to setSummary().
 function flashBtn(el) {
