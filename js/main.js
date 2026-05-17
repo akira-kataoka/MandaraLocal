@@ -4452,7 +4452,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "296"; // bumped each polish cycle
+const APP_VERSION = "297"; // bumped each polish cycle
 // Cycle 285: 600ms green pulse on clipboard / save success to give the user
 // immediate visual feedback in addition to setSummary().
 function flashBtn(el) {
@@ -4462,21 +4462,22 @@ function flashBtn(el) {
 }
 // Cycle 284: surface the version in the header h1 badge.
 // Cycle 296: badge click opens the shortcuts help modal.
-(() => {
+try {
   const b = document.getElementById("app-version-badge");
-  if (!b) return;
-  b.textContent = `v${APP_VERSION}`;
-  b.addEventListener("click", () => {
-    if (typeof showHelpModal === "function") showHelpModal();
-  });
-})();
+  if (b) {
+    b.textContent = `v${APP_VERSION}`;
+    b.addEventListener("click", () => {
+      if (typeof showHelpModal === "function") showHelpModal();
+    });
+  }
+} catch (e) { console.warn("version badge init failed", e); }
 // Cycle 291: restore axis font-size from prior session if it survived in state.
-(() => {
+try {
   const v = state.chartAxisFs;
   if ((v === "S" || v === "M" || v === "L") && els.scatterAxisFs) {
     els.scatterAxisFs.value = v;
   }
-})();
+} catch (e) { console.warn("chartAxisFs restore failed", e); }
 const APP_VERSION_NOTE = "Polish cycles 195-280: ピン留め 6 surface × 5 export × 番号体系 + 系列別回帰 + Markdown/CSV/SVG/PNG/QR";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
