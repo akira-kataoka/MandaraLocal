@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=301" />
+  <link rel="stylesheet" href="css/style.css?v=302" />
 </head>
 <body>
   <header class="app-header">
@@ -916,26 +916,20 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=301"></script>
+  <script type="module" src="js/main.js?v=302"></script>
   <script>
-    // Cycle 301: emergency reset for users stuck on cached broken builds.
-    // Wipe the old SW + caches first, then register the new v2 SW so the next
-    // page load is guaranteed to fetch fresh HTML/JS over the network.
+    // Cycle 302: PWA is fully disabled until we re-design caching. Aggressively
+    // wipe any leftover SW + Cache Storage so previously installed builds can't
+    // intercept fetches and serve stale (broken) main.js.
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", async () => {
-        try {
-          const regs = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(regs.map(r => r.unregister()));
-        } catch {}
-        try {
-          if (window.caches) {
-            const keys = await caches.keys();
-            await Promise.all(keys.map(k => caches.delete(k)));
-          }
-        } catch {}
-        // Re-register the cleaned SW after a short delay (best-effort).
-        setTimeout(() => navigator.serviceWorker.register("service-worker.js").catch(() => {}), 1500);
-      });
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        for (const r of regs) r.unregister();
+      }).catch(() => {});
+    }
+    if (window.caches) {
+      caches.keys().then((keys) => {
+        for (const k of keys) caches.delete(k);
+      }).catch(() => {});
     }
   </script>
 </body>

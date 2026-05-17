@@ -84,40 +84,52 @@ html, body {
 .app-header .header-actions {
   margin-left: auto;
   display: flex;
-  gap: 8px;
-  align-items: center;
+  gap: 10px;
+  align-items: flex-start;
   flex-wrap: wrap;
-  row-gap: 6px;
+  row-gap: 8px;
   justify-content: flex-end;
 }
-/* Cycle 301: group header buttons with a thin divider so the long toolbar
-   is scannable instead of a 30-button blob. */
+/* Cycle 302: each function group becomes a labelled card so the toolbar
+   reads as 6 logical regions rather than a flat strip of 30 buttons. */
 .app-header .hg {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px 2px 0;
-  border-right: 1px solid rgba(255,255,255,0.18);
+  padding: 14px 8px 4px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
   position: relative;
 }
-.app-header .hg:last-child { border-right: none; padding-right: 0; }
 .app-header .hg::before {
   content: attr(data-label);
   position: absolute;
-  top: -10px;
-  left: 0;
+  top: 1px;
+  left: 6px;
   font-size: 9px;
-  letter-spacing: 0.05em;
-  opacity: 0.55;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
   color: var(--header-fg);
   white-space: nowrap;
   pointer-events: none;
+  font-weight: 600;
 }
-.app-header { padding-top: 18px; }
+.app-header { padding: 8px 16px; align-items: flex-start; }
+.app-header h1 { padding-top: 2px; }
+.app-header .subtitle { padding-top: 6px; }
 
+/* Cycle 302: replace the fixed 100vh-48px math with a real flex column on
+   <body> so the map area always fills whatever space the wrapped header
+   leaves behind, instead of being pushed off-screen. */
+html, body { height: 100%; margin: 0; }
+body { display: flex; flex-direction: column; min-height: 100vh; }
+.app-header { flex: 0 0 auto; }
 .app-main {
   display: flex;
-  height: calc(100vh - 48px);
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
 }
 
 .sidebar {
