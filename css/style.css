@@ -195,36 +195,54 @@ body.zen-mode .sidebar { display: none; }
 body.zen-mode .map-wrap { width: 100%; }
 body.zen-mode #btn-zen { background: #1e3a8a; color: #fff; }
 
+/* Cycle 310: card-style panels with a colored left rail + soft shadow so the
+   long sidebar reads as a vertical timeline of analysis steps. */
 .panel {
   background: #fff;
   border: 1px solid var(--border);
+  border-left: 3px solid #1e3a8a;
   border-radius: 6px;
   padding: 10px 12px;
   margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+  transition: box-shadow 0.15s, border-left-color 0.15s;
 }
+.panel:hover { box-shadow: 0 3px 8px rgba(15,23,42,0.08); }
+.panel.collapsed { border-left-color: #94a3b8; }
 .panel h2 {
-  margin: 0 0 8px 0;
+  margin: -10px -12px 8px -12px;
   font-size: 13px;
-  font-weight: 600;
-  color: #334155;
+  font-weight: 700;
+  color: #1e293b;
+  background: linear-gradient(90deg, rgba(30,58,138,0.06), transparent 70%);
   border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 6px;
+  padding: 8px 12px 8px 12px;
   cursor: pointer;
   user-select: none;
   position: relative;
+  letter-spacing: 0.01em;
 }
 .panel h2::after {
   content: "▾";
   position: absolute;
-  right: 0;
-  top: 0;
+  right: 10px;
+  top: 8px;
   font-size: 11px;
   color: var(--muted);
   transition: transform .15s;
 }
 .panel.collapsed h2::after { transform: rotate(-90deg); }
 .panel.collapsed > *:not(h2) { display: none; }
-body.dark .panel h2 { color: #cbd5e1; border-bottom-color: #334155; }
+body.dark .panel {
+  background: #0f172a;
+  border-color: #1e293b;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+body.dark .panel h2 {
+  color: #f1f5f9;
+  background: linear-gradient(90deg, rgba(96,165,250,0.18), transparent 70%);
+  border-bottom-color: #334155;
+}
 
 /* Ensure [hidden] beats display:flex / display:block from class rules.
    Without !important Safari sometimes keeps a partially-applied layout. */
