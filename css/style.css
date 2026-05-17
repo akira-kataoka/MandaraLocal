@@ -115,7 +115,8 @@ html, body {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  background: #fff;
+  background: var(--card, #fff);
+  color: var(--text);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 6px;
@@ -126,6 +127,12 @@ html, body {
   flex-direction: column;
   gap: 4px;
 }
+body.dark .app-header .hmenu-popup {
+  background: #0f172a;
+  border-color: #334155;
+}
+body.dark .app-header .hmenu-popup .btn { color: #e5e7eb; background: #1e293b; border-color: #334155; }
+body.dark .app-header .hmenu-popup .btn:hover { background: #334155; }
 .app-header .hmenu-item {
   width: 100%;
   text-align: left;
