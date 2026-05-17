@@ -4452,7 +4452,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "295"; // bumped each polish cycle
+const APP_VERSION = "296"; // bumped each polish cycle
 // Cycle 285: 600ms green pulse on clipboard / save success to give the user
 // immediate visual feedback in addition to setSummary().
 function flashBtn(el) {
@@ -4461,9 +4461,14 @@ function flashBtn(el) {
   setTimeout(() => el.classList.remove("flash-ok"), 600);
 }
 // Cycle 284: surface the version in the header h1 badge.
+// Cycle 296: badge click opens the shortcuts help modal.
 (() => {
   const b = document.getElementById("app-version-badge");
-  if (b) b.textContent = `v${APP_VERSION}`;
+  if (!b) return;
+  b.textContent = `v${APP_VERSION}`;
+  b.addEventListener("click", () => {
+    if (typeof showHelpModal === "function") showHelpModal();
+  });
 })();
 // Cycle 291: restore axis font-size from prior session if it survived in state.
 (() => {
