@@ -1,24 +1,12 @@
-// MandaraNext service worker — cache-first for own assets, network-first for data.
-const CACHE = "mandaranext-v1";
+// MandaraNext service worker
+// Cycle 300: switch HTML/JS/CSS to network-first so deploys reach users
+// immediately (the old cache-first strategy pinned broken builds in place).
+const CACHE = "mandaranext-v2";
 const ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
   "./icon.svg",
-  "./css/style.css",
-  "./js/main.js",
-  "./js/map.js",
-  "./js/data.js",
-  "./js/classification.js",
-  "./js/color.js",
-  "./js/legend.js",
-  "./js/stats.js",
-  "./js/export.js",
-  "./js/scatter.js",
-  "./js/histogram.js",
-  "./js/table.js",
-  "./js/settings.js",
-  "./js/pref_table.js",
   "./data/japan_prefectures.geojson",
   "./data/sample_population.csv",
 ];
@@ -26,7 +14,6 @@ const ASSETS = [
 self.addEventListener("install", (evt) => {
   evt.waitUntil(
     caches.open(CACHE).then((c) =>
-      // Cache best-effort: missing files shouldn't break install
       Promise.allSettled(ASSETS.map((u) => c.add(u)))
     )
   );
@@ -46,8 +33,23 @@ self.addEventListener("fetch", (evt) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  // Own-origin asset: cache-first
+  // Own-origin
   if (url.origin === location.origin) {
+    const isCode = /\.(html|js|css)(\?|$)/i.test(url.pathname) || url.pathname === "/" || url.pathname.endsWith("/");
+    if (isCode) {
+      // network-first: always try fresh, fall back to cache when offline.
+      evt.respondWith(
+        fetch(req).then((resp) => {
+          if (resp.ok) {
+            const clone = resp.clone();
+            caches.open(CACHE).then((c) => c.put(req, clone));
+          }
+          return resp;
+        }).catch(() => caches.match(req).then((hit) => hit || caches.match("./index.html")))
+      );
+      return;
+    }
+    // Static data / images: cache-first.
     evt.respondWith(
       caches.match(req).then((hit) => {
         if (hit) return hit;
