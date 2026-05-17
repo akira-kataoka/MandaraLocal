@@ -195,6 +195,23 @@ body.zen-mode .sidebar { display: none; }
 body.zen-mode .map-wrap { width: 100%; }
 body.zen-mode #btn-zen { background: #1e3a8a; color: #fff; }
 
+/* Cycle 312: sidebar group titles (データ準備 / 描画設定 / 分析) to chunk
+   the long panel list into 3 logical sections. */
+.sidebar-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: none;
+  margin: 6px 4px 6px 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed var(--border);
+}
+.sidebar-group-title:not(:first-child) {
+  margin-top: 16px;
+}
+body.dark .sidebar-group-title { color: #94a3b8; border-bottom-color: #334155; }
+
 /* Cycle 310: card-style panels with a colored left rail + soft shadow so the
    long sidebar reads as a vertical timeline of analysis steps. */
 .panel {
