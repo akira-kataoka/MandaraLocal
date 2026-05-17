@@ -4,18 +4,18 @@
 
 // Cycle 309: cache-bust every internal module so browser-cached older
 // builds can't shadow the latest map.js / histogram.js etc.
-import { parseCsvText, loadCsvFile, loadSampleCsv, buildValueLookup, buildMuniIndex, buildTownIndex } from "./data.js?v=315";
-import { computeBreaks, classifyValue } from "./classification.js?v=315";
-import { getPalette } from "./color.js?v=315";
-import { computeStats, formatNum, detectOutliers } from "./stats.js?v=315";
-import { renderLegend } from "./legend.js?v=315";
-import { MandaraMap } from "./map.js?v=315";
-import { exportPng, exportSvg, exportKml } from "./export.js?v=315";
-import { loadSettings, saveSettings } from "./settings.js?v=315";
-import { renderScatter } from "./scatter.js?v=315";
-import { renderHistogram } from "./histogram.js?v=315";
-import { renderBoxplot, renderGroupedBoxplot } from "./boxplot.js?v=315";
-import { renderTable, getSortState } from "./table.js?v=315";
+import { parseCsvText, loadCsvFile, loadSampleCsv, buildValueLookup, buildMuniIndex, buildTownIndex } from "./data.js?v=316";
+import { computeBreaks, classifyValue } from "./classification.js?v=316";
+import { getPalette } from "./color.js?v=316";
+import { computeStats, formatNum, detectOutliers } from "./stats.js?v=316";
+import { renderLegend } from "./legend.js?v=316";
+import { MandaraMap } from "./map.js?v=316";
+import { exportPng, exportSvg, exportKml } from "./export.js?v=316";
+import { loadSettings, saveSettings } from "./settings.js?v=316";
+import { renderScatter } from "./scatter.js?v=316";
+import { renderHistogram } from "./histogram.js?v=316";
+import { renderBoxplot, renderGroupedBoxplot } from "./boxplot.js?v=316";
+import { renderTable, getSortState } from "./table.js?v=316";
 
 // ----- State -----
 const state = {
@@ -4457,7 +4457,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "315"; // bumped each polish cycle
+const APP_VERSION = "316"; // bumped each polish cycle
 // Cycle 303: close header dropdowns when clicking elsewhere. Leaflet's
 // invalidateSize call happens further below where `mapper` is in scope.
 try {

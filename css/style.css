@@ -209,6 +209,21 @@ body.zen-mode .sidebar { display: none; }
 body.zen-mode .map-wrap { width: 100%; }
 body.zen-mode #btn-zen { background: #1e3a8a; color: #fff; }
 
+/* Cycle 316: stronger focus ring across form controls + softer hover state on
+   buttons so keyboard users see where they are. */
+.form-row input:focus-visible,
+.form-row select:focus-visible,
+.form-row textarea:focus-visible,
+.sidebar input:focus-visible,
+.sidebar select:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+  border-color: #3b82f6;
+}
+.btn:hover:not(:disabled) { background: #f1f5f9; }
+body.dark .btn:hover:not(:disabled) { background: #1e293b; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+
 /* Cycle 312: sidebar group titles (データ準備 / 描画設定 / 分析) to chunk
    the long panel list into 3 logical sections. */
 .sidebar-group-title {
