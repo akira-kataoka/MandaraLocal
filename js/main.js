@@ -750,7 +750,8 @@ function populatePrefFilter(g) {
   for (const code of [...seen.keys()].sort((a,b)=>a-b)) {
     const o = document.createElement("option");
     o.value = seen.get(code) || `#${code}`;
-    o.label = `${code}`;
+    // Cycle 305: drop the code label that browsers were rendering as a
+    // second line ("北海道 / 1") and made the dropdown look duplicated.
     list.appendChild(o);
   }
   // store the name→code map on the element for the change handler
@@ -4450,7 +4451,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "304"; // bumped each polish cycle
+const APP_VERSION = "305"; // bumped each polish cycle
 // Cycle 303: close header dropdowns when clicking elsewhere. Leaflet's
 // invalidateSize call happens further below where `mapper` is in scope.
 try {
