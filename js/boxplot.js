@@ -15,7 +15,7 @@ const PAD = { top: 12, right: 14, bottom: 26, left: 14 };
  * @param values raw numbers
  * @param label  x-axis caption (field name)
  */
-export function renderBoxplot(svgEl, values, label, opts = {}) {
+export function renderBoxplot(svgEl, values, label) {
   svgEl.innerHTML = "";
   const v = values.filter(Number.isFinite);
   const n = v.length;
@@ -80,26 +80,19 @@ export function renderBoxplot(svgEl, values, label, opts = {}) {
   tip.textContent = `平均 X̄ = ${formatNum(mean)}`;
   diamond.appendChild(tip);
   svgEl.appendChild(diamond);
-  // Small μ label above the marker.
-  // Cycle 295: scale with axisFontSize (default 8 ≈ tickFs-1).
-  const _fsKey = opts.axisFontSize === "S" || opts.axisFontSize === "L" ? opts.axisFontSize : "M";
-  const _tickFs = _fsKey === "S" ? 7 : _fsKey === "L" ? 11 : 9;
+  // Small μ label above the marker
   const meanLab = make("text", {
     x: mx, y: cy - dx - 2, "text-anchor": "middle",
-    "font-size": Math.max(7, _tickFs - 1), "font-weight": 700, fill: "#dc2626", "font-family": "sans-serif",
+    "font-size": 8, "font-weight": 700, fill: "#dc2626", "font-family": "sans-serif",
   });
   meanLab.textContent = "μ";
   svgEl.appendChild(meanLab);
 
-  // Cycle 288: axis font size shared with scatter (Cycle 287).
-  const fsKey = opts.axisFontSize === "S" || opts.axisFontSize === "L" ? opts.axisFontSize : "M";
-  const tickFs = fsKey === "S" ? 7 : fsKey === "L" ? 11 : 9;
-  const labelFs = tickFs + 1;
   // Axis tick labels: min, median, max
   for (const [val, anchor] of [[min, "start"], [med, "middle"], [max, "end"]]) {
     const t = make("text", {
       x: x(val), y: H - 6, "text-anchor": anchor,
-      "font-size": tickFs, fill: "#475569", "font-family": "sans-serif",
+      "font-size": 9, fill: "#475569", "font-family": "sans-serif",
     });
     t.textContent = formatNum(val);
     svgEl.appendChild(t);
@@ -108,7 +101,7 @@ export function renderBoxplot(svgEl, values, label, opts = {}) {
   if (label) {
     const lbl = make("text", {
       x: W / 2, y: PAD.top - 2, "text-anchor": "middle",
-      "font-size": labelFs, fill: "#1e293b", "font-weight": 600, "font-family": "sans-serif",
+      "font-size": 10, fill: "#1e293b", "font-weight": 600, "font-family": "sans-serif",
     });
     lbl.textContent = label;
     svgEl.appendChild(lbl);
@@ -122,7 +115,7 @@ const GROUP_PALETTE = [
   "#2563eb", "#dc2626", "#16a34a", "#d97706",
   "#9333ea", "#0891b2", "#db2777", "#65a30d",
 ];
-export function renderGroupedBoxplot(svgEl, groups, label, opts = {}) {
+export function renderGroupedBoxplot(svgEl, groups, label) {
   svgEl.innerHTML = "";
   if (!groups || groups.length === 0) return { n: 0 };
   const G = groups.length;
@@ -168,15 +161,11 @@ export function renderGroupedBoxplot(svgEl, groups, label, opts = {}) {
     for (const [k, val] of Object.entries(attrs)) n.setAttribute(k, val);
     return n;
   };
-  // Cycle 289: shared axisFontSize with scatter (Cycle 287) / boxplot single (288).
-  const fsKey = opts.axisFontSize === "S" || opts.axisFontSize === "L" ? opts.axisFontSize : "M";
-  const tickFs = fsKey === "S" ? 7 : fsKey === "L" ? 11 : 9;
-  const labelFs = tickFs + 1;
   // Top label
   if (label) {
     const t = make("text", {
       x: W2 / 2, y: PAD2.top - 2, "text-anchor": "middle",
-      "font-size": labelFs, fill: "#1e293b", "font-weight": 600,
+      "font-size": 10, fill: "#1e293b", "font-weight": 600,
     });
     t.textContent = label;
     svgEl.appendChild(t);
@@ -211,7 +200,7 @@ export function renderGroupedBoxplot(svgEl, groups, label, opts = {}) {
     // Group name (left margin)
     const lab = make("text", {
       x: PAD2.left - 4, y: cy + 3, "text-anchor": "end",
-      "font-size": tickFs + 1, fill: "#1e293b", "font-weight": 500,
+      "font-size": 10, fill: "#1e293b", "font-weight": 500,
     });
     const shortName = g.name.length > 10 ? g.name.slice(0, 9) + "…" : g.name;
     lab.textContent = `${shortName} (n=${g.n})`;
@@ -223,7 +212,7 @@ export function renderGroupedBoxplot(svgEl, groups, label, opts = {}) {
     svgEl.appendChild(make("line", { x1: x, y1: totalH - PAD2.bottom, x2: x, y2: totalH - PAD2.bottom + 3, stroke: "#475569" }));
     const t = make("text", {
       x, y: totalH - PAD2.bottom + 14, "text-anchor": "middle",
-      "font-size": tickFs, fill: "#475569",
+      "font-size": 9, fill: "#475569",
     });
     t.textContent = formatNum(gMin + f * xRange);
     svgEl.appendChild(t);

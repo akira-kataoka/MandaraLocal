@@ -4,8 +4,7 @@
 
 const KEY = "mandara_local_settings_v1";
 
-const SAVED_KEYS = ["mode", "classes", "method", "palette", "reverse", "maxR",
-  "legendFs", "legendPrec", "legendLayout", "pinColor", "chartAxisFs"];
+const SAVED_KEYS = ["mode", "classes", "method", "palette", "reverse", "maxR"];
 
 export function loadSettings() {
   try {

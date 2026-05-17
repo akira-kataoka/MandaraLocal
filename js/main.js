@@ -230,7 +230,6 @@ const els = {
   btnScatterPinBrush: $("btn-scatter-pin-brush"),
   scatterPinColor: $("scatter-pin-color"),
   scatterDegree:   $("scatter-degree"),
-  scatterAxisFs:   $("scatter-axis-fs"),
   scatterCsv:      $("scatter-csv"),
   scatterDataCsv:  $("scatter-data-csv"),
   panelSplom:      $("panel-splom"),
@@ -2085,12 +2084,6 @@ els.scatterLabelN?.addEventListener("change", drawScatter);
 els.scatterLabelN?.addEventListener("input", drawScatter);
 els.scatterLabelPlace?.addEventListener("change", drawScatter);
 els.scatterDegree?.addEventListener("change", drawScatter);
-els.scatterAxisFs?.addEventListener("change", () => {
-  // Cycle 291: persist axis size across reloads / shared scenes.
-  state.chartAxisFs = els.scatterAxisFs.value;
-  saveSettings(state);
-  refresh();
-});
 els.chkScatterLogX.addEventListener("change", drawScatter);
 els.chkScatterLogY.addEventListener("change", drawScatter);
 els.scatterSwap?.addEventListener("click", () => {
@@ -4452,7 +4445,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "297"; // bumped each polish cycle
+const APP_VERSION = "298"; // bumped each polish cycle (Cycle 287-297 を巻き戻し)
 // Cycle 285: 600ms green pulse on clipboard / save success to give the user
 // immediate visual feedback in addition to setSummary().
 function flashBtn(el) {
@@ -4461,23 +4454,10 @@ function flashBtn(el) {
   setTimeout(() => el.classList.remove("flash-ok"), 600);
 }
 // Cycle 284: surface the version in the header h1 badge.
-// Cycle 296: badge click opens the shortcuts help modal.
-try {
+(() => {
   const b = document.getElementById("app-version-badge");
-  if (b) {
-    b.textContent = `v${APP_VERSION}`;
-    b.addEventListener("click", () => {
-      if (typeof showHelpModal === "function") showHelpModal();
-    });
-  }
-} catch (e) { console.warn("version badge init failed", e); }
-// Cycle 291: restore axis font-size from prior session if it survived in state.
-try {
-  const v = state.chartAxisFs;
-  if ((v === "S" || v === "M" || v === "L") && els.scatterAxisFs) {
-    els.scatterAxisFs.value = v;
-  }
-} catch (e) { console.warn("chartAxisFs restore failed", e); }
+  if (b) b.textContent = `v${APP_VERSION}`;
+})();
 const APP_VERSION_NOTE = "Polish cycles 195-280: ピン留め 6 surface × 5 export × 番号体系 + 系列別回帰 + Markdown/CSV/SVG/PNG/QR";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
@@ -4932,7 +4912,6 @@ function snapshotCurrent() {
     legendFs: els.selectLegendFs?.value || "m",
     legendPrec: els.selectLegendPrec?.value || "auto",
     legendLayout: els.selectLegendLayout?.value || "vertical",
-    chartAxisFs: els.scatterAxisFs?.value || "M",
     // Cycle 240: include scatter pin selection + color so recipients see the
     // exact same pinned regions when opening a shared URL.
     pinIds: (state.pinnedScatterIds instanceof Set && state.pinnedScatterIds.size)
@@ -5101,11 +5080,6 @@ els.selectScene.addEventListener("change", async () => {
   }
   if (snap.legendLayout !== undefined && els.selectLegendLayout) {
     els.selectLegendLayout.value = snap.legendLayout;
-  }
-  // Cycle 291: restore chart axis font-size selector if present.
-  if ((snap.chartAxisFs === "S" || snap.chartAxisFs === "M" || snap.chartAxisFs === "L") && els.scatterAxisFs) {
-    els.scatterAxisFs.value = snap.chartAxisFs;
-    state.chartAxisFs = snap.chartAxisFs;
   }
   // Apply visibility toggles
   els.rowSymbolSize.hidden = !(state.mode === "symbol" || state.mode === "both" || state.mode === "graduated");
@@ -6013,12 +5987,12 @@ function refresh() {
       // Cap to 8 groups for readability; fall back to single boxplot if too many
       // valid groups or none.
       if (groups.length >= 2 && groups.length <= 8) {
-        renderGroupedBoxplot(els.boxplotSvg, groups, `${state.field} × ${colorByField}`, { axisFontSize: els.scatterAxisFs?.value || "M" });
+        renderGroupedBoxplot(els.boxplotSvg, groups, `${state.field} × ${colorByField}`);
       } else {
-        renderBoxplot(els.boxplotSvg, values, state.field, { axisFontSize: els.scatterAxisFs?.value || "M" });
+        renderBoxplot(els.boxplotSvg, values, state.field);
       }
     } else {
-      renderBoxplot(els.boxplotSvg, values, state.field, { axisFontSize: els.scatterAxisFs?.value || "M" });
+      renderBoxplot(els.boxplotSvg, values, state.field);
     }
   }
 
@@ -6065,7 +6039,6 @@ function refresh() {
       groups:  groupHist,
       facet:   !!els.chkHistFacet?.checked,
       onBinClick: (lo, hi) => pinBinMembers(lo, hi),
-      axisFontSize: els.scatterAxisFs?.value || "M",
     });
   }
 
@@ -7319,7 +7292,6 @@ function drawScatter() {
     shapeLegend,
     regressionByGroup: !!els.chkScatterRegGroup?.checked,
     titleStats: !!els.chkScatterStatsTitle?.checked,
-    axisFontSize: els.scatterAxisFs?.value || "M",
     degree: parseInt(els.scatterDegree?.value || "1", 10) || 1,
     onBrush: (ids) => {
       mapper.markOutliers(ids);

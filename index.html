@@ -14,11 +14,11 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta name="theme-color" content="#1f2d3d" />
-  <link rel="stylesheet" href="css/style.css?v=297" />
+  <link rel="stylesheet" href="css/style.css?v=298" />
 </head>
 <body>
   <header class="app-header">
-    <h1>MandaraNext <span id="app-version-badge" title="クリックでショートカット一覧 [?]" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px;cursor:pointer"></span></h1>
+    <h1>MandaraNext <span id="app-version-badge" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px"></span></h1>
     <span class="subtitle">地理情報分析支援システム</span>
     <div class="header-actions">
       <select id="select-export-dpi" class="btn" title="エクスポート解像度" style="padding:4px 6px;">
@@ -658,14 +658,6 @@
           </select>
         </div>
         <div class="form-row">
-          <label for="scatter-axis-fs">グラフ軸サイズ</label>
-          <select id="scatter-axis-fs" title="散布図・ヒストグラム・ボックスプロットの軸ラベル/ティックの大きさ">
-            <option value="S">小</option>
-            <option value="M" selected>標準</option>
-            <option value="L">大（プレゼン向き）</option>
-          </select>
-        </div>
-        <div class="form-row">
           <label for="scatter-degree">回帰次数</label>
           <select id="scatter-degree">
             <option value="1" selected>1次（線形）</option>
@@ -911,7 +903,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.min.js"></script>
 
   <!-- App -->
-  <script type="module" src="js/main.js?v=297"></script>
+  <script type="module" src="js/main.js?v=298"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

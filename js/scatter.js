@@ -73,11 +73,6 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
   const px = vRaw => pxAt(sx(vRaw));
   const py = vRaw => pyAt(sy(vRaw));
 
-  // Cycle 287: axis label / tick font size is user-configurable.
-  // "S" / "M" / "L" → tick 7 / 9 / 11 px, axis label +1px on top.
-  const fsKey = opts.axisFontSize === "S" || opts.axisFontSize === "L" ? opts.axisFontSize : "M";
-  const tickFs = fsKey === "S" ? 7 : fsKey === "L" ? 11 : 9;
-  const labelFs = tickFs + 1;
   // axes
   const axis = el("g", { class: "axis" });
   axis.appendChild(line(PAD.left, H - PAD.bottom, W - PAD.right, H - PAD.bottom));
@@ -88,16 +83,16 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     const tx = pxAt(t);
     const raw = logX ? Math.pow(10, t) : t;
     axis.appendChild(line(tx, H - PAD.bottom, tx, H - PAD.bottom + 3));
-    axis.appendChild(text(tx, H - PAD.bottom + 12, formatShort(raw), "middle", { "font-size": tickFs }));
+    axis.appendChild(text(tx, H - PAD.bottom + 12, formatShort(raw), "middle"));
   }
   for (const t of ticks(yMin, yMax, 4)) {
     const ty = pyAt(t);
     const raw = logY ? Math.pow(10, t) : t;
     axis.appendChild(line(PAD.left - 3, ty, PAD.left, ty));
-    axis.appendChild(text(PAD.left - 5, ty + 3, formatShort(raw), "end", { "font-size": tickFs }));
+    axis.appendChild(text(PAD.left - 5, ty + 3, formatShort(raw), "end"));
   }
-  axis.appendChild(text(W / 2, H - 4, xLabel, "middle", { "font-size": labelFs, "font-weight": 600 }));
-  axis.appendChild(text(8, PAD.top + innerH / 2, yLabel, "middle", { transform: `rotate(-90, 8, ${PAD.top + innerH / 2})`, "font-size": labelFs, "font-weight": 600 }));
+  axis.appendChild(text(W / 2, H - 4, xLabel, "middle"));
+  axis.appendChild(text(8, PAD.top + innerH / 2, yLabel, "middle", { transform: `rotate(-90, 8, ${PAD.top + innerH / 2})` }));
   svgEl.appendChild(axis);
 
   // points (sizeFor from opts gives variable radius for bubble-chart mode)
@@ -330,12 +325,10 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       });
       labels.appendChild(ring);
       // Cycle 271: show the 1-indexed pin order at the center of the ring.
-      // Cycle 293: scale with the chart's axis font size so it grows on L.
       if (pinNo) {
-        const pinNumFs = Math.max(6, tickFs - 2);
         const numText = el("text", {
-          x: cx.toFixed(1), y: (cy + pinNumFs / 3).toFixed(1),
-          "text-anchor": "middle", "font-size": String(pinNumFs), "font-weight": "700",
+          x: cx.toFixed(1), y: (cy + 2).toFixed(1),
+          "text-anchor": "middle", "font-size": "7", "font-weight": "700",
           fill: pinColor, "pointer-events": "none",
         });
         numText.textContent = String(pinNo);
@@ -690,7 +683,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
       m.setAttribute("stroke-width", "0.6");
       lg.appendChild(m);
       const t = el("text", {
-        x: x0 + 20, y: cy + 3, "font-size": tickFs, fill: "#1e293b",
+        x: x0 + 20, y: cy + 3, "font-size": 9, fill: "#1e293b",
       });
       const label = String(it.name || "");
       t.textContent = label.length > 13 ? label.slice(0, 12) + "…" : label;
@@ -719,7 +712,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
         fill: col, stroke: "#1e293b", "stroke-width": 0.4,
       }));
       const t = el("text", {
-        x: rightX - 73, y: y, "font-size": tickFs, fill: "#1e293b",
+        x: rightX - 73, y: y, "font-size": 9, fill: "#1e293b",
       });
       const label = cat === "__other__" ? "その他" : String(cat);
       t.textContent = label.length > 11 ? label.slice(0, 10) + "…" : label;
@@ -755,7 +748,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
     });
     lg.appendChild(bg);
     const title = el("text", {
-      x: x0 + padX, y: y0 - boxH + 10, "font-size": tickFs, "font-weight": 700, fill: "#1e293b",
+      x: x0 + padX, y: y0 - boxH + 10, "font-size": 9, "font-weight": 700, fill: "#1e293b",
     });
     title.textContent = sl.fieldName.length > 11 ? sl.fieldName.slice(0, 10) + "…" : sl.fieldName;
     lg.appendChild(title);
@@ -768,7 +761,7 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
         fill: "rgba(37,99,235,0.4)", stroke: "#1e3a8a", "stroke-width": 0.5,
       }));
       const t = el("text", {
-        x: cx + 14, y: cy + 3, "font-size": Math.max(7, tickFs - 1), fill: "#1e293b",
+        x: cx + 14, y: cy + 3, "font-size": 8, fill: "#1e293b",
       });
       t.textContent = fmt(vals[i]);
       lg.appendChild(t);
@@ -778,14 +771,13 @@ export function renderScatter(svgEl, xs, ys, xLabel, yLabel, ids = null, onHover
 
   // Cycle 227: optional statistics subtitle drawn inside the SVG so PNG/SVG
   // exports carry n / r / R² without the user having to caption the image.
-  // Cycle 295: font-size follows the axisFontSize selector (tickFs).
   if (opts.titleStats && Number.isFinite(r) && nValid >= 2) {
     const r2pct = (r * r * 100).toFixed(1);
     const t = el("text", {
       x: PAD.left + (W - PAD.left - PAD.right) / 2,
       y: 8,
       "text-anchor": "middle",
-      "font-size": tickFs, "font-weight": 600, fill: "#475569",
+      "font-size": 9, "font-weight": 600, fill: "#475569",
     });
     t.textContent = `n=${nValid}  r=${r.toFixed(3)}  R²=${r2pct}%`;
     svgEl.appendChild(t);
