@@ -244,6 +244,52 @@ body.dark .panel h2 {
   border-bottom-color: #334155;
 }
 
+/* Cycle 311: per-panel icon + category-based left-rail color so the long
+   sidebar groups visually into "data preparation / appearance / analysis". */
+.panel h2::before {
+  margin-right: 6px;
+  font-weight: 400;
+}
+/* Data preparation (green rail) */
+.sidebar .panel:nth-of-type(1) { border-left-color: #16a34a; }
+.sidebar .panel:nth-of-type(1) h2::before { content: "📍"; }
+.sidebar .panel:nth-of-type(2) { border-left-color: #16a34a; }
+.sidebar .panel:nth-of-type(2) h2::before { content: "📂"; }
+#panel-field { border-left-color: #16a34a; }
+#panel-field h2::before { content: "📋"; }
+/* Appearance (blue rail) */
+#panel-class    { border-left-color: #2563eb; }
+#panel-class h2::before    { content: "🎚"; }
+#panel-legend   { border-left-color: #2563eb; }
+#panel-legend h2::before   { content: "🏷"; }
+#panel-timeseries { border-left-color: #2563eb; }
+#panel-timeseries h2::before { content: "⏱"; }
+/* Analysis (purple rail) */
+#panel-stats    { border-left-color: #9333ea; }
+#panel-stats h2::before    { content: "📊"; }
+#panel-histogram { border-left-color: #9333ea; }
+#panel-histogram h2::before { content: "📶"; }
+#panel-boxplot  { border-left-color: #9333ea; }
+#panel-boxplot h2::before  { content: "📦"; }
+#panel-table    { border-left-color: #9333ea; }
+#panel-table h2::before    { content: "🧾"; }
+#panel-crosstab { border-left-color: #9333ea; }
+#panel-crosstab h2::before { content: "📑"; }
+#panel-scatter  { border-left-color: #9333ea; }
+#panel-scatter h2::before  { content: "📈"; }
+#panel-multireg { border-left-color: #9333ea; }
+#panel-multireg h2::before { content: "🧮"; }
+#panel-splom    { border-left-color: #9333ea; }
+#panel-splom h2::before    { content: "🔲"; }
+#panel-hclust   { border-left-color: #9333ea; }
+#panel-hclust h2::before   { content: "🌳"; }
+#panel-kmeans   { border-left-color: #9333ea; }
+#panel-kmeans h2::before   { content: "🎯"; }
+#panel-pca      { border-left-color: #9333ea; }
+#panel-pca h2::before      { content: "🧭"; }
+#panel-lisa     { border-left-color: #9333ea; }
+#panel-lisa h2::before     { content: "🗺"; }
+
 /* Ensure [hidden] beats display:flex / display:block from class rules.
    Without !important Safari sometimes keeps a partially-applied layout. */
 [hidden] { display: none !important; }
