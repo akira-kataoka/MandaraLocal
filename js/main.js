@@ -4,18 +4,18 @@
 
 // Cycle 309: cache-bust every internal module so browser-cached older
 // builds can't shadow the latest map.js / histogram.js etc.
-import { parseCsvText, loadCsvFile, loadSampleCsv, buildValueLookup, buildMuniIndex, buildTownIndex } from "./data.js?v=319";
-import { computeBreaks, classifyValue } from "./classification.js?v=319";
-import { getPalette } from "./color.js?v=319";
-import { computeStats, formatNum, detectOutliers } from "./stats.js?v=319";
-import { renderLegend } from "./legend.js?v=319";
-import { MandaraMap } from "./map.js?v=319";
-import { exportPng, exportSvg, exportKml } from "./export.js?v=319";
-import { loadSettings, saveSettings } from "./settings.js?v=319";
-import { renderScatter } from "./scatter.js?v=319";
-import { renderHistogram } from "./histogram.js?v=319";
-import { renderBoxplot, renderGroupedBoxplot } from "./boxplot.js?v=319";
-import { renderTable, getSortState } from "./table.js?v=319";
+import { parseCsvText, loadCsvFile, loadSampleCsv, buildValueLookup, buildMuniIndex, buildTownIndex } from "./data.js?v=320";
+import { computeBreaks, classifyValue } from "./classification.js?v=320";
+import { getPalette } from "./color.js?v=320";
+import { computeStats, formatNum, detectOutliers } from "./stats.js?v=320";
+import { renderLegend } from "./legend.js?v=320";
+import { MandaraMap } from "./map.js?v=320";
+import { exportPng, exportSvg, exportKml } from "./export.js?v=320";
+import { loadSettings, saveSettings } from "./settings.js?v=320";
+import { renderScatter } from "./scatter.js?v=320";
+import { renderHistogram } from "./histogram.js?v=320";
+import { renderBoxplot, renderGroupedBoxplot } from "./boxplot.js?v=320";
+import { renderTable, getSortState } from "./table.js?v=320";
 
 // ----- State -----
 const state = {
@@ -4457,7 +4457,7 @@ window.addEventListener("keydown", (e) => {
 
 // Cycle 250: master cheat-sheet covering the shortcuts and conventions that
 // have accumulated over 250 cycles. Static markup; sectioned for scannability.
-const APP_VERSION = "319"; // bumped each polish cycle
+const APP_VERSION = "320"; // bumped each polish cycle
 // Cycle 319: fill the footer version pill.
 try {
   const fv = document.getElementById("app-footer-version");
@@ -4498,7 +4498,7 @@ function flashBtn(el) {
   const b = document.getElementById("app-version-badge");
   if (b) b.textContent = `v${APP_VERSION}`;
 })();
-const APP_VERSION_NOTE = "Polish cycles 195-280: ピン留め 6 surface × 5 export × 番号体系 + 系列別回帰 + Markdown/CSV/SVG/PNG/QR";
+const APP_VERSION_NOTE = "Polish cycles 195-320: ピン留め 6 surface × 5 export × 系列別回帰 + UI改修 (カード/アイコン/グループ/フッター) + 緊急安定化";
 function showHelpModal() {
   document.getElementById("help-modal")?.remove();
   const overlay = document.createElement("div");

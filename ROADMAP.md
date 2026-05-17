@@ -160,6 +160,28 @@ MANDARA 公式機能（https://ktgis.net/mandara/function/）を基準に
 - Cycle 276/278: シーン保存/削除時に含有件数を confirm 表示
 - Cycle 277: シーン一覧 option に 📌N ★M バッジ
 
+### 🚨 緊急修正 + 安定化 (Cycle 298-309)
+- Cycle 298: Cycle 287-297 を巻き戻し（JS 初期化エラー対応）
+- Cycle 299: 住所/地名検索を datalist で候補リスト選択化
+- Cycle 300-302: Service Worker を完全廃止（network-first → 全停止）+ body-flex で地図高さ修正
+- Cycle 303: ヘッダドロップダウンメニュー化 + Leaflet invalidateSize 強制
+- Cycle 304: **r2 重複宣言の SyntaxError 修正（根本原因）**
+- Cycle 305: 都道府県 datalist のコード label 削除
+- Cycle 306-308: 町丁目 Voronoi セル表示トグル + 注釈 (近似である旨)
+- Cycle 309: 内部 ESM モジュール全てに `?v=` cache busting
+
+### 🎨 UI/UX 大改修 (Cycle 310-319)
+- Cycle 310: サイドバー panel をカード化（左ボーダー + 影 + h2 帯）
+- Cycle 311: 各 panel に絵文字アイコン + カテゴリ別カラーレール (緑/青/紫)
+- Cycle 312: サイドバーに「📥 データ準備 / 🎨 描画設定 / 🔬 分析」のグループ見出し
+- Cycle 313: グループ見出しを sticky 化（スクロール中も表示）
+- Cycle 314: ダークモードドロップダウン + e-Stat 境界 GeoJSON 案内
+- Cycle 315: subtitle 縦書き防止 + +オーバーレイ ボタン強調
+- Cycle 316: フォーム要素 :focus-visible リング + ボタン hover/active 反応
+- Cycle 317: 「全て閉じる / 全て開く」一括コントロール
+- Cycle 318: SEO / OGP メタタグ整備
+- Cycle 319: フッター（クレジット + クイックリンク）
+
 ### 🔵 ピン留めシステム（Cycle 212-275 集約）
 - **6 surface で Shift+クリック / Shift+ヘッダー → ピン留め**
   - 散布図の点 (212) / テーブル行 (251) / 凡例 swatch (252) / ヒスト bar (253) / クロス集計セル (255/258) / 地図地物 (254)
